@@ -63,7 +63,6 @@ class TelegramBot_base{
 		
 	
 	public function sendMessage($data){//should NOT throw TelegramException
-		print_r($data);
 		$path = realpath(dirname(__FILE__))."/logs/sentMessages.txt";
 		$log = createOrOpenLogFile($path);
 
@@ -71,7 +70,6 @@ class TelegramBot_base{
 		$res = fwrite($log, "[".date('d.m.Y H:i:s')."]\t$data_json");
 		if($res === false)
 			throw new StdoutTextException("log fwrite1 error");
-			
 	
 		$opts = array(
 			'http' => array(
@@ -85,9 +83,17 @@ class TelegramBot_base{
 		$context = stream_context_create($opts);
 		
 		$res = file_get_contents("https://api.telegram.org/bot".TELEGRAM_BOT_TOKEN."/sendMessage", false, $context);
-		if($res === false)
-			throw new StdoutTextException("sendMessage->file_get_contents error: ".print_r($http_response_header, true).print_r($data, true));
-		
+		if($res === false){
+			$respCode = $this->getHTTPCode($http_response_header);
+			
+			switch($respCode){
+			case 403:
+				throw new StdoutTextException("Bot was blocked by user ".$data['chat_id'].". HTTP error 403");
+			default:
+				throw new StdoutTextException("sendMessage->file_get_contents unknown error $respCode: ".print_r($http_response_header, true).print_r($data, true));
+			}
+		}
+
 		$message = json_decode($res);
 		if($message === false)
 			throw new StdoutTextException("sendMessage->json_decode error ".print_r($message, true).print_r($data, true));
