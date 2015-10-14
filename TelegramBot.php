@@ -38,7 +38,7 @@ class TelegramBot extends TelegramBot_base{
 	}
 	
 	protected function getPreviousMessageArrayKey(){
-		return "pma_".$this->telegram_id;
+		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
 	}
 	
 	protected function getPreviousMessageArray(){
