@@ -1,3 +1,4 @@
+*_dev*
 /logs/*
 /locks/*
 config/bot_specific_info.php

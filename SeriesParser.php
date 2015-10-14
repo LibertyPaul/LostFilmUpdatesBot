@@ -35,17 +35,6 @@ class SeriesParser extends Parser{
 		return $show->url_id;
 	}
 		
-		
-	
-	protected function isShowOnAir($show_id){
-		//$url
-	}
-	
-	
-	protected function addShow($url_id, $titleRu, $titleEn){
-		
-	}
-	
 	protected function submitNewSeries($url_id, $seriesTimestamp, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
 		$getShowId = $this->pdo->prepare("
 			SELECT `id`
