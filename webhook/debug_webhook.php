@@ -2,6 +2,7 @@
 require_once(realpath(dirname(__FILE__))."/../config/config.php");
 require_once(realpath(dirname(__FILE__))."/../config/stuff.php");
 require_once(realpath(dirname(__FILE__))."/../TelegramBot.php");
+require_once(realpath(dirname(__FILE__))."/input_debug_webhook.php");
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
 	$path = realpath(dirname(__FILE__))."/../logs/webhookErrorLog.txt";
@@ -30,24 +31,7 @@ if($_GET['token'] !== TELEGRAM_BOT_TOKEN)
 */
 //$update_json = file_get_contents("php://input");
 
-$update_json = '{
-    "update_id": 868276967,
-    "message": {
-        "message_id": 9986,
-        "from": {
-            "id": 2768837,
-            "first_name": "LibertyPaul",
-            "username": "LibertyPaul"
-        },
-        "chat": {
-            "id": -12770203,
-            "title": "Кот и блины",
-            "type": "group"
-        },
-        "date": 1444838929,
-        "text": "\/test"
-    }
-}';
+
 
 
 $update = json_decode($update_json);
