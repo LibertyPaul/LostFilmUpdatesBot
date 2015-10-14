@@ -86,6 +86,10 @@ class TelegramBot_base{
 		if($res === false){
 			$respCode = $this->getHTTPCode($http_response_header);
 			
+			$res = fwrite($log, "ERROR $respCode\n\n");
+			if($res === false)
+				throw new StdoutTextException("log fwrite2 error");
+			
 			switch($respCode){
 			case 403:
 				throw new StdoutTextException("Bot was blocked by user ".$data['chat_id'].". HTTP error 403");
@@ -111,7 +115,7 @@ class TelegramBot_base{
 		
 		$res = fwrite($log, "SUCCESS\n\n");
 		if($res === false)
-			throw new StdoutTextException("log fwrite2 error");
+			throw new StdoutTextException("log fwrite3 error");
 		$res = fclose($log);
 		if($res === false)
 			throw new StdoutTextException("log fclose error");
