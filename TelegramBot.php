@@ -486,13 +486,13 @@ class TelegramBot extends TelegramBot_base{
 	}
 /*
 Commands:
+help - Показать инфо о боте
 add_show - Добавить уведомления о сериале
 get_my_shows - Показать выбранные сериалы
 remove_show - Удалить уведомления о сериале
 mute - Выключить уведомления на время
-cancel - отменить команду
-stop - удалиться из контакт-листа бота
-help - показать инфо о боте
+cancel - Отменить команду
+stop - Удалиться из контакт-листа бота
 */
 	protected function sendToBotan($message, $eventName){
 		$message_array = json_decode(json_encode($message), true);
