@@ -21,7 +21,7 @@ function setLastRecievedId($value){
 
 function getLastRecievedId(){
 	$memcache = createMemcache();
-	return $memcache->get(MEMCACHE_LATEST_UPDATE_ID_KEY);
+	return intval($memcache->get(MEMCACHE_LATEST_UPDATE_ID_KEY));
 }
 
 
