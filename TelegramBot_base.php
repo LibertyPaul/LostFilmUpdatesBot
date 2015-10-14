@@ -18,11 +18,11 @@ class TelegramBot_base{
 		$this->memcache = createMemcache();
 		
 		$this_ptr = $this;
-		/*
+		
 		set_exception_handler(function(Exception $ex) use ($this_ptr){
 			$this_ptr->exception_handler($ex);
 		});
-		*/
+		
 		
 	}
 	
