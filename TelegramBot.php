@@ -514,7 +514,7 @@ stop - Удалиться из контакт-листа бота
 			throw new StdoutTextException("update telegram id, and stored id doesn't match");
 		
 		if(isset($message->text) === false)
-			throw new TelegramException($this->chat_id, "message without text");
+			return;
 		
 		$cmd = $this->extractCommand($message->text);
 		
