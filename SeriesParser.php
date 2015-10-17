@@ -34,6 +34,10 @@ class SeriesParser extends Parser{
 		$show = $getUrlId->fetchObject();
 		return $show->url_id;
 	}
+	
+	protected function getTorrentFile($url_id, $seasonNumber, $seriesNumber){
+		
+	}
 		
 	protected function submitNewSeries($url_id, $seriesTimestamp, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
 		$getShowId = $this->pdo->prepare("
@@ -120,7 +124,7 @@ class SeriesParser extends Parser{
 		$parsedCount = preg_match_all($regexp, $this->pageSrc, $params);
 		if($parsedCount === false)
 			throw new Exception("preg_last_error: ".preg_last_error());
-		
+
 		
 		$alreadyParsed = $parsedCount;
 		
@@ -133,10 +137,8 @@ class SeriesParser extends Parser{
 			$url_id = intval($params[3][$seriesIndex]);//если === 42 - LostFilm.Кинозал - игнорим
 			if($url_id === 42)
 				continue;
-			$showTitleRu = 	$params[4][$seriesIndex];
-			$showTitleRu = rtrim($showTitleRu);//костыль. сделать через регулярку не получилось
-			
-			$seriesTitleRu = $params[5][$seriesIndex];
+			$showTitleRu = rtrim($params[4][$seriesIndex]);//костыль. сделать через регулярку не получилось
+			$seriesTitleRu = rtrim($params[5][$seriesIndex]);
 			$seriesTitleEn = $params[6][$seriesIndex];
 			$releaseDatetime = new DateTime($params[7][$seriesIndex]);
 			
