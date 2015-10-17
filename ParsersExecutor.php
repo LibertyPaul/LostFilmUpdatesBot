@@ -14,7 +14,7 @@ function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
 		throw new StdoutTextException("chmod error");
 	
 	
-	$errorText = '$errno $errstr $errfile:$errline';
+	$errorText = "$errno $errstr $errfile:$errline";
 	fwrite($errorLogFile, $errorText);
 	fclose($errorLogFile);
 }
