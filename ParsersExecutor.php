@@ -1,22 +1,20 @@
 <?php
-
+require_once(realpath(dirname(__FILE__))."/config/stuff.php");
 require_once(realpath(dirname(__FILE__))."/ShowParser.php");
 require_once(realpath(dirname(__FILE__))."/SeriesParser.php");
 require_once(realpath(dirname(__FILE__))."/config/cron_actions.php");
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
 	$path = realpath(dirname(__FILE__)).'/logs/ParsersErrorLog.txt';
-	$errorLogFile = fopen($path, 'a');
-	if($errorLogFile === false)
-		exit("errorLigFile fopen error");
-	$res = chmod($path, 0777);
-	if($res === false)
-		throw new StdoutTextException("chmod error");
-	
-	
+	$errorLogFile = createOrOpenLogFile($path);	
 	$errorText = "$errno $errstr $errfile:$errline";
-	fwrite($errorLogFile, $errorText);
-	fclose($errorLogFile);
+	$res = fwrite($errorLogFile, $errorText);
+	if($res === false)
+		exit("error log write error");
+	$res = fclose($errorLogFile);
+	if($res === false)
+		exit("error log close error");
+	
 }
 
 set_error_handler('error_handler');
