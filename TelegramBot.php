@@ -79,8 +79,10 @@ class TelegramBot extends TelegramBot_base{
 				FROM `users`
 				WHERE `telegram_id` = {$this->telegram_id}
 			");
-			if($res->num_rows === 0)
-				throw new TelegramException($this->chat_id, "Твой Telegram ID не найден в БД, ты регистрировался командой </start>?");
+			if($res->num_rows === 0){
+				$this->deletePreviousMessageArray();			
+				throw new TelegramException($this->chat_id, "Твой Telegram ID не найден в БД, ты регистрировался командой /start ?");
+			}
 		
 			$user = $res->fetch_object();
 			$user_id = intval($user->id);
@@ -316,8 +318,10 @@ class TelegramBot extends TelegramBot_base{
 						':show_id' => $show->id
 					)
 				);
-				if($res === false || $action->rowCount() === 0)
+				if($res === false || $action->rowCount() === 0){
+					$this->deletePreviousMessageArray();
 					throw new TelegramException($this->chat_id, "Ошибка добавления в базу данных. Я сообщу об этом создателю");
+				}
 				else{//все норм
 					$this->sendMessage(
 						array(
@@ -409,8 +413,10 @@ class TelegramBot extends TelegramBot_base{
 							)
 						);
 					}
-					else
+					else{
+						$this->deletePreviousMessageArray();
 						throw new TelegramException($this->chat_id, "action->execute 2 error");
+					}
 					
 					$this->deletePreviousMessageArray();
 					break;
@@ -477,8 +483,10 @@ class TelegramBot extends TelegramBot_base{
 						)
 					);
 				}
-				else
+				else{
+					$this->deletePreviousMessageArray();
 					throw new TelegramException($this->chat_id, "action->execute 3 error");
+				}
 			}
 			$this->deletePreviousMessageArray();
 			break;
@@ -503,8 +511,10 @@ stop - Удалиться из контакт-листа бота
 		$regexp = '/([^@]+)[\s\S]*/';
 		$matches = array();
 		$res = preg_match($regexp, $text, $matches);
-		if($res === false)
+		if($res === false){
+			$this->deletePreviousMessageArray();
 			throw new TelegramException($this->chat_id, "Не знаю такой команды");
+		}
 		
 		return $matches[1];
 	}
@@ -527,6 +537,7 @@ stop - Удалиться из контакт-листа бота
 			$this->addPreviousMessageArray($message->text);//добавляем сообщение к n предыдущих
 		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
 		
+		print_r($messagesTextArray);
 		$argc = count($messagesTextArray);
 		
 		if($argc < 1)
@@ -618,8 +629,10 @@ stop - Удалиться из контакт-листа бота
 						DELETE FROM `users`
 						WHERE `id` = {$this->getUserId()}
 					");
-					if($this->sql->affected_rows === 0)
+					if($this->sql->affected_rows === 0){
+						$this->deletePreviousMessageArray();
 						throw new TelegramException($this->chat_id, "Упс, произошло недоразумение. Я сообщу об этом создателю");
+					}
 					
 					$this->sendMessage(
 						array(
@@ -693,8 +706,9 @@ stop - Удалиться из контакт-листа бота
 				FROM `users`
 				WHERE `id` = {$this->getUserId()}
 			");
-			if($res->num_rows === 0)
+			if($res->num_rows === 0){
 				throw new TelegramException($this->chat_id, "Упс, кажется я не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова");
+			}
 			
 			$user = $res->fetch_object();
 			
@@ -710,6 +724,7 @@ stop - Удалиться из контакт-листа бота
 			}
 			else
 				throw new TelegramException($this->chat_id, "Упс, что-то не так с моей базой данных. Я сообщу об этом создателю.");
+			
 			
 			$res = $this->sql->query("
 				UPDATE `users`
