@@ -2,27 +2,44 @@
 require_once(realpath(dirname(__FILE__)).'/config/stuff.php');
 
 class TorrentFetcher{
+	protected $torrentDir;
 	protected $login;
 	protected $password;
 	protected $curl;
 	protected $cookiesFilePath;
+	protected $pdo;
 	private $logFile;
 	
+	const TORRENT_DIR_NAME = 'torrentFiles/';
 	const LOG_FNAME = 'TorrentFetcher.log.txt';
-	const TORRENT_DIR_PATH = 'torrentFiles/';
 	
 	public function __construct($login, $password){
+		if(is_dir(self::TORRENT_DIR_NAME) === false)
+			throw new Exception("torrentDir is not a valid path to directory");
+		$this->torrentDir = self::TORRENT_DIR_NAME;
+		
+		if(is_string($login) === false)
+			throw new Exception("invalid <login> type: ".var_dump($login, true));
 		$this->login = $login;
+		
+		if(is_string($password) === false)
+			throw new Exception("invalid <password> type: ".var_dump($password, true));
 		$this->password = $password;
 		
 		$this->curl = curl_init();
 		if($this->curl === false)
 			throw new Exception(__METHOD__.' -> curl_init error');
 		
-		$this->cookiesFilePath = tempnam('/tmp', 'LFUB_cookies_');
+		
+		$tmp_dir = sys_get_temp_dir();
+		if(is_writeable($tmp_dir) === false)
+			throw new Exception(__METHOD__." -> $tmp_dir is not writeable");
+			
+		$this->cookiesFilePath = tempnam($tmp_dir, 'LFUB_cookies_');
 		if($this->cookiesFilePath == false)
 			throw new Exception(__METHOD__.' -> tempnam error');
-			
+		
+		$this->pdo = createPDO();
 		
 		$path = realpath(dirname(__FILE__)).'/logs/'.self::LOG_FNAME;
 		$this->logFile = createOrOpenLogFile($path);
@@ -81,17 +98,19 @@ class TorrentFetcher{
 	
 	protected function curlQuery($url, $POSTFields = null){
 		$isPOST = $POSTFields !== null;
+		
 		$res = curl_setopt_array($this->curl,
 			array(
 				CURLOPT_URL 		=> $url,
 				CURLOPT_RETURNTRANSFER 	=> true,
-				CURLOPT_FOLLOWLOCATION 	=> true,
+				CURLOPT_FOLLOWLOCATION 	=> false,
 				CURLOPT_POST 		=> $isPOST,
 				CURLOPT_POSTFIELDS 	=> $POSTFields,
 				CURLOPT_USERAGENT 	=> 'Mozilla/5.0 AppleWebKit (KHTML, like Gecko) Chrome Safari',
 				CURLOPT_VERBOSE 	=> false,
 				CURLOPT_COOKIEJAR 	=> $this->cookiesFilePath,
-				CURLOPT_COOKIEFILE 	=> $this->cookiesFilePath
+				CURLOPT_COOKIEFILE 	=> $this->cookiesFilePath,
+				CURLOPT_ENCODING	=> 'gzip'
 			)
 		);
 		if($res === false)
@@ -100,7 +119,7 @@ class TorrentFetcher{
 		$res = curl_exec($this->curl);
 		if($res === false)
 			throw new Exception(__METHOD__.' -> curl_exec error');
-	
+		
 		return $res;
 	}
 		
@@ -118,7 +137,6 @@ class TorrentFetcher{
 			'act' 		=> 'login'
 		);
 		$res = $this->curlQuery($url, $POSTFields);
-	
 		return $res;
 	}
 
@@ -130,7 +148,6 @@ class TorrentFetcher{
 	protected function loginRoutine(){//функция выполняет процедуры авторизации
 		//логинимся
 		$htmlCode = $this->login();//#1
-		
 		
 		//парсим HTML ответ с формой и автосабмитом
 		$urlRegexp = '/<form[\s\S]*?action="([^"]*)"/';
@@ -146,25 +163,46 @@ class TorrentFetcher{
 		$matches = array();
 		$res = preg_match_all($fieldsRegexp, $htmlCode, $matches);
 		if($res === false || $res === 0)
-			throw new Exception(__METHOD__." fields match failed");
+			throw new Exception(__FUNCTION__." fields match failed");
 
 		$POSTFields = array();
 		for($i = 0; $i < $res; ++$i)
 			$POSTFields[$matches[1][$i]] = $matches[2][$i];
 			
-			
 		//эмулируем автосабмит посылая все поля формы вручную
 		$htmlCode = $this->submitLoginForm($url, $POSTFields);//#2
 	}
 	
-	protected function getShowUrlId($show_id){
-		$pdo = createPDO();
-		static $getShowUrlId = $pdo->prepare("
-			SELECT `url_id`
-			FROM `shows`
-			WHERE `id` = :show_id
-		");
+	public function getShowId($url_id){
+		static $getShowId;
+		if(isset($getShowId) === false){
+			$getShowId = $this->pdo->prepare("
+				SELECT `id`
+				FROM `shows`
+				WHERE `url_id` = :url_id
+			");
+		}
+		$res = $getShowId->execute(
+			array(
+				':url_id' => $url_id
+			)
+		);
+		if($res === false)
+			throw new Exception(__METHOD__." PDO getShowId->execute error");
 		
+		$show = $getShowId->fetchObject();
+		return $show->id;
+	}
+	
+	public function getShowUrlId($show_id){
+		static $getShowUrlId;
+		if(isset($getShowUrlId) === false){
+			$getShowUrlId = $this->pdo->prepare("
+				SELECT `url_id`
+				FROM `shows`
+				WHERE `id` = :show_id
+			");
+		}
 		$res = $getShowUrlId->execute(
 			array(
 				':show_id' => $show_id
@@ -173,8 +211,8 @@ class TorrentFetcher{
 		if($res === false)
 			throw new Exception(__METHOD__." PDO getShowUrlId->execute error");
 		
-		$show = $res->fetchObject();
-		return $show->id;
+		$show = $getShowUrlId->fetchObject();
+		return $show->url_id;
 	}
 	
 	private function getDltCookie($show_id){//заходим на страницу сериала & получаем dlt_2 куку
@@ -186,11 +224,42 @@ class TorrentFetcher{
 		return $res;
 	}
 	
-	static public function getTorrentDir(){
-		return realpath(dirname(__FILE__)).'/'.TORRENT_DIR_PATH;
+	protected function convertSize($value, $unitName){
+		switch($unitName){
+		case 'ТБ':
+			$value *= 1024;
+		case 'ГБ':
+			$value *= 1024;
+		case 'МБ':
+			$value *= 1024;
+		case 'КБ':
+			$value *= 1024;
+		case 'Б':
+			break;
+		default:
+			throw new Exception("Unknown size unit: $unitName");
+		}
+		
+		return ceil($value);
 	}
 	
-	public function downloadSeriesTorrents($show_id, $seasonNumber, $seriesNumber){//качает торрент-файлы для всех качеств(если для этой серии уже есть торрент-файлы, то добавляет(или нет))
+	public function downloadTorrentFile($url){//качает файл из $url в /tmp и возвращает путь к нему
+		$torrentData = file_get_contents($url);
+		if($torrentData === false)
+			throw new Exception(__METHOD__." file_get_contents error");
+		
+		$tmpFile = tempnam('/tmp', 'torrent_');
+		if($tmpFile === false)
+			throw new Exception(__METHOD__." tempnam error");
+		
+		$res = file_put_contents($tmpFile, $torrentData);
+		if($res !== strlen($torrentData))
+			throw new Exception(__METHOD__." file_put_contents error");
+			
+		return $tmpFile;
+	}
+	
+	public function getTorrentFilesPorperties($show_id, $seasonNumber, $seriesNumber){//заходит на retre.org и парсит все торрент файлы
 		$this->getDltCookie($show_id);
 		
 		$urlId = $this->getShowUrlId($show_id);
@@ -213,11 +282,11 @@ class TorrentFetcher{
 		$match = array();
 		$res = preg_match($urlRegexp, $htmlCode, $match);
 		if($res === false || $res === 0)
-			exit("fields match failed");
+			throw new Exception(__METHOD__." fields match failed");
 		$url = $match[1];
 		
-		
 		$htmlCode = $this->curlQuery($url);
+		$htmlCode_utf8 = mb_convert_encoding($htmlCode, 'UTF-8', 'CP1251');
 		//вот тут лежат заветные ссылки на торрент-файлы
 		//парсим & качаем
 		
@@ -231,23 +300,72 @@ class TorrentFetcher{
 		*/
 		
 		$matches = array();
-		$res = preg_match_all($torrentInfoRegexp, $htmlCode, $matches);
-		if($res === false || $res === 0)
+		$matchesCount = preg_match_all($torrentInfoRegexp, $htmlCode_utf8, $matches);
+		if($matchesCount === false)
 			throw new Exception(__METHOD__." preg_match_all error");
+		if($matchesCount === 0)
+			throw new Exception("$seriesNumber cерия $seasonNumber сезона не найдена...");
 		
 		
-		$pdo = createPDO();
-		$isTorrentFileExists = $pdo->prepare("
-			SELECT COUNT(*) AS `count`
-			FROM `torrentFiles`
+		
+		$torrentsProperties = array();
+		for($i = 0; $i < $matchesCount; ++$i){
+			$torrentsProperties[] = array(
+				'url' 		=> $matches[1][$i],
+				'quality' 	=> $matches[2][$i],
+				'fileSize' 	=> $this->convertSize($matches[3][$i], $matches[4][$i])
+			);
+		}
+		return $torrentsProperties;
+	}
+	
+	protected function isTorrentCached($show_id, $seasonNumber, $seriesNumber, $quality){//проверяет, есть ли торент файл в БД и на диске
+		$isTorrentFileExists = $this->pdo->prepare("
+			SELECT 
+				`torrentFilename`
+			FROM 	`torrentFiles`
 			WHERE 	`show_id`			= :show_id
 			AND	`seasonNumber`			= :seasonNumber
 			AND	`seriesNumber`			= :seriesNumber
 			AND	STRCMP(`quality`, :quality) 	= 0
 		");
 		
+		$res = $isTorrentFileExists->execute(
+			array(
+				':show_id' 	=> $show_id,
+				':seasonNumber' => $seasonNumber,
+				':seriesNumber' => $seriesNumber,
+				':quality' 	=> $quality
+			)
+		);
+		if($res === false)
+			throw new Exception(__METHOD__." isTorrentFileExists->execute error");
+			
+		$torrentFileInfoArray = $isTorrentFileExists->fetchAll();
+				
+		switch(count($torrentFileInfoArray)){
+		case 1:
+			$torrentPath = $this->torrentDir.$torrentFileInfoArray[0]['torrentFilename'];
+			if(is_file($torrentPath)){
+				return $torrentPath;
+			}
+		case 0:
+			return false;
+		default:
+			throw new Exception("DB duplicate key detected: ".print_r($torrentFileInfoArray, true));
+		}
+	}
+	
+	protected function cacheTorrentFile($show_id, $seasonNumber, $seriesNumber, $quality, $fileSize, $url){
+		$torrentFileName = uniqid("$show_id.$seasonNumber.$seriesNumber.").'.torrent';
+		$torrentFilePath = $this->torrentDir.$torrentFileName;
 		
-		$addTorrentFile = $pdo->prepare("
+		$tmpTorrentFilePath = $this->downloadTorrentFile($url);
+		$res = rename($tmpTorrentFilePath, $torrentFilePath);
+		if($res === false)
+			throw new Exception(__METHOD__." rename error");
+		
+		$addTorrentFile = $this->pdo->prepare("
 			INSERT IGNORE INTO `torrentFiles` (
 				`torrentFilename`,
 				`show_id`,
@@ -266,68 +384,54 @@ class TorrentFetcher{
 			)
 		");
 		
-		for($i = 0; $i < $res; ++$i){
-			$url = $matches[1][$i];
-			$quality = $matches[2][$i];
-			$size = $matches[3][$i];
-			$unit = $matches[4][$i];
-			
-			$sizeBytes = $size;
-			switch($unit){
-			case 'ТБ':
-				$sizeKB *= 1024;
-			case 'ГБ':
-				$sizeKB *= 1024;
-			case 'МБ':
-				$sizeKB *= 1024;
-			case 'КБ':
-				$sizeKB *= 1024;
-			case 'Б':
-				break;
-			default:
-				throw new Exception("Unknown size unit: $unit");
-			}
-			
-			$res = $isTorrentFileExists->execute(
-				array(
-					':show_id' 	=> $show_id,
-					':seasonNumber' => $seasonNumber,
-					':seriesNumber' => $seriesNumber
-					':quality' 	=> $quality
-				)
-			);
+		$res = $addTorrentFile->execute(
+			array(
+				':torrentFilename'	=> basename($torrentFilePath),
+				':show_id' 		=> $show_id,
+				':seasonNumber' 	=> $seasonNumber,
+				':seriesNumber' 	=> $seriesNumber,
+				':quality' 		=> $quality,
+				':filesize' 		=> $sizeBytes
+			)
+		);
+		if($res === false){
+			$res = unlink($torrentFilePath);
 			if($res === false)
-				throw new Exception(__METHOD__." isTorrentFileExists->execute error");
-			
-			$res_obj = $isTorrentFileExists->fetchObject();
-			$count = $res_obj->count;//количество торрени файлов с заданным качеством
-			if($count === 0){			
-				$torrentFileNamePrefix = "$show_id.$seasonNumber.$seriesNumber.";
-				$torrentFilePath = tempnam(self::getTorrentDir(), $torrentFileNamePrefix).".torrent";
-				/*
-				if(is_file($torrentFilePath))
-					throw new Exception("Torrent file is already exists");
-				*/
-				$torrentData = $this->curlQuery($url);
-				$res = file_put_contents($torrentFilePath, $torrentData, LOCK_EX);
-				if($res === false)
-					throw new Exception(__METHOD__." file_put_contents error");
-				
-				
-				$res = $addTorrentFile->execute(
-					array(
-						':torrentFilename'	=> basename($torrentFilePath)
-						':show_id' 		=> $show_id,
-						':seasonNumber' 	=> $seasonNumber,
-						':seriesNumber' 	=> $seriesNumber
-						':quality' 		=> $quality
-						':filesize' 		=> $sizeBytes
-					)
+				throw new Exception(__METHOD__." unlink error");
+			throw new Exception(__METHOD__." addTorrentFile->execute error");
+		}
+		
+		return $torrentFilePath;
+	}
+		
+	
+	public function fetchSeriesTorrents($show_id, $seasonNumber, $seriesNumber){//качает торрент-файлы для всех качеств если их нет в кеше.
+		$torrentFilesProperties = $this->getTorrentFilesPorperties($show_id, $seasonNumber, $seriesNumber);
+		$torrentsPaths = array();
+		
+		foreach($torrentFilesProperties as $torrentFileProperties){
+			$torrentFilePath = $this->isTorrentCached(
+				$show_id,
+				$seasonNumber,
+				$seriesNumber,
+				$torrentFileProperties['quality']
+			);
+			if($torrentFilePath === false){		
+				$torrentsPaths[] = $this->cacheTorrentFile(
+					$show_id,
+					$seasonNumber,
+					$seriesNumber,
+					$torrentFileProperties['quality'],
+					$torrentFileProperties['fileSize'],
+					$torrentFileProperties['url']
 				);
-				if($res === false)
-					throw new Exception(__METHOD__." addTorrentFile->execute error");
+			}
+			else{
+				$torrentsPaths[] = $torrentFilePath;
 			}
 		}
+		
+		return $torrentsPaths;
 	}
 }
 
