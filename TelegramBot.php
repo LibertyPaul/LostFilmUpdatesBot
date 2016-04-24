@@ -71,51 +71,56 @@ class TelegramBot extends TelegramBot_base{
 		$this->memcache->delete($this->getPreviousMessageArrayKey());
 	}
 	
-	protected function getUserId(){//SQL injection-safe. returns an integer.
+	protected function getUserId(){
 		static $user_id;
 		if(isset($user_id) === false){
-			$res = $this->sql->query("
+			$getUserIdQuery = $this->pdo->prepare('
 				SELECT `id`
 				FROM `users`
-				WHERE `telegram_id` = {$this->telegram_id}
-			");
-			if($res->num_rows === 0){
+				WHERE `telegram_id` = :telegram_id
+			');
+			
+			$getUserIdQuery->execute(
+				array(
+					':telegram_id' => $this->telegram_id
+				)
+			);
+			
+			$result = $getUserIdQuery->fetchAll();
+			if(count($result) === 0){
 				$this->deletePreviousMessageArray();			
 				throw new TelegramException($this->chat_id, "Твой Telegram ID не найден в БД, ты регистрировался командой /start ?");
 			}
-		
-			$user = $res->fetch_object();
-			$user_id = intval($user->id);
+				
+			$user_id = intval($result[0]['id']);
 		}
 		return $user_id;
 	}
 	
 	protected function updateUserInfo($telegram_username, $telergam_firstName){
-		$telegram_username = $this->sql->real_escape_string($telegram_username);
-		$telergam_firstName = $this->sql->real_escape_string($telergam_firstName);
-		$res = $this->sql->query("
+		$updateUserInfoQuery = $this->pdo->prepare('
 			UPDATE `users`
 			SET 
-				`telegram_username` = '$telegram_username',
-				`telergam_firstName` = '$telergam_firstName'
-			WHERE `id` = {$this->getUserId()}
-		");
-		if($this->sql->affected_rows === 0)
+				`telegram_username` = :username,
+				`telergam_firstName` = :firstName
+			WHERE `id` = :user_id
+		');
+		
+		$updateUserInfoQuery->execute(
+			array(
+				':username' 	=> $telegram_username,
+				':firstName'	=> $telergam_firstName,
+				':user_id'		=> $this->getUserId()
+			)
+		);
+		
+		if($updateUserInfoQuery->rowCount() === 0){
 			throw new StdoutTextException("updateUserInfo -> sql UPDATE error");
+		}
 	}
 	
 	protected function notifyAdmin($text){
-		$res = $this->sql->query("
-			SELECT `telegram_id`
-			FROM `users`
-			WHERE `telegram_username` LIKE 'LibertyPaul'
-		");
-		if($res->num_rows === 0)//админа нет в БД
-			return;
-		
-		$admin = $res->fetch_object();
-		
-		$adminBot = new TelegramBot(intval($admin->telegram_id), intval($admin->telegram_id));
+		$adminBot = new TelegramBot(2768837, 2768837);
 		$adminBot->sendMessage(
 			array(
 				'text' => $text,
@@ -130,72 +135,107 @@ class TelegramBot extends TelegramBot_base{
 	
 	
 	public static function newSeriesEvent($show_id, $season, $seriesNumber, $seriesTitle){
-		if(is_int($show_id) === false)
+		if(is_int($show_id) === false){
 			throw new StdoutTextException("show_id must be an integer");
+		}
 		
-		
-	
-		$sql = createSQL();
-		$usersToNotify = $sql->query("
+		$pdo = createPDO();
+		$usersToNotifyQuery = $pdo->prepare('
 			SELECT `telegram_id`
 			FROM `users`
 			RIGHT JOIN `tracks` ON `users`.`id` = `tracks`.`user_id`
-			WHERE `tracks`.`show_id` = $show_id
+			WHERE `tracks`.`show_id` = :show_id
 			AND `users`.`mute` = 0
-		");
+		');
 		
-		$res = $sql->query("
+		$usersToNotifyQuery->execute(
+			array(
+				':show_id' => $show_id
+			)
+		);
+		
+		$usersToNotify = $usersToNotifyQuery->fetchAll();
+		
+		
+		$showNameQuery = $pdo->prepare('
 			SELECT `title_ru`, `url_id`
 			FROM `shows`
-			WHERE `id` = $show_id
-		");
-		if($res->num_rows === 0)
-			throw new StdoutException("Show with id = $show_id is not found");
-		$show = $res->fetch_object();
+			WHERE `id` = :show_id
+		');
 		
-		$text = "Вышла новая серия {$show->title_ru}\n";
-		$text .= "$season-й сезон, серия №$seriesNumber \"$seriesTitle\"\n";
-		$text .= "Серию можно скачать по ссылке:\nhttps://www.lostfilm.tv/browse.php";
+		$showNameQuery->execute(
+			array(
+				':show_id' => $show_id
+			)
+		);
+		
+		$res = $showNameQuery->fetchAll();
+		if(count($res) === 0){
+			throw new StdoutException("Show with id = $show_id is not found");
+		}
+
+		$show = $res[0];
+		
+		$template  = '
+Вышла новая серия #showName
+#season-й сезон, серия №#seriesNumber "#seriesTitle"
+Серию можно скачать по ссылке:
+https://www.lostfilm.tv/browse.php
+		';
+		
+		$text = str_replace(
+			array('#showName', '#season', '#seriesNumber', '#seriesTitle'),
+			array($show['title_ru'], $season, $seriesNumber, $seriesTitle),
+			$template
+		);
+		
 		
 		
 		$path = realpath(dirname(__FILE__)).'/logs/newSeriesEventLog.txt';
 		$logFile = createOrOpenLogFile($path);
 		
-		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t{$show->title_ru} - $season:$seriesNumber");
-		if($res === false)
+		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t{$show[title_ru]} - $season:$seriesNumber");
+		if($res === false){
 			throw new StdoutTextException("fwrite error 1");
+		}
+
 		
-		$usersCount = $usersToNotify->num_rows;
-		$i = 0;
-		while($user = $usersToNotify->fetch_object()){
+		
+		$usersCount = count($usersToNotify);
+		$success = 0;
+		foreach($usersToNotify as $user){
 			try{
-				$bot = new TelegramBot(intval($user->telegram_id));
+				$bot = new TelegramBot(intval($user['telegram_id']));
 				$bot->sendMessage(
 					array(
 						'text' => $text
 				
 					)
 				);
-				++$i;
+				++$success;
 			}
 			catch(StdoutTextException $ste){
 				$res = fwrite($logFile, "exception: {$ste->getMessage()}\n");
-				if($res === false)
+				if($res === false){
 					throw new StdoutTextException("fwrite error 2");
+				}
 			}
 			catch(Exception $ex){
 				$res = fwrite($logFile, "exception: {$ex->message}\n");
-				if($res === false)
+				if($res === false){
 					throw new StdoutTextException("fwrite error 3");
+				}
 			}
 		}
 		
-		$res = fwrite($logFile, "\n$i/$usersCount уведомлений разослано\n\n");
-		if($res === false)
+		$res = fwrite($logFile, "\n$success/$usersCount уведомлений разослано\n\n");
+		if($res === false){
 			throw new StdoutTextException("fwrite error 2");
+		}
 		$res = fclose($logFile);
-		if($res === false)
+		if($res === false){
 			throw new StdoutTextException("fclose error");
+		}
 			
 	}
 	
