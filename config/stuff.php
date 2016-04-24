@@ -48,6 +48,7 @@ function createMemcache(){
 }
 
 
+
 function createOrOpenLogFile($path){
 	if(is_file($path)){
 		$hf = fopen($path, 'a');
@@ -57,7 +58,7 @@ function createOrOpenLogFile($path){
 	else{
 		$hf = fopen($path, 'a');
 		if($hf === false)
-			throw new Exception("log fopen O_CREAT error");
+			throw new Exception("log fopen '$path' O_CREAT error");
 		$res = chmod($path, 0777);
 		if($res === false)
 			throw new Exception("chmod error");

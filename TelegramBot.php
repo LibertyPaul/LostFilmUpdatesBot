@@ -508,6 +508,10 @@ stop - Удалиться из контакт-листа бота
 	}
 	
 	protected function extractCommand($text){//в чатах команда, посылаемая боту имеет вид /cmd@LostFilmUpdatesBot
+		if(strlen($text) === 0){
+			return '';
+		}
+	
 		$regexp = '/([^@]+)[\s\S]*/';
 		$matches = array();
 		$res = preg_match($regexp, $text, $matches);

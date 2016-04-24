@@ -25,14 +25,19 @@ function getLastRecievedId(){
 }
 
 
-if($_GET['token'] !== TELEGRAM_BOT_TOKEN)
-	exit('incorrect token');
+
+if(isset($_GET['password']) === false){
+	exit('no password provided');
+}
+elseif($_GET['password'] !== WEBHOOK_PASSWORD){
+	exit('incorrect password');
+}
 
 $update_json = file_get_contents("php://input");
-
 $update = json_decode($update_json);
-if($update === null || $update === false)
-	throw new Exception("incorrect JSON input");
+if($update === null || $update === false){
+	exit('incorrect JSON input');
+}
 	
 $debugOutput = true;
 if($debugOutput){
@@ -42,16 +47,20 @@ if($debugOutput){
 	fclose($log);
 }
 
-if(intval($update->update_id) < getLastRecievedId())
-	exit("outdated message");
-else
-	setLastRecievedId($update->update_id);
+if(isset($_GET['ignore_msg_id']) && $_GET['ignore_msg_id'] === 'true'){
+	if(intval($update->update_id) < getLastRecievedId()){
+		exit("outdated message");
+	}
+	else{
+		setLastRecievedId($update->update_id);
+	}
+}
 
-if(isset($update->message) === false)
+if(isset($update->message) === false){
 	exit("no message provided in update");
+}
 
 $bot = new TelegramBot(intval($update->message->from->id), intval($update->message->chat->id));
-
 $bot->incomingUpdate($update->message);
 
 
