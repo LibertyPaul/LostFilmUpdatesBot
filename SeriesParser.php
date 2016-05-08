@@ -189,11 +189,7 @@ class SeriesParser extends Parser{
 		foreach($this->rssData->channel->item as $item){
 			try{
 				$result = $parsedTitle = $this->parseTitle($item->title);
-				print_r($parsedTitle);
-				
 				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
-				echo "Show id = $showId".PHP_EOL;
-				
 				$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
 			}
 			catch(Exception $ex){
