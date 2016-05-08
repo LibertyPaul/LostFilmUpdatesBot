@@ -3,154 +3,203 @@
 require_once(realpath(dirname(__FILE__)).'/config/stuff.php');
 require_once(realpath(dirname(__FILE__)).'/TelegramBot.php');
 require_once(realpath(dirname(__FILE__)).'/Parser.php');
+require_once(realpath(dirname(__FILE__)).'/Notifier.php');
 
 
 class SeriesParser extends Parser{
 	protected $pdo;
-	private $lockFile;
+	protected $rssData;
+	protected $notifier;
 
-	public function __construct($pageEncoding = "utf-8"){
-		parent::__construct($pageEncoding);
+	public function __construct(){
+		parent::__construct(null);
 		$this->pdo = createPDO();
+		$this->notifier = new Notifier();
 	}
 
-	
-	protected function getShowUrlId($show_id){
-		$getUrlId = $this->pdo->prepare("
-			SELECT `url_id`
-			FROM `shows`
-			WHERE `id` = :show_id
-		");
-		$res = $getUrlId->execute(
-			array(
-				':show_id' => $show_id
-			)
-		);
-		if($res === false)
-			throw new Exception("PDO execute2 error");
-		if($getUrlId->rowCount() === 0)
-			throw new Exception("No shows in table");
-		
-		$show = $getUrlId->fetchObject();
-		return $show->url_id;
+	public function loadSrc($path){
+		parent::loadSrc($path);
+		$this->rssData = new SimpleXMLElement($this->pageSrc);
 	}
-	
-	protected function getTorrentFile($url_id, $seasonNumber, $seriesNumber){
+			
 		
-	}
-		
-	protected function submitNewSeries($url_id, $seriesTimestamp, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
-		$getShowId = $this->pdo->prepare("
+	protected function getShowId($showTitleRu, $showTitleEn){
+		$getUrlId = $this->pdo->prepare('
 			SELECT `id`
 			FROM `shows`
-			WHERE `url_id` = :url_id
-		");
+			WHERE 	STRCMP(`title_ru`, :title_ru) = 0
+			AND		STRCMP(`title_en`, :title_en) = 0
+		');
 		
-		$getLatestSeriesTimestamp = $this->pdo->prepare("
-			SELECT `latestSeriesTimestamp`
-			FROM `shows`
-			WHERE `id` = :show_id
-		");			
-		
-		$setLatestSeriesTimestamp = $this->pdo->prepare("
-			UPDATE `shows` SET
-				`latestSeriesTimestamp` = :latestSeriesTimestamp
-			WHERE `id` = :show_id
-		");
-		
-		
-		$res = $getShowId->execute(
+		$getUrlId->execute(
 			array(
-				'url_id' => $url_id
+				':title_ru' => $showTitleRu,
+				':title_en' => $showTitleEn
 			)
 		);
-		if($res === false)
-			throw new Exception("PDO execute1 error");
-		if($getShowId->rowCount() === 0)
-			throw new Exception("Show not found by url_id = $url_id.");
 		
-		$show = $getShowId->fetchObject();
-		$show_id = intval($show->id);
+		$res = $getUrlId->fetchAll();
+		if(count($res) === 0){
+			throw new StdoutTextException("Show $showTitleRu ($showTitleEn) was not found in database");
+		}
 		
-		$res = $getLatestSeriesTimestamp->execute(
+		return $res[0]['id'];
+	}
+	
+	protected function isNewSeries($show_id, $seasonNumber, $seriesNumber){
+		$getSeriesNumber = $this->pdo->prepare("
+			SELECT `seasonNumber`, `seriesNumber`
+			FROM `shows`
+			WHERE `id` = :show_id
+		");
+		
+		$getSeriesNumber->execute(
 			array(
 				':show_id' => $show_id
 			)
 		);
-		if($res === false)
-			throw new Exception("PDO execute2 error");
-		if($getLatestSeriesTimestamp->rowCount() === 0)
+		
+		$res = $getSeriesNumber->fetchAll();
+		if(count($res) === 0){
 			throw new Exception("show_id was not found");
-			
-		$latestSeriesProperties = $getLatestSeriesTimestamp->fetchObject();
-				
-		$latestSeriesTimestamp = 0;
-		if(isset($latestSeriesProperties->latestSeriesTimestamp))
-			$latestSeriesTimestamp = intval($latestSeriesProperties->latestSeriesTimestamp);
-			
-		//echo "$latestSeriesTimestamp -> $seriesTimestamp\t$seriesNameRu $seasonNumber:$seriesNumber\n";
-		if($latestSeriesTimestamp < $seriesTimestamp){
-			$res = $setLatestSeriesTimestamp->execute(
-				array(
-					':latestSeriesTimestamp' => $seriesTimestamp,
-					':show_id' 	=> $show_id
-				)
-			);
-			if($res === false)
-				throw new Exception("PDO execute3 error");
-			
-			
-			TelegramBot::newSeriesEvent($show_id, $seasonNumber, $seriesNumber, $seriesNameRu);
+		}
+		
+		if(isset($res[0]['seasonNumber'], $res[0]['seriesNumber']) === false){
 			return true;
 		}
-		return false;
 		
+		$loggedSeasonNumber = $res[0]['seasonNumber'];
+		$loggedSeriesNumber = $res[0]['seriesNumber'];
+		
+		return $seasonNumber > $loggedSeasonNumber || $seasonNumber === $loggedSeasonNumber && $seriesNumber > $loggedSeriesNumber;
 	}
 	
-	public function run(){// returs number of parsed series in the past. If === 0 we should parse older
-		$regexp = '/<!--\t\t\t0*(\d+)\.0*(\d+)[\S\s]+?cat=_?(\d+)[\S\s]+?title="([^"]+)"[\S\s]+?<b>([^\(<]*)\s?\(?([^)<]*)?\)?[\S\s]+?Дата: <b>([^<]+)/';
-		/*
-			1. Сезон
-			2. Серия // если === 99 - сезон целиком -> отбрасываем
-			3. url_id
-			4. название сериала рус TODO: remove leading space
-			5. название серии рус
-			6. [название серии англ]
-			7. дата и время выхода
-		*/
-		
-		
-		$params = array();
-		$parsedCount = preg_match_all($regexp, $this->pageSrc, $params);
-		if($parsedCount === false)
-			throw new Exception("preg_last_error: ".preg_last_error());
-
-		
-		$alreadyParsed = $parsedCount;
-		
-		for($seriesIndex = 0; $seriesIndex < $parsedCount; ++$seriesIndex){
-			$seasonNumber = intval($params[1][$seriesIndex]);
-			$seriesNumber = intval($params[2][$seriesIndex]);
-			if($seriesNumber === 99)
-				continue;
+	protected function submitNewSeries($show_id, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
+		if($this->isNewSeries($show_id, $seasonNumber, $seriesNumber)){
+			$setSeriesNumber = $this->pdo->prepare("
+				UPDATE `shows`
+				SET
+					`seasonNumber` = :seasonNumber,
+					`seriesNumber` = :seriesNumber
+				WHERE `id` = :show_id
+			");
 			
-			$url_id = intval($params[3][$seriesIndex]);//если === 42 - LostFilm.Кинозал - игнорим
-			if($url_id === 42)
-				continue;
-			$showTitleRu = rtrim($params[4][$seriesIndex]);//костыль. сделать через регулярку не получилось
-			$seriesTitleRu = rtrim($params[5][$seriesIndex]);
-			$seriesTitleEn = $params[6][$seriesIndex];
-			$releaseDatetime = new DateTime($params[7][$seriesIndex]);
+			$setSeriesNumber->execute(
+				array(
+					':seasonNumber' => $seasonNumber,
+					':seriesNumber' => $seriesNumber,
+					':show_id'		=> $show_id
+				)
+			);
 			
-			$res = $this->submitNewSeries($url_id, $releaseDatetime->getTimestamp(), $seriesTitleRu, $seriesTitleEn, $seasonNumber, $seriesNumber);
-			if($res)
-				--$alreadyParsed;
-				
-			//echo "$res: $showTitleRu $seasonNumber:$seriesNumber\n";
-				
-						
+			$this->notifier->newSeriesEvent($show_id, $seasonNumber, $seriesNumber, $seriesNameRu);
 		}
-		return $alreadyParsed;
+	}
+	
+	protected function parseTitle($title){
+		$lastDotPos = strrpos($title, '.');
+		$seasonSeriesNumberTag = substr($title, $lastDotPos + 1);
+		$seasonSeriesNumberTag = trim($seasonSeriesNumberTag);
+		
+		$matches = array();
+		$res = preg_match('/S0?(\d+)E0?(\d+)/', $seasonSeriesNumberTag, $matches);
+		if($res !== 1){
+			throw new StdoutTextException('seasonSeriesNumberTag parsing error');
+		}
+		
+		$seasonNumber = $matches[1];
+		$seriesNumber = $matches[2];
+		
+
+		$title = substr($title, 0, $lastDotPos);
+		$formatEndPos = strrpos($title, ']');
+		
+		$formatTag = null;
+		if($formatEndPos !== false){
+			$formatStartPos = findMatchingParenthesis($title, $formatEndPos);
+			if($formatStartPos === false){
+				throw new StdoutTextException('Broken format tag (opening parenthesis not found)');
+			}
+
+			$length = $formatEndPos - $formatStartPos - 1;
+			$formatTag = substr($title, $formatStartPos + 1, $length);
+			$title = substr($title, 0, $formatStartPos);
+			$title = rtrim($title);
+		}
+		
+		$seriesNameEn = null;
+		$seriesNameEnEndPos = strlen($title) - 1;
+		if($title[$seriesNameEnEndPos] === ')'){
+			$seriesNameEnStartPos = findMatchingParenthesis($title, $seriesNameEnEndPos);
+			if($seriesNameEnStartPos === false){
+				throw new StdoutTextException("Broken series name (opening parenthesis not found)");
+			}
+
+			$length = $seriesNameEnEndPos - $seriesNameEnStartPos - 1;
+			$seriesNameEn = substr($title, $seriesNameEnStartPos + 1, $length);
+			$title = substr($title, 0, $seriesNameEnStartPos);
+		}
+		
+		$seriesNameRu = null;
+		$offset = 2;
+		
+		$seriesNameRuStartPos = strpos($title, ').');
+		if($seriesNameRuStartPos === false){
+			$seriesNameRuStartPos = strpos($title, '.');
+			$offset = 1;
+			if($seriesNameRuStartPos === false){
+				throw new StdoutTextException("Start of show ru name wasn't found");
+			}
+		}
+			
+		$seriesNameRu = substr($title, $seriesNameRuStartPos + $offset);
+		$seriesNameRu = trim($seriesNameRu);
+		$title = substr($title, 0, $seriesNameRuStartPos + 1); // + 1 to left closing parenthesis
+	
+	
+		$showNameEn = null;
+	
+		$showNameEnEndPos = strrpos($title, ')');
+		if($showNameEnEndPos !== false){
+			$showNameEnStartPos = findMatchingParenthesis($title, $showNameEnEndPos);
+			if($showNameEnStartPos === false){
+				throw new StdoutTextException('Broken show name (opening parenthesis not found)');
+			}
+			
+			$length = $showNameEnEndPos - $showNameEnStartPos - 1;
+			$showNameEn = substr($title, $showNameEnStartPos + 1, $length);
+			$title = substr($title, 0, $showNameEnStartPos);
+		}
+		
+		$title = trim($title);
+		$showNameRu = $title;
+		
+		return array(
+			'showTitleRu'	=> $showNameRu,
+			'showTitleEn' 	=> $showNameEn,
+			'seriesTitleRu' => $seriesNameRu,
+			'seriesTitleEn' => $seriesNameEn,
+			'seasonNumber' 	=> $seasonNumber,
+			'seriesNumber' 	=> $seriesNumber
+		);
+	}
+		
+	
+	public function run(){
+		foreach($this->rssData->channel->item as $item){
+			try{
+				$result = $parsedTitle = $this->parseTitle($item->title);
+				print_r($parsedTitle);
+				
+				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
+				echo "Show id = $showId".PHP_EOL;
+				
+				$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
+			}
+			catch(Exception $ex){
+				echo "[ERROR]".$ex->getMessage().PHP_EOL;
+			}
+		}
 	}
 }
 

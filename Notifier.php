@@ -35,7 +35,7 @@ class Notifier{
 			)
 		);
 
-		return $this->usersToNotifyQuery->fetchAll();
+		return $this->usersToNotifyQuery->fetchAll(PDO::FETCH_COLUMN);
 	}
 	
 	protected function generateNotificationText($showTitleRu, $season, $seriesNumber, $seriesTitle){
@@ -49,7 +49,7 @@ class Notifier{
 		
 		$text = str_replace(
 			array('#showName', '#season', '#seriesNumber', '#seriesTitle'),
-			array($show['title_ru'], $season, $seriesNumber, $seriesTitle),
+			array($showTitleRu, $season, $seriesNumber, $seriesTitle),
 			$template
 		);
 		
@@ -65,7 +65,7 @@ class Notifier{
 			)
 		);
 		
-		$res = $this->showNameQuery->fetchAll();
+		$res = $this->showTitleQuery->fetchAll();
 		if(count($res) === 0){
 			throw new StdoutException("Show with id = $show_id is not found");
 		}
