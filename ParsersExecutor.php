@@ -6,6 +6,8 @@ require_once(realpath(dirname(__FILE__))."/config/cron_actions.php");
 
 
 function exception_handler($exception){
+	echo '[EXCEPTION]'.$exception->getMessage().PHP_EOL;
+
 	$path = realpath(dirname(__FILE__)).'/logs/ParsersErrorLog.txt';
 	$errorLogFile = createOrOpenLogFile($path);	
 	$res = fwrite($errorLogFile, $exception->getMessage());
@@ -31,7 +33,6 @@ const showListURL = "https://www.lostfilm.tv/serials.php";
 $showsParser = new ShowParser('CP1251');
 $showsParser->loadSrc(showListURL);
 $showsParser->run();
-
 
 const rssURL = "http://www.lostfilm.tv/rssdd.xml";
 $seriesParser = new SeriesParser();
