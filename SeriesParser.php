@@ -1,8 +1,7 @@
 <?php
-
-require_once(realpath(dirname(__FILE__)).'/config/stuff.php');
-require_once(realpath(dirname(__FILE__)).'/TelegramBot.php');
 require_once(realpath(dirname(__FILE__)).'/Parser.php');
+require_once(realpath(dirname(__FILE__)).'/config/stuff.php');
+require_once(realpath(dirname(__FILE__)).'/Exceptions/StdoutTextException.php');
 require_once(realpath(dirname(__FILE__)).'/Notifier.php');
 
 
@@ -72,7 +71,7 @@ class SeriesParser extends Parser{
 			)
 		);
 		
-		$res = $this->getSeriesNumber->fetchAll();
+		$res = $this->getSeriesNumberQuery->fetchAll();
 		if(count($res) === 0){
 			throw new Exception("show_id was not found");
 		}
