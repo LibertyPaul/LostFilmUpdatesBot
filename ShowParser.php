@@ -1,7 +1,7 @@
 <?php
-
-require_once(realpath(dirname(__FILE__))."/config/stuff.php");
 require_once(realpath(dirname(__FILE__)).'/Parser.php');
+require_once(realpath(dirname(__FILE__))."/config/stuff.php");
+require_once(realpath(dirname(__FILE__)).'/Exceptions/StdoutTextException.php');
 require_once(realpath(dirname(__FILE__)).'/ShowAboutParser.php');
 
 
