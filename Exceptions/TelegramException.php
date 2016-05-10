@@ -1,6 +1,6 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/UserException.php");
-require_once(realpath(dirname(__FILE__))."/../TelegramBot_base.php");
+require_once(__DIR__."/UserException.php");
+require_once(__DIR__."/../TelegramBot_base.php");
 
 
 class TelegramException extends UserException{

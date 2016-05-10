@@ -1,5 +1,5 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/SeriesParser.php");
+require_once(__DIR__."/SeriesParser.php");
 
 const rssURL = "http://www.lostfilm.tv/rssdd.xml";
 $seriesParser = new SeriesParser();

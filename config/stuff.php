@@ -1,6 +1,6 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/config.php");
-require_once(realpath(dirname(__FILE__))."/../Exceptions/StdoutTextException.php");
+require_once(__DIR__."/config.php");
+require_once(__DIR__."/../Exceptions/StdoutTextException.php");
 
 function createSQL(){
 	static $sql;

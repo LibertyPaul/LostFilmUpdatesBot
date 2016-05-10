@@ -1,8 +1,8 @@
 <?php
 
-require_once(realpath(dirname(__FILE__))."/config/config.php");
-require_once(realpath(dirname(__FILE__))."/config/stuff.php");
-require_once(realpath(dirname(__FILE__))."/Exceptions/StdoutTextException.php");
+require_once(__DIR__."/config/config.php");
+require_once(__DIR__."/config/stuff.php");
+require_once(__DIR__."/Exceptions/StdoutTextException.php");
 
 
 class TelegramBot_base{
@@ -27,7 +27,7 @@ class TelegramBot_base{
 	}
 	
 	protected function logException($ex){
-		$path = realpath(dirname(__FILE__))."/../logs/uncaughtExceptions.json.txt";
+		$path = __DIR__."/../logs/uncaughtExceptions.json.txt";
 		$log = createOrOpenLogFile($path);
 		
 		$str = json_encode($ex);
@@ -63,7 +63,7 @@ class TelegramBot_base{
 		
 	
 	public function sendMessage($data){//should NOT throw TelegramException
-		$path = realpath(dirname(__FILE__))."/logs/sentMessages.txt";
+		$path = __DIR__."/logs/sentMessages.txt";
 		$log = createOrOpenLogFile($path);
 		$data_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 		$res = fwrite($log, "[".date('d.m.Y H:i:s')."]\t$data_json");

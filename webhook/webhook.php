@@ -1,10 +1,10 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/../config/config.php");
-require_once(realpath(dirname(__FILE__))."/../config/stuff.php");
-require_once(realpath(dirname(__FILE__))."/../TelegramBot.php");
+require_once(__DIR__."/../config/config.php");
+require_once(__DIR__."/../config/stuff.php");
+require_once(__DIR__."/../TelegramBot.php");
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
-	$path = realpath(dirname(__FILE__))."/../logs/webhookErrorLog.txt";
+	$path = __DIR__."/../logs/webhookErrorLog.txt";
 	$log = createOrOpenLogFile($path);
 	
 	$errorText = "[".date('d.m.Y H:i:s')."]\t$errno $errstr $errfile:$errline\n\n";
@@ -41,7 +41,7 @@ if($update === null || $update === false){
 	
 $debugOutput = true;
 if($debugOutput){
-	$log = createOrOpenLogFile(realpath(dirname(__FILE__)).'/../logs/webhookInput.json');
+	$log = createOrOpenLogFile(__DIR__.'/../logs/webhookInput.json');
 	$readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 	fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n");
 	fclose($log);

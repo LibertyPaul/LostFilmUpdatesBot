@@ -1,5 +1,5 @@
 <?php
-require_once(realpath(dirname(__FILE__)).'/Parser.php');
+require_once(__DIR__.'/Parser.php');
 
 class ShowAboutParser extends Parser{
 	public function __construct($pageEncoding = "utf-8"){
