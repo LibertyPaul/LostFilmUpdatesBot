@@ -1,7 +1,7 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/config/stuff.php");
-require_once(realpath(dirname(__FILE__)).'/TelegramBot.php');
-require_once(realpath(dirname(__FILE__))."/Exceptions/StdoutTextException.php");
+require_once(__DIR__."/config/stuff.php");
+require_once(__DIR__.'/TelegramBot.php');
+require_once(__DIR__."/Exceptions/StdoutTextException.php");
 
 
 class Notifier{
@@ -72,7 +72,7 @@ class Notifier{
 
 		$title_ru = $res[0]['title_ru'];
 		
-		$path = realpath(dirname(__FILE__)).'/logs/newSeriesEventLog.txt';
+		$path = __DIR__.'/logs/newSeriesEventLog.txt';
 		$logFile = createOrOpenLogFile($path);
 		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t$title_ru - $season:$seriesNumber");
 		if($res === false){

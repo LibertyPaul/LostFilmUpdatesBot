@@ -1,8 +1,8 @@
 <?php
-require_once(realpath(dirname(__FILE__)).'/Parser.php');
-require_once(realpath(dirname(__FILE__))."/config/stuff.php");
-require_once(realpath(dirname(__FILE__)).'/Exceptions/StdoutTextException.php');
-require_once(realpath(dirname(__FILE__)).'/ShowAboutParser.php');
+require_once(__DIR__.'/Parser.php');
+require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/Exceptions/StdoutTextException.php');
+require_once(__DIR__.'/ShowAboutParser.php');
 
 
 class ShowParser extends Parser{

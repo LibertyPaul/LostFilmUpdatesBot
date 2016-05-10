@@ -1,9 +1,9 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/TelegramBot_base.php");
-require_once(realpath(dirname(__FILE__))."/Exceptions/TelegramException.php");
-require_once(realpath(dirname(__FILE__))."/Exceptions/StdoutTextException.php");
-require_once(realpath(dirname(__FILE__))."/config/config.php");
-require_once(realpath(dirname(__FILE__))."/Botan/Botan.php");
+require_once(__DIR__."/TelegramBot_base.php");
+require_once(__DIR__."/Exceptions/TelegramException.php");
+require_once(__DIR__."/Exceptions/StdoutTextException.php");
+require_once(__DIR__."/config/config.php");
+require_once(__DIR__."/Botan/Botan.php");
 
 class TelegramBot extends TelegramBot_base{
 	protected $telegram_id;//от кого пришло сообщение

@@ -1,5 +1,5 @@
 <?php
-require_once(realpath(dirname(__FILE__))."/SubstantiveException.php");
+require_once(__DIR__."/SubstantiveException.php");
 
 abstract class StdoutException extends SubstantiveException{
 }
