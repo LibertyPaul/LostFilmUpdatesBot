@@ -93,6 +93,7 @@ class ShowParser extends Parser{
 			try{
 				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
 				if($showId === null){
+					echo "New show: $titles[title_ru] ($titles[title_en])".PHP_EOL;
 					$this->addShowQuery->execute(
 						array(
 							':title_ru' => $titles['title_ru'],

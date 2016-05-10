@@ -10,11 +10,38 @@ class SeriesParser extends Parser{
 	protected $pdo;
 	protected $rssData;
 	protected $notifier;
+	
+	protected $getUrlIdQuery;
+	protected $getSeriesNumberQuery;
+	protected $setLatestSeriesNumberQuery;
 
 	public function __construct(){
 		parent::__construct(null);
-		$this->pdo = createPDO();
 		$this->notifier = new Notifier();
+		
+		$pdo = createPDO();
+		
+		$this->setLatestSeriesNumberQuery = $pdo->prepare('
+			UPDATE `shows`
+			SET
+				`seasonNumber` = :seasonNumber,
+				`seriesNumber` = :seriesNumber
+			WHERE `id` = :show_id
+		');
+		
+		$this->getSeriesNumberQuery = $pdo->prepare('
+			SELECT `seasonNumber`, `seriesNumber`
+			FROM `shows`
+			WHERE `id` = :show_id
+		');
+		
+		
+		$this->getUrlIdQuery = $pdo->prepare('
+			SELECT `id`
+			FROM `shows`
+			WHERE 	STRCMP(`title_ru`, :title_ru) = 0
+			AND		STRCMP(`title_en`, :title_en) = 0
+		');
 	}
 
 	public function loadSrc($path){
@@ -23,22 +50,15 @@ class SeriesParser extends Parser{
 	}
 			
 		
-	protected function getShowId($showTitleRu, $showTitleEn){
-		$getUrlId = $this->pdo->prepare('
-			SELECT `id`
-			FROM `shows`
-			WHERE 	STRCMP(`title_ru`, :title_ru) = 0
-			AND		STRCMP(`title_en`, :title_en) = 0
-		');
-		
-		$getUrlId->execute(
+	protected function getShowId($showTitleRu, $showTitleEn){		
+		$this->getUrlIdQuery->execute(
 			array(
 				':title_ru' => $showTitleRu,
 				':title_en' => $showTitleEn
 			)
 		);
 		
-		$res = $getUrlId->fetchAll();
+		$res = $this->getUrlIdQuery->fetchAll();
 		if(count($res) === 0){
 			throw new StdoutTextException("Show $showTitleRu ($showTitleEn) was not found in database");
 		}
@@ -46,20 +66,14 @@ class SeriesParser extends Parser{
 		return $res[0]['id'];
 	}
 	
-	protected function isNewSeries($show_id, $seasonNumber, $seriesNumber){
-		$getSeriesNumber = $this->pdo->prepare("
-			SELECT `seasonNumber`, `seriesNumber`
-			FROM `shows`
-			WHERE `id` = :show_id
-		");
-		
-		$getSeriesNumber->execute(
+	protected function isNewSeries($show_id, $seasonNumber, $seriesNumber){		
+		$this->getSeriesNumberQuery->execute(
 			array(
 				':show_id' => $show_id
 			)
 		);
 		
-		$res = $getSeriesNumber->fetchAll();
+		$res = $this->getSeriesNumber->fetchAll();
 		if(count($res) === 0){
 			throw new Exception("show_id was not found");
 		}
@@ -75,25 +89,15 @@ class SeriesParser extends Parser{
 	}
 	
 	protected function submitNewSeries($show_id, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
-		if($this->isNewSeries($show_id, $seasonNumber, $seriesNumber)){
-			$setSeriesNumber = $this->pdo->prepare("
-				UPDATE `shows`
-				SET
-					`seasonNumber` = :seasonNumber,
-					`seriesNumber` = :seriesNumber
-				WHERE `id` = :show_id
-			");
-			
-			$setSeriesNumber->execute(
-				array(
-					':seasonNumber' => $seasonNumber,
-					':seriesNumber' => $seriesNumber,
-					':show_id'		=> $show_id
-				)
-			);
-			
-			$this->notifier->newSeriesEvent($show_id, $seasonNumber, $seriesNumber, $seriesNameRu);
-		}
+		$this->setLatestSeriesNumberQuery->execute(
+			array(
+				':seasonNumber' => $seasonNumber,
+				':seriesNumber' => $seriesNumber,
+				':show_id'		=> $show_id
+			)
+		);
+		
+		$this->notifier->newSeriesEvent($show_id, $seasonNumber, $seriesNumber, $seriesNameRu);
 	}
 	
 	protected function parseTitle($title){
@@ -179,8 +183,8 @@ class SeriesParser extends Parser{
 			'showTitleEn' 	=> $showNameEn,
 			'seriesTitleRu' => $seriesNameRu,
 			'seriesTitleEn' => $seriesNameEn,
-			'seasonNumber' 	=> $seasonNumber,
-			'seriesNumber' 	=> $seriesNumber
+			'seasonNumber' 	=> intval($seasonNumber),
+			'seriesNumber' 	=> intval($seriesNumber)
 		);
 	}
 		
@@ -190,7 +194,11 @@ class SeriesParser extends Parser{
 			try{
 				$result = $parsedTitle = $this->parseTitle($item->title);
 				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
-				$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
+				
+				if($this->isNewSeries($showId, $result['seasonNumber'], $result['seriesNumber'])){
+					echo "New series: $showId:S$result[seasonNumber]E$result[seriesNumber]\t$result[seriesTitleRu] ($result[seriesTitleEn])".PHP_EOL;
+					$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
+				}
 			}
 			catch(Exception $ex){
 				echo "[ERROR]".$ex->getMessage().PHP_EOL;
