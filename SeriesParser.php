@@ -104,7 +104,7 @@ class SeriesParser extends Parser{
 		$matches = array();
 		$res = preg_match('/S0?(\d+)E0?(\d+)/', $seasonSeriesNumberTag, $matches);
 		if($res !== 1){
-			throw new StdoutTextException('seasonSeriesNumberTag parsing error');
+			throw new StdoutTextException('seasonSeriesNumberTag parsing error `'.$seasonSeriesNumberTag.'`');
 		}
 		
 		$seasonNumber = $matches[1];
@@ -189,11 +189,8 @@ class SeriesParser extends Parser{
 		foreach($this->rssData->channel->item as $item){
 			try{
 				$result = $parsedTitle = $this->parseTitle($item->title);
-				print_r($result);
 				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
 				$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
-				
-				echo '[SUCCESS]'.PHP_EOL;
 			}
 			catch(Exception $ex){
 				echo "[ERROR]".$ex->getMessage().PHP_EOL;

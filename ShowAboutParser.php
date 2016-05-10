@@ -10,9 +10,13 @@ class ShowAboutParser extends Parser{
 		$regexp = '/Статус: ([^<]*)/';
 		$params = array();
 		$res = preg_match_all($regexp, $this->pageSrc, $params);
-		if($res === false)
-			throw new Exception("Статус сериала не найден");
+		if($res === false){
+			throw new Exception("Show info parsing error");
+		}
 		
+		if($res === 0){
+			throw new Exception("Show onAir status wasn't found");
+		}
 		
 		switch($params[1][0]){
 			case 'закончен':
