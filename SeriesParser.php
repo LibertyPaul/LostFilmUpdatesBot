@@ -7,7 +7,6 @@ require_once(realpath(dirname(__FILE__)).'/Notifier.php');
 
 
 class SeriesParser extends Parser{
-	protected $pdo;
 	protected $rssData;
 	protected $notifier;
 	
