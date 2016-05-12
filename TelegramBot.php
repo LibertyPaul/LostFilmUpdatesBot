@@ -516,7 +516,7 @@ stop - Удалиться из контакт-листа бота
 				}
 			
 				$addUserQuery = $this->pdo->prepare('
-					INSERT INTO `users` (`telegram_id`, `telegram_username`, `telergam_firstName`, `telergam_lastName`)
+					INSERT INTO `users` (`telegram_id`, `telegram_username`, `telegram_firstName`, `telegram_lastName`)
 					VALUES (:telegram_id, :telegram_username, :telegram_firstname, :telegram_lastname)
 				');
 			
