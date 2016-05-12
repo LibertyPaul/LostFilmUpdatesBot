@@ -7,6 +7,8 @@ require_once(__DIR__."/Exceptions/StdoutTextException.php");
 class Notifier{
 	protected $usersToNotifyQuery;
 	protected $showTitleQuery;
+	protected $getUserInfoQuery;
+	protected $getUserCountQuery;
 	
 	
 	public function __construct(){
@@ -25,6 +27,17 @@ class Notifier{
 			SELECT `title_ru`
 			FROM `shows`
 			WHERE `id` = :show_id
+		');
+		
+		$this->getUserInfoQuery = $pdo->prepare('
+			SELECT *
+			FROM `users`
+			WHERE `id` = :user_id
+		');
+		
+		$this->getUserCountQuery = $pdo->prepare('
+			SELECT COUNT(*) AS count
+			FROM `users`
 		');
 	}
 	
@@ -74,7 +87,7 @@ class Notifier{
 		
 		$path = __DIR__.'/logs/newSeriesEventLog.txt';
 		$logFile = createOrOpenLogFile($path);
-		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t$title_ru - $season:$seriesNumber");
+		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t$title_ru - $season:$seriesNumber\n");
 		if($res === false){
 			throw new StdoutTextException("fwrite error 1");
 		}
@@ -119,4 +132,62 @@ class Notifier{
 		}
 			
 	}
+	
+	protected function getUserInfo($user_id){
+		$this->getUserInfoQuery->execute(
+			array(
+				':user_id' => $user_id
+			)
+		);
+		
+		$res = $this->getUserInfoQuery->fetchAll();
+		if(empty($res)){
+			throw new StdoutTextException("User with this id wasn't found");
+		}
+		
+		return $res[0];
+	}
+	
+	public function newUserEvent($user_id){
+		$userInfo = $this->getUserInfo($user_id);
+		
+		$this->getUserCountQuery->execute();
+		$userCount = $this->getUserCountQuery->fetchAll()[0]['count'];
+		
+		$bot = new TelegramBot(2768837);
+		$bot->sendMessage(
+			array(
+				'text' => "Новый юзер $userInfo[telergam_firstName] [#$userCount]"
+			)
+		);
+	}
+	
+	public function userLeftEvent($user_id){
+		$userInfo = $this->getUserInfo($user_id);
+		
+		$bot = new TelegramBot(2768837);
+		$bot->sendMessage(
+			array(
+				'text' => "Юзер $userInfo[telergam_firstName] удалился"
+			)
+		);
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
