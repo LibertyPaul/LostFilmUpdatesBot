@@ -102,19 +102,19 @@ class TelegramBot extends TelegramBot_base{
 		return $user_id;
 	}
 	
-	protected function updateUserInfo($telegram_username, $telergam_firstName){
+	protected function updateUserInfo($telegram_username, $telegram_firstName){
 		$updateUserInfoQuery = $this->pdo->prepare('
 			UPDATE `users`
 			SET 
-				`telegram_username` = :username,
-				`telergam_firstName` = :firstName
+				`telegram_username` 	= :username,
+				`telegram_firstName` 	= :firstName
 			WHERE `id` = :user_id
 		');
 		
 		$updateUserInfoQuery->execute(
 			array(
 				':username' 	=> $telegram_username,
-				':firstName'	=> $telergam_firstName,
+				':firstName'	=> $telegram_firstName,
 				':user_id'		=> $this->getUserId()
 			)
 		);
