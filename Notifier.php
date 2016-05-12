@@ -157,7 +157,7 @@ class Notifier{
 		$bot = new TelegramBot(2768837);
 		$bot->sendMessage(
 			array(
-				'text' => "Новый юзер $userInfo[telergam_firstName] [#$userCount]"
+				'text' => "Новый юзер $userInfo[telegram_firstName] [#$userCount]"
 			)
 		);
 	}
@@ -168,7 +168,7 @@ class Notifier{
 		$bot = new TelegramBot(2768837);
 		$bot->sendMessage(
 			array(
-				'text' => "Юзер $userInfo[telergam_firstName] удалился"
+				'text' => "Юзер $userInfo[telegram_firstName] удалился"
 			)
 		);
 	}
