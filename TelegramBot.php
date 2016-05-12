@@ -4,26 +4,31 @@ require_once(__DIR__."/Exceptions/TelegramException.php");
 require_once(__DIR__."/Exceptions/StdoutTextException.php");
 require_once(__DIR__."/config/config.php");
 require_once(__DIR__."/Botan/Botan.php");
+require_once(__DIR__."/Notifier.php");
 
 class TelegramBot extends TelegramBot_base{
 	protected $telegram_id;//от кого пришло сообщение
 	protected $chat_id;//куда отвечать(возможно не на прямую к пользователю, а в чат, где он написал боту)
 	protected $botan;
+	protected $notifier;
 	
 	public function __construct($telegram_id, $chat_id = null){
-		if(is_int($telegram_id) === false)
+		if(is_int($telegram_id) === false){
 			throw new StdoutTextException("incorrect telegram_id");
+		}
 		
-		if($chat_id === null)
+		if($chat_id === null){
 			$chat_id = $telegram_id;
-		
-		if(is_int($chat_id) === false)
+		}
+		else if(is_int($chat_id) === false){
 			throw new StdoutTextException("incorrect chat_id");
+		}
 				
 		TelegramBot_base::__construct();
 		$this->telegram_id = $telegram_id;
 		$this->chat_id = $chat_id;
 		$this->botan = new Botan(BOTAN_API_KEY);
+		$this->notifier = new Notifier();
 	}	
 	
 	public function sendMessage($args){//function is called by TelegramException and not being able to throw another TelegramException
@@ -117,18 +122,6 @@ class TelegramBot extends TelegramBot_base{
 		if($updateUserInfoQuery->rowCount() === 0){
 			throw new StdoutTextException("updateUserInfo -> sql UPDATE error");
 		}
-	}
-	
-	protected function notifyAdmin($text){
-		$adminBot = new TelegramBot(2768837, 2768837);
-		$adminBot->sendMessage(
-			array(
-				'text' => $text,
-				'reply_markup' => array(
-					'hide_keyboard' => true
-				)
-			)
-		);
 	}
 	
 	protected function insertOrDeleteShow($in_out_flag){//$in_out_flag
@@ -456,21 +449,26 @@ stop - Удалиться из контакт-листа бота
 	}
 	
 	public function incomingUpdate($message){
-		if($message->from->id !== $this->telegram_id)
+		if($message->from->id !== $this->telegram_id){
 			throw new StdoutTextException("update telegram id, and stored id doesn't match");
+		}
 		
-		if(isset($message->text) === false)
-			return;
+		if(isset($message->text) === false){
+			throw new StdoutTextException('$message->text is empty');
+		}
 		
 		$cmd = $this->extractCommand($message->text);
 		
-		if($cmd === "/cancel")
+		if($cmd === "/cancel"){
 			$this->deletePreviousMessageArray();
+		}
 		
-		if($this->getArgc() === 0)
+		if($this->getArgc() === 0){
 			$this->addPreviousMessageArray($cmd);
-		else
+		}
+		else{
 			$this->addPreviousMessageArray($message->text);//добавляем сообщение к n предыдущих
+		}
 		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
 		
 		print_r($messagesTextArray);
@@ -481,45 +479,89 @@ stop - Удалиться из контакт-листа бота
 		switch($messagesTextArray[0]){
 		case "/start":
 			$this->deletePreviousMessageArray();
-			if(isset($message->from->username))
-				$telegram_username = $this->sql->real_escape_string($message->from->username);
-			else
-				$telegram_username = '';
+			if(isset($message->from->username) === false){
+				$message->from->username = null;
+			}
 				
-			if(isset($message->from->first_name))
-				$telegram_firstName = $this->sql->real_escape_string($message->from->first_name);
-			else
-				$telegram_firstName = '';
+			if(isset($message->from->first_name) === false){
+				$message->from->first_name = null;
+			}
 			
-			$res = $this->sql->query("
-				INSERT IGNORE INTO `users` (`telegram_id`, `telegram_username`, `telergam_firstName`)
-				VALUES ({$this->telegram_id}, '$telegram_username', '$telegram_firstName')
-			");
+			if(isset($message->from->last_name) === false){
+				$message->from->last_name = null;
+			}
 			
-			if($this->sql->affected_rows > 0){
-				$startText = "Привет, ".$message->from->first_name."\n";
-				$startText .= "Я - лостфильм бот, моя задача - оповестить тебя о выходе новых серий твоих любимых сериалов на сайте http://lostfilm.tv/\n\n";
-				$startText .= "Чтобы узнать что я умею - введи /help или выбери эту команду в списке";
-				$this->sendMessage(
+			$userId = null;
+			try{
+			
+				$isUserExistsQuery = $this->pdo->prepare('
+					SELECT `id`
+					FROM `users`
+					WHERE `telegram_id` = :telegram_id
+				');
+			
+				$isUserExistsQuery->execute(
 					array(
-						'text' => $startText,
-						'disable_web_page_preview' => true,
+						':telegram_id' => $this->telegram_id
 					)
 				);
+			
+				if(empty($isUserExistsQuery->fetchAll()) === false){
+					$this->sendMessage(
+						array(
+							'text' => "Мы ведь уже знакомы, правда?"
+						)
+					);
+					break;
+				}
+			
+				$addUserQuery = $this->pdo->prepare('
+					INSERT INTO `users` (`telegram_id`, `telegram_username`, `telergam_firstName`, `telergam_lastName`)
+					VALUES (:telegram_id, :telegram_username, :telegram_firstname, :telegram_lastname)
+				');
+			
+				$addUserQuery->execute(
+					array(
+						':telegram_id' 			=> $this->telegram_id,
+						':telegram_username' 	=> $message->from->username,
+						':telegram_firstname' 	=> $message->from->first_name,
+						':telegram_lastname'	=> $message->from->last_name
+					)
+				);
+				
+				
 				try{
-					$this->notifyAdmin("Новый юзер {$message->from->first_name}");
+					$userId = $this->pdo->lastInsertId();
+					$userId = intval($userId);
+					$this->notifier->newUserEvent($userId);
 				}
 				catch(Exception $ex){
+					// TODO: в лог файл
 				}
-				
 			}
-			else{
+			catch(TelegramException $tex){
+				throw $tex;
+			}
+			catch(Exception $ex){
 				$this->sendMessage(
 					array(
-						'text' => "Мы ведь уже знакомы, правда?"
+						'text' => "Упс, с регистрацией что-то пошло не так, напиши об этом пару строк создателю бота @libertypaul, если тебе не лень"
 					)
 				);
+				
+				throw $ex;
+				break;
 			}
+			
+			$startText 	= "Привет, ".$message->from->first_name."\n";
+			$startText .= "Я - лостфильм бот, моя задача - оповестить тебя о выходе новых серий твоих любимых сериалов на сайте http://lostfilm.tv/\n\n";
+			$startText .= "Чтобы узнать что я умею - введи /help или выбери эту команду в списке";
+			$this->sendMessage(
+				array(
+					'text' => $startText,
+					'disable_web_page_preview' => true,
+				)
+			);
 			
 			break;
 		case "/cancel":
@@ -561,6 +603,13 @@ stop - Удалиться из контакт-листа бота
 				$this->deletePreviousMessageArray();
 				$resp = $fullMessageArray[1];
 				if($resp === $ANSWER_YES){
+					try{
+						$this->notifier->userLeftEvent($this->getUserId());
+					}
+					catch(Exception $ex){
+						// TODO: logging
+					}
+					
 					$res = $this->sql->query("
 						DELETE FROM `users`
 						WHERE `id` = {$this->getUserId()}
@@ -578,12 +627,6 @@ stop - Удалиться из контакт-листа бота
 							)
 						)
 					);
-					
-					try{
-						$this->notifyAdmin("Юзер {$message->from->first_name} удалился");
-					}
-					catch(Exception $ex){
-					}
 				}
 				else if($resp === $ANSWER_NO){
 					$this->sendMessage(
