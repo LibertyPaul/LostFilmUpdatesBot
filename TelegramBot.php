@@ -11,6 +11,7 @@ class TelegramBot extends TelegramBot_base{
 	protected $chat_id;//куда отвечать(возможно не на прямую к пользователю, а в чат, где он написал боту)
 	protected $botan;
 	protected $notifier;
+	private $previousMessageArray;
 	
 	public function __construct($telegram_id, $chat_id = null){
 		if(is_int($telegram_id) === false){
@@ -29,6 +30,7 @@ class TelegramBot extends TelegramBot_base{
 		$this->chat_id = $chat_id;
 		$this->botan = new Botan(BOTAN_API_KEY);
 		$this->notifier = new Notifier();
+		$this->fetchPreviousMessageArray();
 	}	
 	
 	public function sendMessage($args){//function is called by TelegramException and not being able to throw another TelegramException
@@ -46,34 +48,46 @@ class TelegramBot extends TelegramBot_base{
 		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
 	}
 	
-	protected function getPreviousMessageArray(){
+	private function fetchPreviousMessageArray(){
 		$previousMessageArray_serialized = $this->memcache->get($this->getPreviousMessageArrayKey());
-		if($previousMessageArray_serialized === false)
-			return array();
-		else
-			return unserialize($previousMessageArray_serialized);
+		if($previousMessageArray_serialized === false){
+			$this->previousMessageArray = array();
+		}
+		else{
+			$this->previousMessageArray = unserialize($previousMessageArray_serialized);
+		}
 	}
 	
-	protected function getArgc(){
-		return count($this->getPreviousMessageArray());//TODO оптимизировать
-	}
-	
-	protected function addPreviousMessageArray($messageText){
-		$previousMessageArray_serialized = $this->memcache->get($this->getPreviousMessageArrayKey());
-		if($previousMessageArray_serialized === false)
-			$previousMessageArray_serialized = serialize(array());
-		
-		$previousMessageArray = unserialize($previousMessageArray_serialized);
-		array_push($previousMessageArray, $messageText);
-		$previousMessageArray_serialized = serialize($previousMessageArray);
+	private function commitPreviousMessageArray(){
+		$previousMessageArray_serialized = serialize($this->previousMessageArray);
 		
 		$res = $this->memcache->set($this->getPreviousMessageArrayKey(), $previousMessageArray_serialized);
-		if($res === false)
-			throw new TelegramException($this->chat_id, "Memcache set() error");
+		if($res === false){
+			throw new StdoutTextException("Memcache set() error");
+		}
+	}
+	
+	protected function getPreviousMessageArray(){
+		return $this->previousMessageArray;
+	}
+	
+	protected function previousMessageArraySize(){
+		return count($this->getPreviousMessageArray());
+	}
+	
+	protected function previousMessageArrayInsert($item){
+		$this->previousMessageArray[] = $item;
+		$this->commitPreviousMessageArray();
 	}
 	
 	protected function deletePreviousMessageArray(){
-		$this->memcache->delete($this->getPreviousMessageArrayKey());
+		$this->previousMessageArray = array();
+		$this->commitPreviousMessageArray();
+	}
+	
+	protected function previousMessageArrayPop(){
+		array_pop($this->previousMessageArray);
+		$this->commitPreviousMessageArray();
 	}
 	
 	protected function getUserId(){
@@ -122,6 +136,10 @@ class TelegramBot extends TelegramBot_base{
 		if($updateUserInfoQuery->rowCount() === 0){
 			throw new StdoutTextException("updateUserInfo -> sql UPDATE error");
 		}
+	}
+	
+	protected function repeatQuestion(){
+		$this->previousMessageArrayPop();
 	}
 	
 	protected function showHelp(){
@@ -685,11 +703,11 @@ stop - Удалиться из контакт-листа бота
 			$this->deletePreviousMessageArray();
 		}
 		
-		if($this->getArgc() === 0){
-			$this->addPreviousMessageArray($cmd);
+		if($this->previousMessageArraySize() === 0){
+			$this->previousMessageArrayInsert($cmd);
 		}
 		else{
-			$this->addPreviousMessageArray($message->text);//добавляем сообщение к n предыдущих
+			$this->previousMessageArrayInsert($message->text);//добавляем сообщение к n предыдущих
 		}
 		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
 		
@@ -800,20 +818,21 @@ stop - Удалиться из контакт-листа бота
 		case "/stop":
 			$ANSWER_YES = 'Да';
 			$ANSWER_NO = 'Нет';
+			$keyboard = array(
+				array(
+					$ANSWER_YES,
+					$ANSWER_NO
+				)
+			);
+			
 			switch($argc){
 			case 1:
-				$keyboard = array(
-					array(
-						$ANSWER_YES,
-						$ANSWER_NO
-					)
-				);
 				$this->sendMessage(
 					array(
 						'text' => "Ты уверен? Вся информация о тебе будет безвозвратно потеряна...",
 						'reply_markup' => array(
 							'keyboard' => $keyboard,
-							'one_time_keyboard' => true
+							'one_time_keyboard' => false
 						)
 					)
 				);
@@ -822,9 +841,10 @@ stop - Удалиться из контакт-листа бота
 			
 			case 2:
 				$fullMessageArray = $this->getPreviousMessageArray();
-				$this->deletePreviousMessageArray();
 				$resp = $fullMessageArray[1];
-				if($resp === $ANSWER_YES){
+				switch($resp){
+				case $ANSWER_YES:
+					$this->deletePreviousMessageArray();
 					try{
 						$this->notifier->userLeftEvent($this->getUserId());
 					}
@@ -849,8 +869,10 @@ stop - Удалиться из контакт-листа бота
 							)
 						)
 					);
-				}
-				else if($resp === $ANSWER_NO){
+					break;
+					
+				case $ANSWER_NO:
+					$this->deletePreviousMessageArray();
 					$this->sendMessage(
 						array(
 							'text' => "Фух, а то я уже испугался",
@@ -859,14 +881,13 @@ stop - Удалиться из контакт-листа бота
 							)
 						)
 					);
-				}
-				else{
+					break;
+				
+				default:
+					$this->repeatQuestion();
 					$this->sendMessage(
 						array(
-							'text' => "Что?",
-							'reply_markup' => array(
-								'hide_keyboard' => true
-							)
+							'text' => "Что?"
 						)
 					);
 				}
