@@ -183,6 +183,75 @@ class TelegramBot extends TelegramBot_base{
 		);
 	}
 	
+	protected function toggleMute(){
+		$this->deletePreviousMessageArray();
+		$isMutedQuery = $this->pdo->prepare('
+			SELECT `mute`
+			FROM `users`
+			WHERE `id` = :user_id
+		');
+		
+		try{
+			$isMutedQuery->execute(
+				array(
+					':user_id' => $this->getUserId()
+				)
+			);
+		}
+		catch(Exception $ex){
+			echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+			$this->deletePreviousMessageArray();
+			throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
+		}
+		
+		$res = $isMutedQuery->fetchAll();
+		if(count($res) === 0){
+			throw new TelegramException($this->chat_id, "Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова");
+		}
+		
+		$user = $res[0];
+		
+		$action = null;
+		$newMode = null;
+		if(intval($user['mute']) === 0){
+			$newMode = 1;
+			$action = "Выключил";
+		}
+		else{
+			$newMode = 0;
+			$action = "Включил";
+		}
+		
+		$toggleMuteQuery = $this->pdo->prepare('
+			UPDATE `users`
+			SET `mute` = :mute
+			WHERE `id` = :user_id
+		');
+		
+		try{
+			$toggleMuteQuery->execute(
+				array(
+					':mute' 	=> $newMode,
+					':user_id'	=> $this->getUserId()
+				)
+			);
+		}
+		catch(Exception $ex){
+			echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+			$this->deletePreviousMessageArray();
+			throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
+		}
+		
+		$this->sendMessage(
+			array(
+				'text' => "$action все уведомления",
+				'reply_markup' => array(
+					'hide_keyboard' => true
+				)
+			)
+		);
+	}
+	
 	protected function insertOrDeleteShow($in_out_flag){//$in_out_flag
 		$fullMessageArray = $this->getPreviousMessageArray();
 		$argc = count($fullMessageArray);
@@ -805,48 +874,7 @@ stop - Удалиться из контакт-листа бота
 			break;
 		
 		case "/mute":
-			$this->deletePreviousMessageArray();
-			$res = $this->sql->query("
-				SELECT `mute`
-				FROM `users`
-				WHERE `id` = {$this->getUserId()}
-			");
-			if($res->num_rows === 0){
-				throw new TelegramException($this->chat_id, "Упс, кажется я не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова");
-			}
-			
-			$user = $res->fetch_object();
-			
-			$text = "";
-			$newMode = null;
-			if(intval($user->mute) === 0){
-				$newMode = 1;
-				$text = "Выключил";
-			}
-			else if(intval($user->mute) === 1){
-				$newMode = 0;
-				$text = "Включил";
-			}
-			else
-				throw new TelegramException($this->chat_id, "Упс, что-то не так с моей базой данных. Я сообщу об этом создателю.");
-			
-			
-			$res = $this->sql->query("
-				UPDATE `users`
-				SET `mute` = $newMode
-				WHERE `id` = {$this->getUserId()}
-			");
-			if($this->sql->affected_rows === 0)
-				throw new TelegramException($this->chat_id, "Упс, что-то не так с моей базой данных. Я сообщу об этом создателю.");			
-			
-			$this->sendMessage(
-				array(
-					'text' => "$text все уведомления",
-					'reply_markup' => array(
-						'hide_keyboard' => true
-					)
-				)
-			);
+			$this->toggleMute();
 			break;
 		
 		case "/get_my_shows":
