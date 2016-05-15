@@ -191,25 +191,26 @@ class TelegramBot extends TelegramBot_base{
 		$action = null;
 		if($in_out_flag){
 			$successText = "добавлен";
-			$action = $this->pdo->prepare("
+			$action = $this->pdo->prepare('
 				INSERT INTO `tracks` (`user_id`, `show_id`) 
-				VALUES ({$this->getUserId()}, :show_id)
-			");
+				VALUES (:user_id, :show_id)
+			');
 		}					
 		else{
 			$successText = "удален";
-			$action = $this->pdo->prepare("
+			$action = $this->pdo->prepare('
 				DELETE FROM `tracks`
-				WHERE `show_id` = :show_id
-				AND `user_id` = {$this->getUserId()}
-			");
+				WHERE `user_id` = :user_id
+				AND   `show_id` = :show_id
+			');
 		}
 	
 	
 		switch($argc){
 		case 1:
+			$query = null;
 			if($in_out_flag){//true -> add_show, false -> remove show
-				$query = "
+				$query = $this->pdo->prepare("
 					SELECT
 						CONCAT(
 							`title_ru`,
@@ -222,16 +223,16 @@ class TelegramBot extends TelegramBot_base{
 						SELECT `tracks`.`id`, `tracks`.`show_id`
 						FROM `tracks`
 						JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-						WHERE `tracks`.`user_id` = {$this->getUserId()}
+						WHERE `tracks`.`user_id` = :user_id
 					) AS `tracked`
 					ON `shows`.`id` = `tracked`.`show_id`
 					WHERE `tracked`.`id` IS NULL
 					AND `shows`.`onAir` != 0
 					ORDER BY `title`
-				";
+				");
 			}
 			else{				
-				$query = "
+				$query = $this->pdo->prepare("
 					SELECT
 						CONCAT(
 							`title_ru`,
@@ -241,20 +242,35 @@ class TelegramBot extends TelegramBot_base{
 						) AS `title`
 					FROM `tracks`
 					JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-					WHERE `tracks`.`user_id` = {$this->getUserId()}
+					WHERE `tracks`.`user_id` = :user_id
 					ORDER BY `title`
-				";
+				");
+			}
+			try{
+				$query->execute(
+					array(
+						':user_id' => $this->getUserId()
+					)
+				);
+			}
+			catch(Exception $ex){
+				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+				$this->deletePreviousMessageArray();
+				throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
 			}
 			
-			$res = $this->sql->query($query);
-			if($res->num_rows === 0){
+			$showTitles = $query->fetchAll(PDO::FETCH_COLUMN, 'title');
+			
+			if(count($showTitles) === 0){
 				$this->deletePreviousMessageArray();
 				
 				$reply = null;
-				if($in_out_flag)
+				if($in_out_flag){
 					$reply = "Ты уже добавил все (!) сериалы из списка. И как ты успеваешь их смотреть??";
-				else
+				}
+				else{
 					$reply = "Нечего удалять";
+				}
 				
 				$this->sendMessage(
 					array(
@@ -266,9 +282,6 @@ class TelegramBot extends TelegramBot_base{
 				);
 			}
 			else{
-				$showTitles = array();
-				while($show = $res->fetch_object())
-					$showTitles[] = $show->title;
 				$keyboard = $this->createKeyboard($showTitles);
 				
 				$this->sendMessage(
@@ -283,49 +296,70 @@ class TelegramBot extends TelegramBot_base{
 			}
 			break;
 		case 2:
-			$showName = $this->sql->real_escape_string($fullMessageArray[1]);
-			$res = $this->sql->query("
-				SELECT `id`, CONCAT(
-					`title_ru`,
-					' (',
-					`title_en`,
-					')'
-				) AS `title_all`
+			$getShowId = $this->pdo->prepare("
+				SELECT 
+					`id`,
+					CONCAT(
+						`title_ru`,
+						' (',
+						`title_en`,
+						')'
+					) AS `title_all`
 				FROM `shows`
-				HAVING `title_all` LIKE '$showName'
+				HAVING STRCMP(`title_all`, :title) = 0
 			");
-			if($res->num_rows > 0){//нашли совпадение по имени (пользователь нажал на кнопку или (, что маловероятно,) ввел сам точное название
-				$show = $res->fetch_object();
-				$title_all = $show->title_all;
-				$res = $action->execute(
+			
+			try{
+				$getShowId->execute(
 					array(
-						':show_id' => $show->id
+						':title' => $fullMessageArray[1]
 					)
 				);
-				if($res === false || $action->rowCount() === 0){
-					$this->deletePreviousMessageArray();
-					throw new TelegramException($this->chat_id, "Ошибка добавления в базу данных. Я сообщу об этом создателю");
-				}
-				else{//все норм
-					$this->sendMessage(
+			}
+			catch(Exception $ex){
+				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+				$this->deletePreviousMessageArray();
+				throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
+			}
+				
+			$res = $getShowId->fetchAll();
+			if(count($res) > 0){//нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, сам ввел точное название
+				$this->deletePreviousMessageArray();
+				
+				$show_id = intval($res[0]['id']);
+				$title_all = $res[0]['title_all'];
+				
+				try{
+					$action->execute(
 						array(
-							'text' => $title_all." $successText",
-							'reply_markup' => array(
-								'hide_keyboard' => true
-							)
+							':show_id' => $show_id,
+							':user_id' => $this->getUserId()
 						)
 					);
-					$this->deletePreviousMessageArray();
+				}
+				catch(Exception $ex){
+					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+					throw new TelegramException($this->chat_id, "Ошибка добавления в базу данных. Я сообщу об этом создателю.");
 				}
 				
+				$this->sendMessage(
+					array(
+						'text' => $title_all." $successText",
+						'reply_markup' => array(
+							'hide_keyboard' => true
+						)
+					)
+				);
+				
 			}
-			else{//совпадения не найдено. Возможно юзверь проебланил с названием. Придется угадывать.
+			else{//совпадения не найдено. Скорее всего юзверь проебланил с названием. Придется угадывать.
 				//TODO: если ненулевой результат у нескольких вариантов - дать пользователю выбрать
+				$query = null;
 				if($in_out_flag){//true -> add_show, false -> remove show
-					$query = "
+					$query = $this->pdo->prepare("
 						SELECT
 							`shows`.`id` AS `id`,
-							MATCH(`title_ru`, `title_en`) AGAINST('$showName') AS `score`,
+							MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
 							CONCAT(
 								`title_ru`,
 								' (',
@@ -337,20 +371,20 @@ class TelegramBot extends TelegramBot_base{
 							SELECT `tracks`.`id`, `tracks`.`show_id`
 							FROM `tracks`
 							JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-							WHERE `tracks`.`user_id` = {$this->getUserId()}
+							WHERE `tracks`.`user_id` = :user_id
 						) AS `tracked`
 						ON `shows`.`id` = `tracked`.`show_id`
 						WHERE `tracked`.`id` IS NULL
 						AND `shows`.`onAir` != 0
 						HAVING `score` > 0.1
 						ORDER BY `score` DESC
-					";
+					");
 				}
 				else{				
-					$query = "
+					$query = $this->pdo->prepare("
 						SELECT
 							`shows`.`id` AS `id`,
-							MATCH(`title_ru`, `title_en`) AGAINST('$showName') AS `score`,
+							MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
 							CONCAT(
 								`title_ru`,
 								' (',
@@ -359,15 +393,29 @@ class TelegramBot extends TelegramBot_base{
 							) AS `title`
 						FROM `tracks`
 						JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-						WHERE `tracks`.`user_id` = {$this->getUserId()}
+						WHERE `tracks`.`user_id` = :user_id
 						HAVING `score` > 0.1
 						ORDER BY `score` DESC
-					";
+					");
 				}
 				
-				$res = $this->sql->query($query);
+				try{
+					$query->execute(
+						array(
+							':user_id' 		=> $this->getUserId(),
+							':show_name'	=> $fullMessageArray[1]
+						)
+					);
+				}
+				catch(Exception $ex){
+					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+					$this->deletePreviousMessageArray();
+					throw new TelegramException($this->chat_id, 'Упс, возникла ошибка, код: TB'.__LINE__);
+				}
 				
-				switch($res->num_rows){
+				$res = $query->fetchAll();
+				
+				switch(count($res)){
 				case 0://не найдено ни одного похожего названия
 					$this->sendMessage(
 						array(
@@ -381,34 +429,36 @@ class TelegramBot extends TelegramBot_base{
 					break;
 								
 				case 1://найдено только одно подходящее название
-					$show = $res->fetch_object();
-					$res = $action->execute(
-						array(
-							':show_id' => $show->id
-						)
-					);
-					if($action->rowCount() > 0){
-						$this->sendMessage(
+					$this->deletePreviousMessageArray();
+					$show = $res[0];
+					try{
+						$action->execute(
 							array(
-								'text' => "{$show->title} $successText",
-								'reply_markup' => array(
-									'hide_keyboard' => true
-								)
+								':show_id' => $show['id'],
+								':user_id' => $this->getUserId()
 							)
 						);
 					}
-					else{
-						$this->deletePreviousMessageArray();
-						throw new TelegramException($this->chat_id, "action->execute 2 error");
+					catch(Exception $ex){
+						echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+						throw new TelegramException($this->chat_id, "Ошибка записи");
 					}
 					
-					$this->deletePreviousMessageArray();
+					$this->sendMessage(
+						array(
+							'text' => "$show[title] $successText",
+							'reply_markup' => array(
+								'hide_keyboard' => true
+							)
+						)
+					);
+					
 					break;
 				
 				default://подходят несколько вариантов
 					$showTitles = array();
-					while($predictedShow = $res->fetch_object()){
-						$showTitles[] = $predictedShow->title;
+					foreach($res as $predictedShow){
+						$showTitles[] = $predictedShow['title'];
 					}
 					$keyboard = $this->createKeyboard($showTitles);
 				
@@ -426,8 +476,8 @@ class TelegramBot extends TelegramBot_base{
 			}
 			break;
 		case 3:
-			$exactShowName = $this->sql->real_escape_string($fullMessageArray[2]);
-			$res = $this->sql->query("
+			$this->deletePreviousMessageArray();
+			$query = $this->pdo->prepare("
 				SELECT 
 					`id`,
 					CONCAT(
@@ -438,12 +488,27 @@ class TelegramBot extends TelegramBot_base{
 					) AS `title_all`,
 					`title_ru`
 				FROM `shows`
-				HAVING `title_all` LIKE '$exactShowName'
+				HAVING STRCMP(`title_all`, :exactShowName) = 0
 			");
-			if($res->num_rows === 0){
+			
+			try{
+				$query->execute(
+					array(
+						':exactShowName' => $fullMessageArray[2]
+					)
+				);
+			}
+			catch(Exception $ex){
+				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+				throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
+			}
+			
+			$res = $query->fetchAll();
+			
+			if(count($res) === 0){
 				$this->sendMessage(
 					array(
-						'text' => "Не могу найти такое название. Используй кнопки для выбора сериала.",
+						'text' => "Не могу найти такое название.",
 						'reply_markup' => array(
 							'hide_keyboard' => true
 						)
@@ -451,28 +516,30 @@ class TelegramBot extends TelegramBot_base{
 				);
 			}
 			else{
-				$show = $res->fetch_object();
-				$res = $action->execute(
-					array(
-						':show_id' => $show->id
-					)
-				);
-				if($action->rowCount() > 0){
-					$this->sendMessage(
+				$show = $res[0];
+				try{
+					$action->execute(
 						array(
-						'text' => "{$show->title_ru} $successText",
-							'reply_markup' => array(
-								'hide_keyboard' => true
-							)
+							':user_id' => $this->getUserId(),
+							':show_id' => $show['id']
 						)
 					);
 				}
-				else{
-					$this->deletePreviousMessageArray();
-					throw new TelegramException($this->chat_id, "action->execute 3 error");
+				catch(Exception $ex){
+					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
+					throw new TelegramException($this->chat_id, 'Ошибка БД, код TB:'.__LINE__);
 				}
+				
+				$this->sendMessage(
+					array(
+					'text' => "$show[title_ru] $successText",
+						'reply_markup' => array(
+							'hide_keyboard' => true
+						)
+					)
+				);
 			}
-			$this->deletePreviousMessageArray();
+			
 			break;
 		}
 	}
