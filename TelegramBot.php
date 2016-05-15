@@ -825,7 +825,6 @@ stop - Удалиться из контакт-листа бота
 			
 			$userId = null;
 			try{
-			
 				$isUserExistsQuery = $this->pdo->prepare('
 					SELECT `id`
 					FROM `users`
@@ -868,7 +867,7 @@ stop - Удалиться из контакт-листа бота
 					$this->notifier->newUserEvent($userId);
 				}
 				catch(Exception $ex){
-					// TODO: в лог файл
+					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 				}
 			}
 			catch(TelegramException $tex){
@@ -885,8 +884,11 @@ stop - Удалиться из контакт-листа бота
 				break;
 			}
 			
-			$startText 	= "Привет, ".$message->from->first_name."\n";
-			$startText .= "Я - лостфильм бот, моя задача - оповестить тебя о выходе новых серий твоих любимых сериалов на сайте http://lostfilm.tv/\n\n";
+			$username = $message->from->first_name;
+			
+			$startText 	= "Привет, $username\n";
+			$startText .= "Я - бот LostFilm updates.\n";
+			$startText .= "Моя задача - оповестить тебя о выходе новых серий твоих любимых сериалов на сайте https://lostfilm.tv/\n\n";
 			$startText .= "Чтобы узнать что я умею - введи /help или выбери эту команду в списке";
 			$this->sendMessage(
 				array(
