@@ -4,16 +4,32 @@ require_once(__DIR__."/../config/stuff.php");
 require_once(__DIR__."/../TelegramBot.php");
 require_once(__DIR__."/input_debug_webhook.php");
 
-function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
-	$path = __DIR__."/../logs/webhookErrorLog.txt";
-	$log = createOrOpenLogFile($path);
+function logError($message){
+	$log = createOrOpenLogFile(__DIR__."/../logs/webhookErrorLog.txt");
+	$errorTextTemplate = "[ERROR]\t#DATETIME]\t#MESSAGE\n\n";
 	
-	$errorText = "[".date('d.m.Y H:i:s')."]\t$errno $errstr $errfile:$errline\n\n";
+	$errorText = str_replace(
+		array('#DATETIME', '#MESSAGE'),
+		array(date('d.m.Y H:i:s'), $message),
+		$errorTextTemplate
+	);
+	echo $errorText;
 	fwrite($log, $errorText);
 	fclose($log);
 }
 
+function exception_handler($ex){
+	logError($ex->getMessage());
+}
+
+
+function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
+	logError("$errno $errstr $errfile:$errline");
+}
+
 set_error_handler('error_handler');
+set_exception_handler('exception_handler');
+
 
 function setLastRecievedId($value){
 	$memcache = createMemcache();
