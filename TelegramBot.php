@@ -124,6 +124,33 @@ class TelegramBot extends TelegramBot_base{
 		}
 	}
 	
+	protected function showHelp(){
+		$this->deletePreviousMessageArray();
+		
+		$helpText  = "LostFilm updates - бот, который оповещает о новых сериях на https://lostfilm.tv/\n\n";
+		$helpText .= "Список команд:\n";
+		$helpText .= "/add_show - Добавить уведомления о сериале\n";
+		$helpText .= "/remove_show - Удалить уведомления о сериале\n";
+		$helpText .= "/mute - Выключить уведомления на время\n";
+		$helpText .= "/cancel - отменить команду\n";
+		$helpText .= "/help - показать это сообщение\n";
+		$helpText .= "/stop - удалиться из контакт-листа бота\n\n";
+
+		$helpText .= "Telegram создателя: @libertypaul\n";
+		$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n\n";
+		$helpText .= "Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.";
+		
+		$this->sendMessage(
+			array(
+				'text' => $helpText,
+				'disable_web_page_preview' => true,
+				'reply_markup' => array(
+					'hide_keyboard' => true
+				)
+			)
+		);
+	}
+	
 	protected function showUserShows(){
 		$this->deletePreviousMessageArray();
 		$getUserShowsQuery = $this->pdo->prepare("
@@ -848,29 +875,7 @@ stop - Удалиться из контакт-листа бота
 			break;
 		
 		case "/help":
-			$this->deletePreviousMessageArray();
-			
-			$helpText = "Лостфилм бот - бот, который оповещает о новых сериях на http://lostfilm.tv/\n\n";
-			$helpText .= "Список команд:\n";
-			$helpText .= "/add_show - Добавить уведомления о сериале\n";
-			$helpText .= "/remove_show - Удалить уведомления о сериале\n";
-			$helpText .= "/mute - Выключить уведомления на время\n";
-			$helpText .= "/cancel - отменить команду\n";
-			$helpText .= "/help - показать это сообщение\n\n";
-
-			$helpText .= "Telegram создателя - @libertypaul\n";
-			$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n\n";
-			$helpText .= "Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.";
-			
-			$this->sendMessage(
-				array(
-					'text' => $helpText,
-					'disable_web_page_preview' => true,
-					'reply_markup' => array(
-						'hide_keyboard' => true
-					)
-				)
-			);
+			$this->showHelp();
 			break;
 		
 		case "/mute":
@@ -890,7 +895,7 @@ stop - Удалиться из контакт-листа бота
 			break;
 		default:
 			$this->deletePreviousMessageArray();
-			throw new TelegramException($this->chat_id, "Unknown command");
+			throw new TelegramException($this->chat_id, "Я хз чё это значит");
 		}
 		
 		try{
