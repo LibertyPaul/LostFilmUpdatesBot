@@ -124,6 +124,65 @@ class TelegramBot extends TelegramBot_base{
 		}
 	}
 	
+	protected function showUserShows(){
+		$this->deletePreviousMessageArray();
+		$getUserShowsQuery = $this->pdo->prepare("
+			SELECT 
+				CONCAT(
+					`shows`.`title_ru`,
+					' (',
+					`shows`.`title_en`,
+					')'
+				) AS `title`,
+				`shows`.`onAir`
+			FROM `tracks`
+			JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
+			WHERE `tracks`.`user_id` = :user_id
+			ORDER BY `shows`.`title_ru`
+		");
+		
+		$getUserShowsQuery->execute(
+			array(
+				':user_id' => $this->getUserId()
+			)
+		);
+		
+		$userShows = $getUserShowsQuery->fetchAll();
+		
+		$textByLines = array();
+		
+		if(count($userShows) === 0){
+			$textByLines[] = "Вы не выбрали ни одного сериала";
+		}
+		else{
+			$textByLines[] = "Ваши сериалы:\n\n";
+			
+			$showTemplate = "#ICON #TITLE\n\n";
+			foreach($userShows as $show){
+				$icon = '•';
+				if(intval($show['onAir']) === 0){
+					$icon = '✕';
+				}
+				
+				$textByLines[] = str_replace(
+					array('#ICON', '#TITLE'),
+					array($icon, $show['title']),
+					$showTemplate
+				);
+			}
+		}
+		
+		$this->sendTextByLines(
+			array(
+				'chat_id' => $this->telegram_id,
+				'reply_markup' => array(
+					'hide_keyboard' => true
+				)
+			),
+			$textByLines
+		);
+	}
+	
 	protected function insertOrDeleteShow($in_out_flag){//$in_out_flag
 		$fullMessageArray = $this->getPreviousMessageArray();
 		$argc = count($fullMessageArray);
@@ -724,48 +783,9 @@ stop - Удалиться из контакт-листа бота
 			break;
 		
 		case "/get_my_shows":
-			$this->deletePreviousMessageArray();
-			$res = $this->sql->query("
-				SELECT CONCAT(
-					`title_ru`,
-					' (',
-					`title_en`,
-					')'
-				) AS `title`
-				FROM `tracks`
-				JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-				WHERE `tracks`.`user_id` = {$this->getUserId()}
-			");
-			if($res->num_rows === 0){
-				$this->sendMessage(
-					array(
-						'text' => "Вы не выбрали ни одного сериала",
-						'reply_markup' => array(
-							'hide_keyboard' => true
-						)
-					)
-				);
-			}
-			else{
-				$textByLines = array();
-				array_push($textByLines, "Ваши сериалы:\n\n");
-				while($show = $res->fetch_object()){
-					array_push($textByLines, "• ".$show->title."\n\n");
-				}
-				
-				$this->sendTextByLines(
-					array(
-						'chat_id' => $this->telegram_id,
-						'reply_markup' => array(
-							'hide_keyboard' => true
-						)
-					),
-					$textByLines
-				);
-			}
+			$this->showUserShows();
 			break;
 			
-		
 		case "/add_show":
 			$this->insertOrDeleteShow(true, $argc);
 			break;
