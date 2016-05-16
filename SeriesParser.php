@@ -80,8 +80,11 @@ class SeriesParser extends Parser{
 			return true;
 		}
 		
-		$loggedSeasonNumber = $res[0]['seasonNumber'];
-		$loggedSeriesNumber = $res[0]['seriesNumber'];
+		$loggedSeasonNumber = intval($res[0]['seasonNumber']);
+		$loggedSeriesNumber = intval($res[0]['seriesNumber']);
+		
+		echo "Logged: S$loggedSeasonNumber E$loggedSeriesNumber".PHP_EOL;
+		echo "New:\t S$seasonNumber E$seriesNumber".PHP_EOL;
 		
 		return $seasonNumber > $loggedSeasonNumber || $seasonNumber === $loggedSeasonNumber && $seriesNumber > $loggedSeriesNumber;
 	}
@@ -191,7 +194,9 @@ class SeriesParser extends Parser{
 		foreach($this->rssData->channel->item as $item){
 			try{
 				$result = $parsedTitle = $this->parseTitle($item->title);
+				print_r($result);
 				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
+				echo $showId.PHP_EOL;
 				
 				if($this->isNewSeries($showId, $result['seasonNumber'], $result['seriesNumber'])){
 					echo "New series: $showId:S$result[seasonNumber]E$result[seriesNumber]\t$result[seriesTitleRu] ($result[seriesTitleEn])".PHP_EOL;
