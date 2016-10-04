@@ -1,8 +1,11 @@
 <?php
 
-require_once(__DIR__."/config/config.php");
-require_once(__DIR__."/config/stuff.php");
-require_once(__DIR__."/Exceptions/StdoutTextException.php");
+require_once(__DIR__.'/config/config.php');
+require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/Exceptions/StdoutTextException.php');
+require_once(__DIR__.'/Exceptions/UserBlockedBotException.php');
+
 
 
 class TelegramBot_base{
@@ -12,7 +15,15 @@ class TelegramBot_base{
 	protected $sql;
 	protected $pdo;
 	
-	protected function __construct(){
+	private $HTTPRequester;
+	
+	protected function __construct(HTTPRequesterInterface $HTTPRequester){
+		if(isset($HTTPRequester) === false){
+			throw new StdoutTextException('$HTTPRequester should not be a null pointer');
+		}
+		
+		$this->HTTPRequester = $HTTPRequester;
+	
 		$this->sql = createSQL();
 		$this->pdo = createPDO();
 		$this->memcache = createMemcache();
@@ -26,7 +37,7 @@ class TelegramBot_base{
 		
 	}
 	
-	protected function logException($ex){
+	private function logException($ex){
 		$path = __DIR__."/../logs/uncaughtExceptions.json.txt";
 		$log = createOrOpenLogFile($path);
 		
@@ -41,7 +52,7 @@ class TelegramBot_base{
 		
 	}
 	
-	protected function exception_handler(Exception $ex){
+	private function exception_handler(Exception $ex){
 		if(method_exists($ex, 'showErrorText')){
 			$ex->showErrorText();
 		}
@@ -53,103 +64,144 @@ class TelegramBot_base{
 		exit;
 	}
 	
-	protected function getHTTPCode($headers){
-		$matches = array();
-		$res = preg_match_all('/[\w]+\/\d\.\d (\d+) [\w]+/', $headers[0], $matches);
-		
-		$code = intval($matches[1][0]);
-		return $code;
+	private function getSendMessageURL(){
+		return "https://api.telegram.org/bot".TELEGRAM_BOT_TOKEN."/sendMessage";
 	}
-		
 	
-	public function sendMessage($data){//should NOT throw TelegramException
+	private function validateTelegramResponse($rawResponse){
+		$response = json_decode($rawResponse);
+		if($response === false){
+			return array(
+				'isValid' 	=> false,
+				'reason'	=> 'json_decode error: '.json_last_error_msg()
+			);
+		}
+		
+		if(isset($response->ok) === false){
+			return array(
+				'isValid' 	=> false,
+				'reason'	=> '$response->ok field is not found'
+			);
+		}
+		
+		if(is_bool($response->ok) === false){
+			return array(
+				'isValid' 	=> false,
+				'reason'	=> '$response->ok field is not of boolean type'
+			);
+		}
+		
+		if($response->ok === false){
+			return array(
+				'isValid' 	=> false,
+				'reason'	=> '$response->ok is false'
+			);
+		}
+		
+		return array(
+			'isValid' => true
+		);
+	}
+	
+	protected function sendMessage($data){//should NOT throw TelegramException
 		$path = __DIR__."/logs/sentMessages.txt";
 		$log = createOrOpenLogFile($path);
-		$data_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-		$res = fwrite($log, "[".date('d.m.Y H:i:s')."]\t$data_json");
-		if($res === false)
-			throw new StdoutTextException("log fwrite1 error");
-	
-		$opts = array(
-			'http' => array(
-				'method' => 'POST',
-				'header' => 'Content-type: application/json',
-				'content' => $data_json
-			)
-		);
 		
+		$content_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 		
-		$context = stream_context_create($opts);
-		
-		$res = file_get_contents("https://api.telegram.org/bot".TELEGRAM_BOT_TOKEN."/sendMessage", false, $context);
+		$res = fwrite($log, "[".date('d.m.Y H:i:s')."]\t$content_json");
 		if($res === false){
-			$respCode = $this->getHTTPCode($http_response_header);
-			
-			$res = fwrite($log, "ERROR $respCode\n\n");
-			if($res === false)
+			throw new StdoutTextException("log fwrite1 error");
+		}
+	
+		$rawResponse = null;
+		
+		try{
+			$rawResponse = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
+		}
+		catch(HTTPException $HTTPException){
+			$respCode = $HTTPException->getCode();
+			$res = fwrite($log, "ERROR $respCode\n");
+			if($res === false){
 				throw new StdoutTextException("log fwrite2 error");
+			}
 			
 			switch($respCode){
 			case 403:
-				throw new StdoutTextException("Bot was blocked by user ".$data['chat_id'].". HTTP error 403");
+				throw new UserBlockedBotException("Destination chat_id: $data[chat_id]");
 			default:
-				throw new StdoutTextException("sendMessage->file_get_contents unknown error $respCode: ".print_r($http_response_header, true).print_r($data, true));
+				throw new StdoutTextException("Unknown HTTP response code: $respCode");
 			}
 		}
-
-		$message = json_decode($res);
-		if($message === false)
-			throw new StdoutTextException("sendMessage->json_decode error ".print_r($message, true).print_r($data, true));
-		
-		if(isset($message->ok) === false || $message->ok === false)
-			throw new StdoutTextException("response is not OK: ".print_r($message, true).print_r($data, true));
-		
-		$respCode = $this->getHTTPCode($http_response_header);
-		if($respCode !== 200){//если сервер телеграма не принял сообщение - попытаемся снова через некоторое время
-			$res = fwrite($log, "FAIL: errcode = $respCode");
-			if($res === false)
-				throw new StdoutTextException("log fwrite2 error");
-			throw new StdoutTextException("HTTP code !== 200\n".$http_response_header);
+	
+		$validationResult = $this->validateTelegramResponse($rawResponse);
+		if($validationResult['isValid'] === true){
+			$res = fwrite($log, "SUCCESS\n\n");
+			if($res === false){
+				throw new StdoutTextException("log fwrite3 error");
+			}
 		}
-		
-		$res = fwrite($log, "SUCCESS\n\n");
-		if($res === false)
-			throw new StdoutTextException("log fwrite3 error");
+		else{
+			throw new StdoutTextException('Telegram response validation failed: '.$validationResult['reason']);
+		}
+				
 		$res = fclose($log);
-		if($res === false)
+		if($res === false){
 			throw new StdoutTextException("log fclose error");
-		return $message->result;
+		}
 	}
 	
-	public function sendTextByLines($messageData, $lines){
+	protected function sendTextByLines($messageData, array $lines, $eol){
 		$emptyMessage = json_encode($messageData);
 		$emptyMessageLength = strlen($emptyMessage);
 		
 		$currentMessage = "";
+		$bufferLength = $emptyMessageLength + strlen($currentMessage);
 		
 		$messages = array();
 		
 		foreach($lines as $str){
-			if($emptyMessageLength + strlen($currentMessage) > MAX_MESSAGE_JSON_LENGTH){
+			$nextMessageLength = strlen($str) + strlen($eol);
+			if($bufferLength > MAX_MESSAGE_JSON_LENGTH){
 				throw new Exception("Слишком длинная строка");
 			}
-			else if($emptyMessageLength + strlen($currentMessage.$str) > MAX_MESSAGE_JSON_LENGTH){
+			else if($bufferLength + $nextMessageLength > MAX_MESSAGE_JSON_LENGTH){
 				$messageData['text'] = $currentMessage;
+				$messages[] = json_encode($messageData);
+				
 				$currentMessage = "";
-				$messages[] = $messageData;
+				$bufferLength = $emptyMessageLength + strlen($currentMessage);
 			}
-			else{				
-				$currentMessage .= $str;
+			else{
+				$nextMessage = $str.$eol;
+				$currentMessage .= $nextMessage;
+				$bufferLength += strlen($nextMessage);
 			}
-			var_dump($currentMessage);
 		}
-		if(strlen($currentMessage) !== 0)
-			$messageData['text'] = $currentMessage;
-		$messages[] = $messageData;
 		
-		foreach($messages as $message){
-			print_r($message);
-			$this->sendMessage($message);
+		if($bufferLength !== 0){
+			$messageData['text'] = $currentMessage;
+			$messages[] = json_encode($messageData);
+		}
+		
+		foreach($messages as $content_json){
+			try{
+				$rawResponse = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
+				
+				$validationResult = $this->validateTelegramResponse($rawResponse);
+				
+				if($validationResult['isValid'] === false){
+					throw new StdoutTextException('Telegram response validation failed: '.$validationResult['reason']);
+				}
+			}
+			catch(HTTPException $HTTPException){
+				switch($HTTPException->getCode()){
+				case 403:
+					throw new UserBlockedBotException("Destination chat_id: $data[chat_id]");
+				default:
+					throw new StdoutTextException("Unknown HTTP response code: $respCode");
+				}
+			}
 		}
 	}
 	

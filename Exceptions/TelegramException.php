@@ -12,7 +12,7 @@ class TelegramException extends UserException{
 	}
 	
 	public function showErrorText(){
-		$bot = new TelegramBot(intval($this->telegram_id), intval($this->telegram_id));
+		$bot = new TelegramBot(intval($this->telegram_id));
 		$bot->sendMessage(
 			array(
 				'text' => $this->getMessage(),

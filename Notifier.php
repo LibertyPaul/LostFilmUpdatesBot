@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__."/config/stuff.php");
-require_once(__DIR__.'/TelegramBot.php');
+require_once(__DIR__.'/TelegramBotFactory.php');
 require_once(__DIR__."/Exceptions/StdoutTextException.php");
 
 
@@ -9,9 +9,16 @@ class Notifier{
 	protected $showTitleQuery;
 	protected $getUserInfoQuery;
 	protected $getUserCountQuery;
+	protected $telegramBotFactory;
 	
 	
-	public function __construct(){
+	public function __construct(TelegramBotFactoryInterface $telegramBotFactory){
+		if($telegramBotFactory === null){
+			throw new Exception('$telegramBotFactory should not be null');
+		}
+		
+		$this->telegramBotFactory = $telegramBotFactory;
+		
 		$pdo = createPDO();
 		
 		$this->usersToNotifyQuery = $pdo->prepare('
@@ -69,8 +76,6 @@ class Notifier{
 		return $text;
 	}
 	
-		
-
 	public function newSeriesEvent($show_id, $season, $seriesNumber, $seriesTitle){
 		$this->showTitleQuery->execute(
 			array(
@@ -87,7 +92,15 @@ class Notifier{
 		
 		$path = __DIR__.'/logs/newSeriesEventLog.txt';
 		$logFile = createOrOpenLogFile($path);
-		$res = fwrite($logFile, "[".date('d.m.Y H:i:s')."]\t$title_ru - $season:$seriesNumber\n");
+		
+		
+		$report = str_replace(
+			array('#DATETIME', '#TITLE_RU', '#SEASON', '#SERIES'),
+			array(date('d.m.Y H:i:s'), $title_ru, $season, $seriesNumber),
+			"[#DATETIME]\t#TITLE_RU - #SEASON:#SERIES\n"
+		);
+		
+		$res = fwrite($logFile, $report);
 		if($res === false){
 			throw new StdoutTextException("fwrite error 1");
 		}
@@ -96,23 +109,21 @@ class Notifier{
 		$notificationText = $this->generateNotificationText($title_ru, $season, $seriesNumber, $seriesTitle);
 		
 		$usersCount = count($usersToNotify);
-		$success = 0;
+		$succeed = 0;
+		$blockedByUserCount = 0;
 		foreach($usersToNotify as $telegram_id){
 			try{
-				$bot = new TelegramBot(intval($telegram_id));
+				$bot = $this->telegramBotFactory->createBot((intval($telegram_id)));
 				$bot->sendMessage(
 					array(
 						'text' => $notificationText
 				
 					)
 				);
-				++$success;
+				++$succeed;
 			}
-			catch(StdoutTextException $ste){
-				$res = fwrite($logFile, "exception: {$ste->getMessage()}\n");
-				if($res === false){
-					throw new StdoutTextException("fwrite error 2");
-				}
+			catch(UserBlockedBotException $ubbe){
+				++$userBlockedCount;
 			}
 			catch(Exception $ex){
 				$res = fwrite($logFile, "exception: {$ex->getMessage()}\n");
@@ -122,10 +133,17 @@ class Notifier{
 			}
 		}
 		
-		$res = fwrite($logFile, "\n$success/$usersCount уведомлений разослано\n\n");
+		$report = str_replace(
+			array('#SUCCEED', '#COUNT', '#BLOCKED_BY_USER', '#FAILED'),
+			array($succeed, $usersCount, $blockedByUserCount, $usersCount - $succeed),
+			"#SUCCEED of #COUNT notifications have been sent. #BLOCKED_BY_USER of #FAILED have been blocked by user\n\n"
+		);
+		
+		$res = fwrite($logFile, $report);
 		if($res === false){
 			throw new StdoutTextException("fwrite error 2");
 		}
+		
 		$res = fclose($logFile);
 		if($res === false){
 			throw new StdoutTextException("fclose error");
@@ -154,7 +172,7 @@ class Notifier{
 		$this->getUserCountQuery->execute();
 		$userCount = $this->getUserCountQuery->fetchAll()[0]['count'];
 		
-		$bot = new TelegramBot(2768837);
+		$bot = $this->telegramBotFactory->createBot(2768837);
 		$bot->sendMessage(
 			array(
 				'text' => "Новый юзер $userInfo[telegram_firstName] [#$userCount]"
@@ -165,7 +183,7 @@ class Notifier{
 	public function userLeftEvent($user_id){
 		$userInfo = $this->getUserInfo($user_id);
 		
-		$bot = new TelegramBot(2768837);
+		$bot = $this->telegramBotFactory->createBot(2768837);
 		$bot->sendMessage(
 			array(
 				'text' => "Юзер $userInfo[telegram_firstName] удалился"

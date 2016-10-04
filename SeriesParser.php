@@ -1,11 +1,15 @@
 <?php
-require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/Notifier.php');
+require_once(__DIR__.'/TelegramBotFactory.php');
 
 
-class SeriesParser extends Parser{
+class FullSeasonWasFoundException extends Exception{}
+
+
+class SeriesParser extends Parser{ //TODO: move series updater part to another class.
 	protected $rssData;
 	protected $notifier;
 	
@@ -15,7 +19,7 @@ class SeriesParser extends Parser{
 
 	public function __construct(){
 		parent::__construct(null);
-		$this->notifier = new Notifier();
+		$this->notifier = new Notifier(new TelegramBotFactory());
 		
 		$pdo = createPDO();
 		
@@ -109,6 +113,12 @@ class SeriesParser extends Parser{
 		$matches = array();
 		$res = preg_match('/S0?(\d+)E0?(\d+)/', $seasonSeriesNumberTag, $matches);
 		if($res !== 1){
+			$res = preg_match('/S\d+/', $seasonSeriesNumberTag, $matches);
+
+			if($res === 1){
+				throw new FullSeasonWasFoundException();
+			}
+
 			throw new StdoutTextException('seasonSeriesNumberTag parsing error `'.$seasonSeriesNumberTag.'`');
 		}
 		
@@ -194,14 +204,15 @@ class SeriesParser extends Parser{
 		foreach($this->rssData->channel->item as $item){
 			try{
 				$result = $parsedTitle = $this->parseTitle($item->title);
-				print_r($result);
 				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
-				echo $showId.PHP_EOL;
 				
 				if($this->isNewSeries($showId, $result['seasonNumber'], $result['seriesNumber'])){
-					echo "New series: $showId:S$result[seasonNumber]E$result[seriesNumber]\t$result[seriesTitleRu] ($result[seriesTitleEn])".PHP_EOL;
+					echo "New series: show_id: $showId, S$result[seasonNumber]E$result[seriesNumber]\t$result[seriesTitleRu] ($result[seriesTitleEn])".PHP_EOL;
 					$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
 				}
+			}
+			catch(FullSeasonWasFoundException $ex){
+				echo 'Full season entry was found. Skipping'.PHP_EOL;
 			}
 			catch(Exception $ex){
 				echo "[ERROR]".$ex->getMessage().PHP_EOL;
