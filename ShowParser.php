@@ -21,14 +21,13 @@ class ShowParser extends Parser{
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`
 			FROM `shows`
-			WHERE
-				STRCMP(`title_ru`, :title_ru) = 0
-			AND	STRCMP(`title_en`, :title_en) = 0
+			WHERE	STRCMP(`title_ru`, :title_ru) = 0
+			AND		STRCMP(`title_en`, :title_en) = 0
 		');
 		
 		$this->addShowQuery = $pdo->prepare('
-			INSERT INTO `shows` (title_ru, title_en)
-			VALUES (:title_ru, :title_en)
+			INSERT INTO `shows` (title_ru, title_en, onAir)
+			VALUES (:title_ru, :title_en, :onAir)
 		');
 		
 		$this->updateShowStateQuery = $pdo->prepare('
@@ -46,13 +45,12 @@ class ShowParser extends Parser{
 			)
 		);
 		
-		$res = $this->getShowIdQuery->fetchAll();
-		
-		if(count($res) > 0){
-			return $res[0]['id'];
+		$res = $this->getShowIdQuery->fetch(PDO::FETCH_ASSOC);
+		if($res === false){
+			return null;
 		}
 		
-		return null;
+		return $res['id'];
 	}
 	
 	protected function parseShowList(){ // -> array(url_id => array(title_ru => '', title_en => ''), ...)
@@ -80,11 +78,17 @@ class ShowParser extends Parser{
 	}
 	
 	protected function getShowPageURL($url_id){
-		if(is_int($url_id) == false){
+		if(is_int($url_id) === false){
 			throw new StdoutTextException('$url_id should be of an integer type.');
 		}
 		
 		return str_replace('#url_id', $url_id, self::showPageTemplate);
+	}
+	
+	private function isOnAir($url_id){
+		$url = $this->getShowPageURL($url_id);
+		$this->showAboutParser->loadSrc($url);
+		return $this->showAboutParser->run();
 	}
 	
 	public function run(){
@@ -94,23 +98,17 @@ class ShowParser extends Parser{
 				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
 				if($showId === null){
 					echo "New show: $titles[title_ru] ($titles[title_en])".PHP_EOL;
+					
+					$onAir = $this->isOnAir($url_id) ? 'Y' : 'N';
+					
 					$this->addShowQuery->execute(
 						array(
 							':title_ru' => $titles['title_ru'],
-							':title_en' => $titles['title_en']
+							':title_en' => $titles['title_en'],
+							':onAir'	=> $onAir
 						)
 					);
 				}
-				
-				$url = $this->getShowPageURL($url_id);
-				$this->showAboutParser->loadSrc($url);
-				
-				$this->updateShowStateQuery->execute(
-					array(
-						':id' 		=> $showId,
-						':onAir'	=> $this->showAboutParser->run()
-					)
-				);
 			}
 			catch(Exception $ex){
 				echo '[EXCEPTION]: '.$ex->getMessage().PHP_EOL;
