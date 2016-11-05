@@ -9,40 +9,32 @@ require_once(__DIR__.'/TelegramBotFactory.php');
 class FullSeasonWasFoundException extends Exception{}
 
 
-class SeriesParser extends Parser{ //TODO: move series updater part to another class.
+class SeriesParser extends Parser{
 	protected $rssData;
 	protected $notifier;
 	
 	protected $getUrlIdQuery;
-	protected $getSeriesNumberQuery;
-	protected $setLatestSeriesNumberQuery;
+	protected $addSeries;
+	protected $latestSeriesQuery;
 
 	public function __construct(){
 		parent::__construct(null);
-		$this->notifier = new Notifier(new TelegramBotFactory());
 		
 		$pdo = createPDO();
-		
-		$this->setLatestSeriesNumberQuery = $pdo->prepare('
-			UPDATE `shows`
-			SET
-				`seasonNumber` = :seasonNumber,
-				`seriesNumber` = :seriesNumber
-			WHERE `id` = :show_id
-		');
-		
-		$this->getSeriesNumberQuery = $pdo->prepare('
-			SELECT `seasonNumber`, `seriesNumber`
-			FROM `shows`
-			WHERE `id` = :show_id
-		');
-		
 		
 		$this->getUrlIdQuery = $pdo->prepare('
 			SELECT `id`
 			FROM `shows`
 			WHERE 	STRCMP(`title_ru`, :title_ru) = 0
 			AND		STRCMP(`title_en`, :title_en) = 0
+		');
+
+		$this->latestSeriesQuery = $pdo->prepare('
+			SELECT COUNT(*) 
+			FROM `series`
+			WHERE 	`show_id` 		= :show_id
+			AND		`seasonNumber` 	= :seasonNumber
+			AND		`seriesNumber` 	= :seriesNumber
 		');
 	}
 
@@ -52,57 +44,20 @@ class SeriesParser extends Parser{ //TODO: move series updater part to another c
 	}
 			
 		
-	protected function getShowId($showTitleRu, $showTitleEn){		
+	protected function getShowId($title_ru, $title_en){		
 		$this->getUrlIdQuery->execute(
 			array(
-				':title_ru' => $showTitleRu,
-				':title_en' => $showTitleEn
+				':title_ru' => $title_ru,
+				':title_en' => $title_en
 			)
 		);
 		
-		$res = $this->getUrlIdQuery->fetchAll();
-		if(count($res) === 0){
-			throw new StdoutTextException("Show $showTitleRu ($showTitleEn) was not found in database");
+		$res = $this->getUrlIdQuery->fetch(PDO::FETCH_ASSOC);
+		if($res === false){
+			throw new StdoutTextException("Show $title_ru ($title_en) was not found in database");
 		}
 		
-		return $res[0]['id'];
-	}
-	
-	protected function isNewSeries($show_id, $seasonNumber, $seriesNumber){		
-		$this->getSeriesNumberQuery->execute(
-			array(
-				':show_id' => $show_id
-			)
-		);
-		
-		$res = $this->getSeriesNumberQuery->fetchAll();
-		if(count($res) === 0){
-			throw new Exception("show_id was not found");
-		}
-		
-		if(isset($res[0]['seasonNumber'], $res[0]['seriesNumber']) === false){
-			return true;
-		}
-		
-		$loggedSeasonNumber = intval($res[0]['seasonNumber']);
-		$loggedSeriesNumber = intval($res[0]['seriesNumber']);
-		
-		echo "Logged: S$loggedSeasonNumber E$loggedSeriesNumber".PHP_EOL;
-		echo "New:\t S$seasonNumber E$seriesNumber".PHP_EOL;
-		
-		return $seasonNumber > $loggedSeasonNumber || $seasonNumber === $loggedSeasonNumber && $seriesNumber > $loggedSeriesNumber;
-	}
-	
-	protected function submitNewSeries($show_id, $seriesNameRu, $seriesNameEn, $seasonNumber, $seriesNumber){
-		$this->setLatestSeriesNumberQuery->execute(
-			array(
-				':seasonNumber' => $seasonNumber,
-				':seriesNumber' => $seriesNumber,
-				':show_id'		=> $show_id
-			)
-		);
-		
-		$this->notifier->newSeriesEvent($show_id, $seasonNumber, $seriesNumber, $seriesNameRu);
+		return $res['id'];
 	}
 	
 	protected function parseTitle($title){
@@ -201,15 +156,11 @@ class SeriesParser extends Parser{ //TODO: move series updater part to another c
 		
 	
 	public function run(){
+		$result = array(); // [seriesTitleRu, seriesTitleEn, seasonNumber, seriesNumber]
+		
 		foreach($this->rssData->channel->item as $item){
 			try{
-				$result = $parsedTitle = $this->parseTitle($item->title);
-				$showId = $this->getShowId($result['showTitleRu'], $result['showTitleEn']);
-				
-				if($this->isNewSeries($showId, $result['seasonNumber'], $result['seriesNumber'])){
-					echo "New series: show_id: $showId, S$result[seasonNumber]E$result[seriesNumber]\t$result[seriesTitleRu] ($result[seriesTitleEn])".PHP_EOL;
-					$this->submitNewSeries($showId, $result['seriesTitleRu'], $result['seriesTitleEn'], $result['seasonNumber'], $result['seriesNumber']);
-				}
+				$result[] = $this->parseTitle($item->title);
 			}
 			catch(FullSeasonWasFoundException $ex){
 				echo 'Full season entry was found. Skipping'.PHP_EOL;
@@ -218,6 +169,8 @@ class SeriesParser extends Parser{ //TODO: move series updater part to another c
 				echo "[ERROR]".$ex->getMessage().PHP_EOL;
 			}
 		}
+		
+		return $result;
 	}
 }
 
