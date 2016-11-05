@@ -10,23 +10,20 @@ class HTTPRequesterMock implements HTTPRequesterInterface{
 	}
 	
 	private function successResponse(){
+		$telegram_resp = array(
+			'ok' => true
+		);
+
 		$resp = array(
-			'ok' => true,
-			'result' => null
+			'value' => json_encode($telegram_resp),
+			'code' => 200
 		);
 		
-		return json_encode($resp);
+		return $resp; 
 	}
 	
 	public function sendJSONRequest($destination, $content_json){
-		$output = array(
-			'destination' 	=> $destination,
-			'content_json'	=> json_decode($content_json, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK)
-		);
-		
-		$output_json = json_encode($output, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK).PHP_EOL.PHP_EOL;
-		
-		$res = file_put_contents($this->destinationFilePath, $output_json, FILE_APPEND);
+		$res = file_put_contents($this->destinationFilePath, $content_json);
 		if($res === false){
 			throw new Exception('HTTPRequesterMock::sendJSONRequest file_put_contents error');
 		}
