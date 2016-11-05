@@ -149,11 +149,59 @@ function findMatchingParenthesis($str, $parenthesisPos){
 
 
 
+function isNewSeries($show_id, $seasonNumber, $seriesNumber){
+	static $isNewSeriesQuery;
+	if(isset($isNewSeriesQuery) === false){
+		$pdo = createPDO();
+		$isNewSeriesQuery = $pdo->prepare('
+			SELECT COUNT(*) FROM `series`
+			WHERE 	`show_id` 		= :show_id
+			AND		`seasonNumber`	= :seasonNumber
+			AND		`seriesNumber`	= :seriesNumber
+		');
+	}
+	
+	$isNewSeriesQuery->execute(
+		array(
+			':show_id' => $show_id,
+			':seasonNumber' => $seasonNumber,
+			':seriesNumber' => $seriesNumber
+		)
+	);
+
+	$count = $this->isNewSeriesQuery->fetch(PDO::FETCH_NUM)[0];
+
+	return intval($count) === 0;
+}
 
 
 
+function getShowId($title_ru, $title_en){
+	$pdo = createPDO();
 
+	$query = $pdo->prepare('
+		SELECT `id`
+		FROM `shows`
+		WHERE 	STRCMP(`title_ru`, :title_ru) = 0
+		AND		STRCMP(`title_en`, :title_en) = 0
+	');
 
+	$query->execute(
+		array(
+			':title_ru' => $title_ru,
+			':title_en' => $title_en
+		)
+	);
+
+	$res = $query->fetch();
+
+	if($res !== false){
+		return $res['id'];
+	}
+	else{
+		return null;
+	}
+}
 
 
 
