@@ -53,8 +53,8 @@ class TelegramBot_base{
 	}
 	
 	private function exception_handler(Exception $ex){
-		if(method_exists($ex, 'showErrorText')){
-			$ex->showErrorText();
+		if(method_exists($ex, 'release')){
+			$ex->release();
 		}
 		else{
 			echo $ex->getMessage();
@@ -133,8 +133,8 @@ class TelegramBot_base{
 				throw new StdoutTextException("Unknown HTTP response code: $respCode");
 			}
 		}
-	
-		$validationResult = $this->validateTelegramResponse($rawResponse);
+		
+		$validationResult = $this->validateTelegramResponse($rawResponse['value']);
 		if($validationResult['isValid'] === true){
 			$res = fwrite($log, "SUCCESS\n\n");
 			if($res === false){
@@ -149,6 +149,8 @@ class TelegramBot_base{
 		if($res === false){
 			throw new StdoutTextException("log fclose error");
 		}
+		
+		return $rawResponse;
 	}
 	
 	protected function sendTextByLines($messageData, array $lines, $eol){
@@ -188,7 +190,7 @@ class TelegramBot_base{
 			try{
 				$rawResponse = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
 				
-				$validationResult = $this->validateTelegramResponse($rawResponse);
+				$validationResult = $this->validateTelegramResponse($rawResponse['value']);
 				
 				if($validationResult['isValid'] === false){
 					throw new StdoutTextException('Telegram response validation failed: '.$validationResult['reason']);

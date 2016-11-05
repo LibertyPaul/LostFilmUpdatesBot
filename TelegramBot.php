@@ -13,21 +13,16 @@ class TelegramBot extends TelegramBot_base{
 	protected $notifier;
 	private $previousMessageArray;
 	
-	public function __construct($telegram_id, $chat_id, HTTPRequesterInterface $HTTPRequester, Notifier $notifier){
+	public function __construct($telegram_id, HTTPRequesterInterface $HTTPRequester, Notifier $notifier){
 		TelegramBot_base::__construct($HTTPRequester);
 		
 		assert(is_int($telegram_id));
-		
-		if($chat_id !== null && $telegram_id !== $chat_id){
-			throw new TelegramException($chat_id, 'Сорян, я с чатами не работаю');
-		}
-		
 		$this->telegram_id = $telegram_id;
+		
 		$this->botan = new Botan(BOTAN_API_KEY);
 		
-		if($notifier === null){
-			throw new Exception('Notifier should not be null');
-		}
+
+		assert($notifier !== null);
 		$this->notifier = $notifier;
 		
 		$this->fetchPreviousMessageArray();
@@ -39,7 +34,7 @@ class TelegramBot extends TelegramBot_base{
 		}
 		
 		try{
-			parent::sendMessage($args);
+			return parent::sendMessage($args);
 		}
 		catch(TelegramException $tex){//если даже произошло исключение TelegramException - перенаправляем его в stdout
 			echo 'TelegramException from TelegramBot_base::sendMessage() was caught'.PHP_EOL;
@@ -111,7 +106,7 @@ class TelegramBot extends TelegramBot_base{
 			$result = $getUserIdQuery->fetchAll();
 			if(empty($result)){// TODO: move error handling to another place
 				$this->previousMessageArrayErase();			
-				throw new TelegramException($this->telegram_id, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
+				throw new TelegramException($this, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
 			}
 				
 			$user_id = intval($result[0]['id']);
@@ -160,7 +155,7 @@ class TelegramBot extends TelegramBot_base{
 	protected function registerUser($username, $firstName, $lastName){
 		$this->previousMessageArrayErase();
 		if($this->isUserRegistred()){
-			throw new TelegramException($this->telegram_id, 'Мы ведь уже знакомы, правда?');
+			throw new TelegramException($this, 'Мы ведь уже знакомы, правда?');
 		}
 		
 		$addUserQuery = $this->pdo->prepare('
@@ -180,7 +175,7 @@ class TelegramBot extends TelegramBot_base{
 		}
 		catch(Exception $ex){
 			echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
-			throw new TelegramException($this->telegram_id, 'По неизвестным причинам не могу тебя зарегистрировать. Напиши @libertypaul об этом, он разберется. Код TB'.__LINE__);
+			throw new TelegramException($this, 'По неизвестным причинам не могу тебя зарегистрировать. Напиши @libertypaul об этом, он разберется. Код TB'.__LINE__);
 		}
 		
 		try{
@@ -255,7 +250,7 @@ class TelegramBot extends TelegramBot_base{
 				catch(Exception $ex){
 					echo $ex->getMessage();
 					$this->previousMessageArrayErase();
-					throw new TelegramException($this->telegram_id, 'Возникла ошибка: Не получилось удалить тебя из контакт-листа');
+					throw new TelegramException($this, 'Возникла ошибка: Не получилось удалить тебя из контакт-листа');
 				}
 				
 				$this->sendMessage(
@@ -355,7 +350,7 @@ class TelegramBot extends TelegramBot_base{
 			$showTemplate = '#ICON #TITLE';
 			foreach($userShows as $show){
 				$icon = '•';
-				if(intval($show['onAir']) === 0){
+				if($show['onAir'] === 'N'){
 					$icon = '✕';
 				}
 				
@@ -399,12 +394,12 @@ class TelegramBot extends TelegramBot_base{
 		catch(Exception $ex){
 			echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 			$this->previousMessageArrayErase();
-			throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
 		
 		$res = $isMutedQuery->fetchAll();
 		if(count($res) === 0){
-			throw new TelegramException($this->telegram_id, 'Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова');
+			throw new TelegramException($this, 'Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова');
 		}
 		
 		$user = $res[0];
@@ -437,7 +432,7 @@ class TelegramBot extends TelegramBot_base{
 		catch(Exception $ex){
 			echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 			$this->previousMessageArrayErase();
-			throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
 		
 		$this->sendMessage(
@@ -494,7 +489,7 @@ class TelegramBot extends TelegramBot_base{
 					) AS `tracked`
 					ON `shows`.`id` = `tracked`.`show_id`
 					WHERE `tracked`.`id` IS NULL
-					AND `shows`.`onAir` != 0
+					AND `shows`.`onAir` = 'Y'
 					ORDER BY `title`
 				");
 			}
@@ -523,7 +518,7 @@ class TelegramBot extends TelegramBot_base{
 			catch(Exception $ex){
 				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 				$this->previousMessageArrayErase();
-				throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 			
 			$showTitles = $query->fetchAll(PDO::FETCH_COLUMN, 'title');
@@ -553,7 +548,7 @@ class TelegramBot extends TelegramBot_base{
 				
 				$this->sendMessage(
 					array(
-						'text' => 'Как называется сериал?\nВыбери из списка или введи пару слов из названия.',
+						'text' => "Как называется сериал?\nВыбери из списка или введи пару слов из названия.",
 						'reply_markup' => array(
 							'keyboard' => $keyboard,
 							'one_time_keyboard' => true
@@ -586,7 +581,7 @@ class TelegramBot extends TelegramBot_base{
 			catch(Exception $ex){
 				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 				$this->previousMessageArrayErase();
-				throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 				
 			$res = $getShowId->fetchAll();
@@ -606,7 +601,7 @@ class TelegramBot extends TelegramBot_base{
 				}
 				catch(Exception $ex){
 					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
-					throw new TelegramException($this->telegram_id, 'Ошибка добавления в базу данных. Я сообщу об этом создателю.');
+					throw new TelegramException($this, 'Ошибка добавления в базу данных. Я сообщу об этом создателю.');
 				}
 				
 				$this->sendMessage(
@@ -642,7 +637,7 @@ class TelegramBot extends TelegramBot_base{
 						) AS `tracked`
 						ON `shows`.`id` = `tracked`.`show_id`
 						WHERE `tracked`.`id` IS NULL
-						AND `shows`.`onAir` != 0
+						AND `shows`.`onAir` = 'Y'
 						HAVING `score` > 0.1
 						ORDER BY `score` DESC
 					");
@@ -677,7 +672,7 @@ class TelegramBot extends TelegramBot_base{
 				catch(Exception $ex){
 					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
 					$this->previousMessageArrayErase();
-					throw new TelegramException($this->telegram_id, 'Упс, возникла ошибка, код: TB'.__LINE__);
+					throw new TelegramException($this, 'Упс, возникла ошибка, код: TB'.__LINE__);
 				}
 				
 				$res = $query->fetchAll();
@@ -708,7 +703,7 @@ class TelegramBot extends TelegramBot_base{
 					}
 					catch(Exception $ex){
 						echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
-						throw new TelegramException($this->telegram_id, 'Ошибка записи');
+						throw new TelegramException($this, 'Ошибка записи');
 					}
 					
 					$this->sendMessage(
@@ -767,7 +762,7 @@ class TelegramBot extends TelegramBot_base{
 			}
 			catch(Exception $ex){
 				echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
-				throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 			
 			$res = $query->fetchAll();
@@ -794,7 +789,7 @@ class TelegramBot extends TelegramBot_base{
 				}
 				catch(Exception $ex){
 					echo __FILE__.':'.__LINE__."\t".$ex->getMessage();
-					throw new TelegramException($this->telegram_id, 'Ошибка БД, код TB:'.__LINE__);
+					throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 				}
 				
 				$this->sendMessage(
@@ -835,7 +830,7 @@ stop - Удалиться из контакт-листа бота
 		$res = preg_match($regexp, $text, $matches);
 		if($res === false){
 			$this->previousMessageArrayErase();
-			throw new TelegramException($this->telegram_id, 'Не знаю такой команды');
+			throw new TelegramException($this, 'Не знаю такой команды');
 		}
 		
 		return $matches[1];
@@ -864,7 +859,7 @@ stop - Удалиться из контакт-листа бота
 		}
 		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
 		
-		print_r($messagesTextArray);
+		//print_r($messagesTextArray);
 		$argc = count($messagesTextArray);
 		
 		if($argc < 1)
@@ -924,7 +919,7 @@ stop - Удалиться из контакт-листа бота
 			break;
 		default:
 			$this->previousMessageArrayErase();
-			throw new TelegramException($this->telegram_id, 'Я хз чё это значит');
+			throw new TelegramException($this, 'Я хз чё это значит');
 		}
 		
 		try{
