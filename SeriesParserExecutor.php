@@ -1,9 +1,9 @@
 <?php
 require_once(__DIR__.'/config/stuff.php');
-require_once(__DIR__."/SeriesParser.php");
+require_once(__DIR__.'/SeriesParser.php');
 
 class SeriesParserExecutor{
-	private static $rssURL = "http://www.lostfilm.tv/rssdd.xml";
+	private static $rssURL = 'http://www.lostfilm.tv/rssdd.xml';
 	private $seriesParser;
 	private $addSeriesQuery;
 	
