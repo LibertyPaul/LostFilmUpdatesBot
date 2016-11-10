@@ -19,23 +19,6 @@ class SeriesParser extends Parser{
 
 	public function __construct(){
 		parent::__construct(null);
-		
-		$pdo = createPDO();
-		
-		$this->getUrlIdQuery = $pdo->prepare('
-			SELECT `id`
-			FROM `shows`
-			WHERE 	STRCMP(`title_ru`, :title_ru) = 0
-			AND		STRCMP(`title_en`, :title_en) = 0
-		');
-
-		$this->latestSeriesQuery = $pdo->prepare('
-			SELECT COUNT(*) 
-			FROM `series`
-			WHERE 	`show_id` 		= :show_id
-			AND		`seasonNumber` 	= :seasonNumber
-			AND		`seriesNumber` 	= :seriesNumber
-		');
 	}
 
 	public function loadSrc($path){
@@ -43,23 +26,6 @@ class SeriesParser extends Parser{
 		$this->rssData = new SimpleXMLElement($this->pageSrc);
 	}
 			
-		
-	protected function getShowId($title_ru, $title_en){		
-		$this->getUrlIdQuery->execute(
-			array(
-				':title_ru' => $title_ru,
-				':title_en' => $title_en
-			)
-		);
-		
-		$res = $this->getUrlIdQuery->fetch(PDO::FETCH_ASSOC);
-		if($res === false){
-			throw new StdoutTextException("Show $title_ru ($title_en) was not found in database");
-		}
-		
-		return $res['id'];
-	}
-	
 	protected function parseTitle($title){
 		$lastDotPos = strrpos($title, '.');
 		$seasonSeriesNumberTag = substr($title, $lastDotPos + 1);
