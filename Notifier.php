@@ -71,30 +71,22 @@ class Notifier{
 
 	public function newSeriesEvent($telegram_id, $title_ru, $season, $seriesNumber, $seriesTitle){
 		assert(is_int($telegram_id));	
-		$path = __DIR__.'/logs/newSeriesEventLog.txt';
-		$logFile = createOrOpenLogFile($path);
 		
-		$notificationText = $this->generateNotificationText($title_ru, $season, $seriesNumber, $seriesTitle);
+		$notificationText = $this->generateNotificationText(
+			$title_ru,
+			$season,
+			$seriesNumber,
+			$seriesTitle
+		);
 		
-		try{
-			$bot = $this->getBot($telegram_id);
-			return $bot->sendMessage(
-				array(
-					'text' => $notificationText
-			
-				)
-			);
-		}
-		catch(UserBlockedBotException $ubbe){
-			return 403;
-		}
-		catch(Exception $ex){
-			$res = fwrite($logFile, "exception: {$ex->getMessage()}\n");
-			assert($res);
-		}
+		$bot = $this->getBot($telegram_id);
+		return $bot->sendMessage(
+			array(
+				'text' => $notificationText,
+				'disable_web_page_preview' => false
+			)
+		);
 		
-		$res = fclose($logFile);
-		assert($res);
 	}
 	
 	
