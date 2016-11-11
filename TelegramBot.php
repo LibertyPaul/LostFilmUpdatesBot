@@ -28,17 +28,14 @@ class TelegramBot extends TelegramBot_base{
 		$this->fetchPreviousMessageArray();
 	}	
 	
-	public function sendMessage($args){//function is called by TelegramException and not being able to throw another TelegramException
-		if(isset($args['chat_id']) === false){
-			$args['chat_id'] = $this->telegram_id;
-		}
-		
+	public function sendMessage($args){
+		$args['chat_id'] = $this->telegram_id;
+
 		try{
 			return parent::sendMessage($args);
 		}
-		catch(TelegramException $tex){//если даже произошло исключение TelegramException - перенаправляем его в stdout
-			echo 'TelegramException from TelegramBot_base::sendMessage() was caught'.PHP_EOL;
-			throw new StdoutTextException($tex->getMessage());
+		catch(TelegramException $tex){
+			assert(false, 'parent::sendMessage has thrown TelegramException');
 		}
 	}
 	
