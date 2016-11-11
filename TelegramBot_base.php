@@ -42,14 +42,8 @@ class TelegramBot_base{
 		$log = createOrOpenLogFile($path);
 		
 		$str = json_encode($ex);
-		$res = fwrite($log, $str);
-		if($res === false)
-			exit("uncaughtExceptions fwrite error");
-			
-		$res = fclose($log);
-		if($res === false)
-			exit("uncaughtExceptions fclose error");
-		
+		assert(fwrite($log, $str));
+		assert(fclose($log));
 	}
 	
 	private function exception_handler(Exception $ex){
@@ -68,89 +62,30 @@ class TelegramBot_base{
 		return "https://api.telegram.org/bot".TELEGRAM_BOT_TOKEN."/sendMessage";
 	}
 	
-	private function validateTelegramResponse($rawResponse){
-		$response = json_decode($rawResponse);
-		if($response === false){
-			return array(
-				'isValid' 	=> false,
-				'reason'	=> 'json_decode error: '.json_last_error_msg()
-			);
-		}
-		
-		if(isset($response->ok) === false){
-			return array(
-				'isValid' 	=> false,
-				'reason'	=> '$response->ok field is not found'
-			);
-		}
-		
-		if(is_bool($response->ok) === false){
-			return array(
-				'isValid' 	=> false,
-				'reason'	=> '$response->ok field is not of boolean type'
-			);
-		}
-		
-		if($response->ok === false){
-			return array(
-				'isValid' 	=> false,
-				'reason'	=> '$response->ok is false'
-			);
-		}
-		
-		return array(
-			'isValid' => true
-		);
-	}
-	
 	protected function sendMessage($data){//should NOT throw TelegramException
 		$path = __DIR__."/logs/sentMessages.txt";
 		$log = createOrOpenLogFile($path);
 		
 		$content_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 		
-		$res = fwrite($log, "[".date('d.m.Y H:i:s')."]\t$content_json");
-		if($res === false){
-			throw new StdoutTextException("log fwrite1 error");
-		}
-	
-		$rawResponse = null;
+		assert(fwrite($log, "[".date('d.m.Y H:i:s')."]\t$content_json"));
+		
+		$result = null;
 		
 		try{
-			$rawResponse = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
+			$result = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
 		}
 		catch(HTTPException $HTTPException){
-			$respCode = $HTTPException->getCode();
-			$res = fwrite($log, "ERROR $respCode\n");
-			if($res === false){
-				throw new StdoutTextException("log fwrite2 error");
-			}
-			
-			switch($respCode){
-			case 403:
-				throw new UserBlockedBotException("Destination chat_id: $data[chat_id]");
-			default:
-				throw new StdoutTextException("Unknown HTTP response code: $respCode");
-			}
+			assert(fwrite($log, 'ERROR '.$HTTPException->getMessage().PHP_EOL));
 		}
 		
-		$validationResult = $this->validateTelegramResponse($rawResponse['value']);
-		if($validationResult['isValid'] === true){
-			$res = fwrite($log, "SUCCESS\n\n");
-			if($res === false){
-				throw new StdoutTextException("log fwrite3 error");
-			}
-		}
-		else{
-			throw new StdoutTextException('Telegram response validation failed: '.$validationResult['reason']);
+		if($result['code'] === 200){
+			assert(fwrite($log, "SUCCESS\n\n"));
 		}
 				
-		$res = fclose($log);
-		if($res === false){
-			throw new StdoutTextException("log fclose error");
-		}
+		assert(fclose($log));
 		
-		return $rawResponse;
+		return $result;
 	}
 	
 	protected function sendTextByLines($messageData, array $lines, $eol){

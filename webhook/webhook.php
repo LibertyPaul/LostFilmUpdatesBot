@@ -13,8 +13,8 @@ function logError($message){
 		$errorTextTemplate
 	);
 	echo $errorText;
-	fwrite($log, $errorText);
-	fclose($log);
+	assert(fwrite($log, $errorText));
+	assert(fclose($log));
 }
 
 function exception_handler($ex){
@@ -59,8 +59,8 @@ $debugOutput = true;
 if($debugOutput){
 	$log = createOrOpenLogFile(__DIR__.'/../logs/webhookInput.json');
 	$readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-	fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n");
-	fclose($log);
+	assert(fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n"));
+	assert(fclose($log));
 }
 
 if(isset($_GET['ignore_msg_id']) && $_GET['ignore_msg_id'] === 'true'){
