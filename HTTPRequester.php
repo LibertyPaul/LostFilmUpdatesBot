@@ -3,36 +3,43 @@
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 
 class HTTPRequester implements HTTPRequesterInterface{
-	
-	protected function getHTTPCode($headers){
-		$matches = array();
-		$res = preg_match_all('/[\w]+\/\d\.\d (\d+) [\w]+/', $headers[0], $matches);
-		
-		$code = intval($matches[1][0]);
-		return $code;
-	}
+	private $curl;
 
-	public function sendJSONRequest($destination, $content_json){
-		$context = stream_context_create(
-			array(
-				'http' => array(
-					'method' => 'POST',
-					'header' => 'Content-type: application/json',
-					'content' => $content_json
+	public function __construct(){
+		$this->curl = curl_init();
+		assert($this->curl !== false);
+		assert(
+			curl_setopt_array(
+				$this->curl,
+				array(
+					CURLOPT_RETURNTRANSFER 	=> true,
+					CURLOPT_POST			=> true,
+					CURLOPT_HTTPHEADER		=> array(
+						'Content-type: application/json'
+					)
 				)
 			)
 		);
-		//TODO: move to cURL in order to get meaningful messages along with 4xx codes
-		$response = file_get_contents($destination, false, $context);
-	
-		$respCode = $this->getHTTPCode($http_response_header);
+	}
+
+	public function __destruct(){
+		assert(curl_close($this->curl));
+	}
+
+	public function sendJSONRequest($destination, $content_json){
+		assert(curl_setopt($this->curl, CURLOPT_URL, $destination));
+		assert(curl_setopt($this->curl, CURLOPT_POSTFIELDS, $content_json));
+
+		$response = curl_exec($this->curl);
 		if($response === false){
-			throw new HTTPException("file_get_contents fail", $respCode);
+			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 
 		return array(
 			'value' => $response,
-			'code'	=> $respCode	
+			'code' => intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE))
 		);
-	}
+
+	}	
+		
 }
