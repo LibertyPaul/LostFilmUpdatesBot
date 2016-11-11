@@ -1,7 +1,7 @@
 <?php
-require_once(__DIR__."/config/stuff.php");
+require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/TelegramBotFactory.php');
-require_once(__DIR__."/Exceptions/StdoutTextException.php");
+require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 
 
 class Notifier{
@@ -52,17 +52,22 @@ class Notifier{
 	}
 	
 	protected function generateNotificationText($showTitleRu, $season, $seriesNumber, $seriesTitle){
-		$template = join("\n", array(
-			'Вышла новая серия #showName',
-			'#season-й сезон, серия №#seriesNumber "#seriesTitle"',
-			'Серию можно скачать по ссылке:',
+		$template = 
+			'Вышла новая серия <b>#showName</b>'				.PHP_EOL.
+			'Сезон #season, серия #seriesNumber, "#seriesTitle"'.PHP_EOL.
+			'Серию можно скачать по ссылке:'					.PHP_EOL.
 			'https://www.lostfilm.tv/browse.php'
-		));
+		;
 			
 		
 		$text = str_replace(
 			array('#showName', '#season', '#seriesNumber', '#seriesTitle'),
-			array($showTitleRu, $season, $seriesNumber, $seriesTitle),
+			array(
+				htmlspecialchars($showTitleRu),
+				$season,
+				$seriesNumber,
+				htmlspecialchars($seriesTitle)
+			),
 			$template
 		);
 		
@@ -83,7 +88,8 @@ class Notifier{
 		return $bot->sendMessage(
 			array(
 				'text' => $notificationText,
-				'disable_web_page_preview' => false
+				'parse_mode' => 'HTML',
+				'disable_web_page_preview' => true,
 			)
 		);
 		
