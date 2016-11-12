@@ -1,9 +1,10 @@
 <?php
-require_once(__DIR__."/config/stuff.php");
+require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Notifier.php');
 
 class NotificationDispatcher{
 	private $notifier;
+	private $pdo;
 	private $getNotificationData;
 	private $setNotificationCode;
 	private $bots;
@@ -12,8 +13,8 @@ class NotificationDispatcher{
 		assert($notifier !== null);
 		$this->notifier = $notifier;
 		
-		$pdo = createPDO();
-		$this->getNotificationData = $pdo->prepare('
+		$this->pdo = createPDO();
+		$this->getNotificationData = $this->pdo->prepare('
 			SELECT 	`notificationsQueue`.`id`,
 					`users`.`telegram_id`,
 					`shows`.`title_ru` AS showTitle,
@@ -24,18 +25,26 @@ class NotificationDispatcher{
 			LEFT JOIN `users` ON `notificationsQueue`.`user_id` = `users`.`id`
 			LEFT JOIN `series` ON `notificationsQueue`.`series_id` = `series`.`id`
 			LEFT JOIN `shows` ON `series`.`show_id` = `shows`.`id`
-			WHERE `notificationsQueue`.`responceCode` IS NULL
+			WHERE	`notificationsQueue`.`responseCode` != 200
+			AND		`notificationsQueue`.`retryCount`	<  :maxRetryCount
 		');
 		
-		$this->setNotificationCode = $pdo->prepare('
-			UPDATE `notificationsQueue`
-			SET `responceCode` = :responceCode
+		$this->setNotificationDeliveryResult = $this->pdo->prepare('
+			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
 		');
 		
 	}
 	
 	public function run(){
-		$this->getNotificationData->execute();
+		$this->pdo->query('LOCK TABLES notificationsQueue WRITE');
+
+
+		$this->getNotificationData->execute(
+			array(
+				'maxRetryCount' => MAX_NOTIFICATION_RETRY_COUNT
+			)
+		);
+
 		
 		while($notification = $this->getNotificationData->fetch(PDO::FETCH_ASSOC)){
 			$result = $this->notifier->newSeriesEvent(
@@ -46,13 +55,15 @@ class NotificationDispatcher{
 				$notification['seriesTitle']
 			);
 			
-			$this->setNotificationCode->execute(
+			$this->setNotificationDeliveryResult->execute(
 				array(
-					':responceCode' => $result['code']
+					'notificationId'	=> $notification['id'],
+					'HTTPCode' 			=> $result['code']
 				)
 			);
-			
 		}
+
+		$this->pdo->query('UNLOCK TABLES');
 	}
 }
 			
