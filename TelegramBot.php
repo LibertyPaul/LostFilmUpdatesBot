@@ -323,7 +323,7 @@ class TelegramBot extends TelegramBot_base{
 				) AS `title`,
 				`shows`.`onAir`
 			FROM `tracks`
-			JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
+			LEFT JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
 			WHERE `tracks`.`user_id` = :user_id
 			ORDER BY `shows`.`title_ru`
 		");
