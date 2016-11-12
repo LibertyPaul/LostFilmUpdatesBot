@@ -100,7 +100,7 @@ class TelegramBot_base{
 		foreach($lines as $str){
 			$nextMessageLength = strlen($str) + strlen($eol);
 			if($bufferLength > MAX_MESSAGE_JSON_LENGTH){
-				throw new Exception("Слишком длинная строка");
+				throw new Exception("One of the rows in too long");
 			}
 			else if($bufferLength + $nextMessageLength > MAX_MESSAGE_JSON_LENGTH){
 				$messageData['text'] = $currentMessage;
@@ -120,24 +120,15 @@ class TelegramBot_base{
 			$messageData['text'] = $currentMessage;
 			$messages[] = json_encode($messageData);
 		}
-		
+
 		foreach($messages as $content_json){
-			try{
-				$rawResponse = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
-				
-				$validationResult = $this->validateTelegramResponse($rawResponse['value']);
-				
-				if($validationResult['isValid'] === false){
-					throw new StdoutTextException('Telegram response validation failed: '.$validationResult['reason']);
-				}
-			}
-			catch(HTTPException $HTTPException){
-				switch($HTTPException->getCode()){
-				case 403:
-					throw new UserBlockedBotException("Destination chat_id: $data[chat_id]");
-				default:
-					throw new StdoutTextException("Unknown HTTP response code: $respCode");
-				}
+			$response = $this->HTTPRequester->sendJSONRequest(
+				$this->getSendMessageURL(),
+				$content_json
+			);
+
+			if($response['code'] !== 200){
+				throw new Exception('Failed part-of-message sending attempt. HTTP code: '.$response['code']);
 			}
 		}
 	}
