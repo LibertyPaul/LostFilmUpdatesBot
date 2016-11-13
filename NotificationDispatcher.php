@@ -25,8 +25,11 @@ class NotificationDispatcher{
 			LEFT JOIN `users` ON `notificationsQueue`.`user_id` = `users`.`id`
 			LEFT JOIN `series` ON `notificationsQueue`.`series_id` = `series`.`id`
 			LEFT JOIN `shows` ON `series`.`show_id` = `shows`.`id`
-			WHERE	`notificationsQueue`.`responseCode` != 200
-			AND		`notificationsQueue`.`retryCount`	<  :maxRetryCount
+			WHERE (
+				`notificationsQueue`.`responseCode` IS NULL OR
+				`notificationsQueue`.`responseCode` != 200
+			)
+			AND	`notificationsQueue`.`retryCount` < :maxRetryCount
 		');
 		
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
@@ -36,8 +39,13 @@ class NotificationDispatcher{
 	}
 	
 	public function run(){
-		$this->pdo->query('LOCK TABLES notificationsQueue WRITE');
-
+		$this->pdo->query('
+			LOCK TABLES 
+				notificationsQueue	WRITE,
+				users				READ,
+				series				READ,
+				shows				READ;
+		');
 
 		$this->getNotificationData->execute(
 			array(
