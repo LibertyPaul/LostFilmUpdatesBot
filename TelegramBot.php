@@ -8,13 +8,16 @@ require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/Notifier.php');
 
 class TelegramBot extends TelegramBot_base{
-	protected $telegram_id;
-	protected $botan;
-	protected $notifier;
+	private $user_id;
+	private $telegram_id;
+	private $botan;
+	private $notifier;
 	private $previousMessageArray;
 	
 	public function __construct($telegram_id, HTTPRequesterInterface $HTTPRequester, Notifier $notifier){
 		TelegramBot_base::__construct($HTTPRequester);
+
+		$user_id = null;
 		
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
@@ -86,8 +89,7 @@ class TelegramBot extends TelegramBot_base{
 	}
 	
 	protected function getUserId(){
-		static $user_id;
-		if(isset($user_id) === false){
+		if($this->user_id === null){
 			$getUserIdQuery = $this->pdo->prepare('
 				SELECT `id`
 				FROM `users`
@@ -106,9 +108,9 @@ class TelegramBot extends TelegramBot_base{
 				throw new TelegramException($this, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
 			}
 				
-			$user_id = intval($result[0]['id']);
+			$this->user_id = intval($result[0]['id']);
 		}
-		return $user_id;
+		return $this->user_id;
 	}
 	
 	protected function updateUserInfo($telegram_username, $telegram_firstName){
@@ -152,12 +154,29 @@ class TelegramBot extends TelegramBot_base{
 	protected function registerUser($username, $firstName, $lastName){
 		$this->previousMessageArrayErase();
 		if($this->isUserRegistred()){
-			throw new TelegramException($this, 'Мы ведь уже знакомы, правда?');
+			//throw new TelegramException($this, 'Мы ведь уже знакомы, правда?');
+			$this->sendMessage(
+				array(
+					'text' => 'Мы ведь уже знакомы, правда?'
+				)
+			);
+
+			return;
 		}
 		
 		$addUserQuery = $this->pdo->prepare('
-			INSERT INTO `users` (`telegram_id`, `telegram_username`, `telegram_firstName`, `telegram_lastName`)
-			VALUES (:telegram_id, :telegram_username, :telegram_firstname, :telegram_lastname)
+			INSERT INTO `users` (
+				`telegram_id`,
+				`telegram_username`,
+				`telegram_firstName`,
+				`telegram_lastName`
+			)
+			VALUES (
+				:telegram_id,
+				:telegram_username,
+				:telegram_firstname,
+				:telegram_lastname
+			)
 		');
 		
 		try{
@@ -196,6 +215,20 @@ class TelegramBot extends TelegramBot_base{
 	}
 	
 	protected function unregisterUser(){
+		$user_id = $this->getUserId();
+		if($user_id === null){
+			$this->sendMessage(
+				array(
+					'text' => 
+						'Ты еще не регистрировался, а уже пытаешься удалиться'.PHP_EOL.	
+						'Не надо так...'
+				)
+			);
+
+			return;
+		}
+
+
 		$ANSWER_YES = 'Да';
 		$ANSWER_NO = 'Нет';
 		$keyboard = array(
