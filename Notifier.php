@@ -106,7 +106,7 @@ class Notifier{
 		
 		$res = $this->getUserInfoQuery->fetch();
 		if($res === false){
-			throw new StdoutTextException("User with this id wasn't found");
+			throw new StdoutTextException("User with id($user_id) wasn't found");
 		}
 		
 		return $res;
