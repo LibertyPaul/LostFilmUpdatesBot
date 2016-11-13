@@ -14,6 +14,7 @@ class TelegramBot_base{
 	
 	protected $sql;
 	protected $pdo;
+	protected $memcache;
 	
 	private $HTTPRequester;
 	
