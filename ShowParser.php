@@ -27,9 +27,9 @@ class ShowParser extends Parser{
 		');
 		
 		$this->addShowQuery = $pdo->prepare('
-			INSERT INTO `shows` (title_ru, title_en)
-			VALUES (:title_ru, :title_en)
-		');
+			INSERT INTO `shows` (title_ru, title_en, onAir)
+			VALUES (:title_ru, :title_en, 1)
+		');// temporary fix for onAir
 		
 		$this->updateShowStateQuery = $pdo->prepare('
 			UPDATE `shows`
@@ -92,6 +92,7 @@ class ShowParser extends Parser{
 		foreach($showList as $url_id => $titles){
 			try{
 				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
+				echo "$titles[title_ru], $titles[title_en] $showId".PHP_EOL;
 				if($showId === null){
 					echo "New show: $titles[title_ru] ($titles[title_en])".PHP_EOL;
 					$this->addShowQuery->execute(
@@ -108,7 +109,7 @@ class ShowParser extends Parser{
 				$this->updateShowStateQuery->execute(
 					array(
 						':id' 		=> $showId,
-						':onAir'	=> $this->showAboutParser->run()
+						':onAir'	=> $this->showAboutParser->run() ? 1 : 0
 					)
 				);
 			}
