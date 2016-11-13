@@ -7,7 +7,7 @@ require_once(__DIR__.'/HTTPRequesterMock.php');
 class TelegramBotMockFactory implements TelegramBotFactoryInterface{
 	
 	public function __construct($outputPath){
-		assert(is_file($outputPath) === false);
+		assert(is_file($outputPath));
 		$this->outputPath = $outputPath;
 	}
 	

@@ -32,7 +32,7 @@ class MessageTester{
 	);
 	
 	private $telegram_id;
-	private $bot;
+	private $botFactory;
 	private $botOutputFile;
 
 	public function __construct($telegram_id){
@@ -41,9 +41,7 @@ class MessageTester{
 		
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
 
-		$factory = new TelegramBotMockFactory($this->botOutputFile);
-
-		$this->bot = $factory->createBot($this->telegram_id);
+		$this->botFactory = new TelegramBotMockFactory($this->botOutputFile);
 	}
 	
 	private function fillTemplate(array $fields){
@@ -87,9 +85,11 @@ class MessageTester{
 		$json_msg = $this->fillTemplate(array('#TEXT' => $message));
 
 		$this->truncateBotOutputFile();
+
+		$bot = $this->botFactory->createBot($this->telegram_id);
 		
 		try{
-			$this->bot->incomingUpdate(json_decode($json_msg)->message);
+			$bot->incomingUpdate(json_decode($json_msg)->message);
 		}
 		catch(TelegramException $tex){
 			$tex->release();
@@ -97,12 +97,10 @@ class MessageTester{
 
 		$response_json = file_get_contents($this->botOutputFile);
 		assert($response_json !== false);
-		assert(strlen($response_json) > 0);
 
 		$response = json_decode($response_json);
-		assert($response !== false);
 
-		return $response->text;
+		return $response;
 	}
 
 

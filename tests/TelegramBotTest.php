@@ -23,83 +23,93 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 			)
 		);
 		
-		return intval($userExists->fetch()[0]) === 0;
+		return intval($userExists->fetch()[0]) !== 0;
 	}
-	
-	public function testRegistration(){
-		
-		if($this->userExists(self::TEST_TELEGRAM_ID) === false){
 
-			$resp = $this->messageTester->send('/start');
-			$this->assertContains('Привет', $resp);
-
-			$this->assertTure($this->userExists(self::TEST_TELEGRAM_ID));
-
-		}
+	private function start(){
+		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
 		$resp = $this->messageTester->send('/start');
-		$this->assertContains('знакомы', $resp);
+
+		if($isExist === false){
+			$this->assertContains('Привет', $resp->text);
+			$this->assertTrue($this->userExists(self::TEST_TELEGRAM_ID));
+		}
+		else{
+			$this->assertContains('знакомы', $resp->text);
+		}
+	}
+
+	private function cancel(){
+		$resp = $this->messageTester->send('/cancel');
+		$this->assertEquals('Действие отменено.', $resp->text);
+	}
+
+	private function stop(){
+		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
 		$resp = $this->messageTester->send('/stop');
-		$this->assertContains('Ты уверен?', $resp);
-		
-		$resp = $this->messageTester->send('Нет');
-		$this->assertContains('Фух', $resp);
 
-		$resp = $this->messageTester->send('/stop');
-		$this->assertContains('Ты уверен?', $resp);
+		if($isExist === false){
+			$this->assertContains('Ты еще не регистрировался', $resp->text);
+		}
+		else{
+			$this->assertContains('Ты уверен?', $resp->text);
 
-		$resp = $this->messageTester->send('Да');
-		$this->assertContains('Прощай', $resp);
-
+			$resp = $this->messageTester->send('Да');
+			$this->assertContains('Прощай', $resp->text);
+		}
 
 		$this->assertFalse($this->userExists(self::TEST_TELEGRAM_ID));
+	}
 
+	public function testRegistration(){
+		$this->cancel();	
+		$this->start();
+
+		$resp = $this->messageTester->send('/start');
+		$this->assertContains('знакомы', $resp->text);
+
+		$resp = $this->messageTester->send('/stop');
+		$this->assertContains('Ты уверен?', $resp->text);
+		
+		$resp = $this->messageTester->send('Нет');
+		$this->assertContains('Фух', $resp->text);
+
+		$this->stop();
 	}
 
 	public function testAddShow(){
-		
-		if($this->userExists(self::TEST_TELEGRAM_ID) === false){
-
-			$resp = $this->messageTester->send('/start');
-			$this->assertContains('Привет', $resp);
-
-			$this->assertTure($this->userExists(self::TEST_TELEGRAM_ID));
-
-		}
-
+		$this->cancel();
+		$this->start();
 
 		$resp = $this->messageTester->send('/add_show');
-		$this->assertContains('Как называется сериал?', $resp);
+		$this->assertContains('Как называется сериал?', $resp->text);
 
-		$showList = json_decode($resp);
-		$this->assertEquals('/cancel', $showList->keyboard[0][0]);
+		$keyboard = $resp->reply_markup->keyboard;
+		$this->assertTrue(isset($keyboard));
+		$this->assertTrue(isset($keyboard[0]));
+		$this->assertEquals('/cancel', $keyboard[0][0]);
 
 
-		$randomShow = $showList->keyboard[rand(1, count($showList->keyboard) - 1)][rand(0, 1)];
+		$keyboardRows = count($keyboard);
+		$this->assertGreaterThan(0, $keyboardRows);
+
+		$showCount = count($keyboard[0]) - 1;
+		if($keyboardRows > 1){
+			$showCount += ($keyboardRows - 2) * 2 + count($keyboard[$keyboardRows - 1]);
+		}
+
+		$randomIndex = rand(0, $showCount);
+
+		$row = ($randomIndex - 1) / 2;
+		$col = ($randomIndex - 1) % 2;
+
+		$randomShow = $keyboard[$row][$col];
 		$resp = $this->messageTester->send($randomShow);
-		$this->assertEquals($randomShow.' добавлен', $resp);
+		$this->assertEquals($randomShow.' добавлен', $resp->text);
 
-
+		$this->stop();
 	}
+
 }
-		
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
