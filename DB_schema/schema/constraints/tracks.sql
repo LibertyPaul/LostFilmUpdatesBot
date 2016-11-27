@@ -1,0 +1,11 @@
+ALTER TABLE `tracks`
+	ADD CONSTRAINT `tracks_ibfk_10`
+		FOREIGN KEY (`user_id`)
+		REFERENCES `users` (`id`)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE,
+	ADD CONSTRAINT `tracks_ibfk_11`
+		FOREIGN KEY (`show_id`)
+		REFERENCES `shows` (`id`)
+		ON DELETE CASCADE
+		ON UPDATE CASCADE;
