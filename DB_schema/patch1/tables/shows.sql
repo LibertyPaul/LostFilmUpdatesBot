@@ -1,15 +1,26 @@
 ALTER TABLE `shows`
-CHANGE `title_ru` `title_ru` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL,
-CHANGE `title_en` `title_en` VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL;
+	CHANGE `title_ru`
+		`title_ru` VARCHAR(255)
+		CHARACTER SET utf8
+		COLLATE utf8_bin
+		NOT NULL,
+	CHANGE `title_en`
+		`title_en` VARCHAR(255)
+		CHARACTER SET utf8
+		COLLATE utf8_bin
+		NOT NULL;
 
 ALTER TABLE `shows`
-DROP `seasonNumber`,
-DROP `seriesNumber`;
+	DROP `seasonNumber`,
+	DROP `seriesNumber`;
 
 
 
 ALTER TABLE `shows`
-ADD `onAir_` ENUM('Y', 'N') NOT NULL AFTER `onAir`, ADD INDEX (`onAir_`);
+	ADD
+		`onAir_` ENUM('Y', 'N')
+		NOT NULL
+		AFTER `onAir`;
 
 UPDATE `shows` SET onAir_ = (
     CASE
@@ -19,7 +30,11 @@ UPDATE `shows` SET onAir_ = (
 );
 
 ALTER TABLE `shows`
-DROP onAir;
+	DROP onAir;
 
 ALTER TABLE `shows`
-CHANGE `onAir_` `onAir` ENUM('Y', 'N') CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL;
+	CHANGE `onAir_`
+	`onAir` ENUM('Y', 'N')
+	CHARACTER SET utf8
+	COLLATE utf8_general_ci
+	NOT NULL;

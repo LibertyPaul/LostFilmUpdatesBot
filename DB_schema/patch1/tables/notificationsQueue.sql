@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `notificationsQueue` (
+CREATE TABLE `notificationsQueue` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `series_id` int(10) unsigned NOT NULL,
   `user_id` int(10) unsigned NOT NULL,
@@ -8,9 +8,4 @@ CREATE TABLE IF NOT EXISTS `notificationsQueue` (
   KEY `responceCode` (`responceCode`),
   KEY `series_id` (`series_id`),
   KEY `user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
-
-ALTER TABLE `notificationsQueue`
-  ADD CONSTRAINT `notificationsQueue_ibfk_1` FOREIGN KEY (`series_id`) REFERENCES `series` (`id`),
-  ADD CONSTRAINT `notificationsQueue_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;

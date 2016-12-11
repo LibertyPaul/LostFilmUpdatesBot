@@ -1,5 +1,17 @@
 #!/bin/bash
 
+readonly path="$1"
+
+if [ ! -z "$path" ]; then
+
+	if [ ! -d "$path" ]; then
+		echo 'Invalid schema directory path'
+		exit
+	fi
+
+	cd "$path"
+fi
+
 if [ ! -f DB.sql ]; then
 	echo "DB.sql is not exist"
 	exit
@@ -12,7 +24,15 @@ cat DB.sql >> "$tmpFile"
 printf "\n\n" >> "$tmpFile"
 
 
-declare -a elementsOrder=(tables constraints triggers procedures)
+declare -a elementsOrder=(
+	constraints_drop
+	indexes_drop
+	tables
+	indexes_create
+	constraints_create
+	triggers
+	procedures
+)
 
 for element in "${elementsOrder[@]}"; do
 	if [[ -d "./$element" && $(ls ./$element/*.sql | wc -l) > 0 ]]; then

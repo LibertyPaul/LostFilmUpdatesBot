@@ -3,8 +3,7 @@ ALTER TABLE `users`
 		ENUM('Y', 'N') 
 		NOT NULL
 		DEFAULT 'N'
-		AFTER `mute`,
-	ADD	INDEX(`mute_`);
+		AFTER `mute`;
 
 UPDATE users SET mute_ = (
 	CASE
@@ -24,7 +23,3 @@ ALTER TABLE `users`
 	COLLATE utf8_general_ci 
 	NOT NULL 
 	DEFAULT 'N';
-
-ALTER TABLE `users`
-	DROP INDEX `mute_`,
-	ADD INDEX `mute`(`mute`);
