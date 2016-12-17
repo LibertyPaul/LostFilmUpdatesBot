@@ -50,18 +50,6 @@ class StuffTest extends PHPUnit_Framework_TestCase{
 	}
 
 	public function testDBConnection(){
-		$throws = false;
-		try{
-			createSQL();
-		}
-		catch(Exception $ex){
-			$throws = true;
-		}
-		finally{
-			$this->assertFalse($throws);
-		}
-		
-
 		$this->assertThat(
 			createPDO(),
 			$this->logicalNot(

@@ -12,7 +12,6 @@ class TelegramBot_base{
 	const tokenLength = 32;
 	const expireTime = 3600;
 	
-	protected $sql;
 	protected $pdo;
 	protected $memcache;
 	
@@ -25,7 +24,6 @@ class TelegramBot_base{
 		
 		$this->HTTPRequester = $HTTPRequester;
 	
-		$this->sql = createSQL();
 		$this->pdo = createPDO();
 		$this->memcache = createMemcache();
 		
