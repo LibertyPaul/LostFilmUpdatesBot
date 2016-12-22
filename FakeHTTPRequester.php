@@ -23,7 +23,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	}
 	
 	public function sendJSONRequest($destination, $content_json){
-		$res = file_put_contents($this->destinationFilePath, $content_json, FILE_APPEND);
+		$res = file_put_contents($this->destinationFilePath, "\n\n$content_json", FILE_APPEND);
 		if($res === false){
 			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
 		}

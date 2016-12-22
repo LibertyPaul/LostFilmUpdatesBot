@@ -89,7 +89,10 @@ class MessageTester{
 		$bot = $this->botFactory->createBot($this->telegram_id);
 		
 		try{
-			$bot->incomingUpdate(json_decode($json_msg)->message);
+			$msg = json_decode($json_msg);
+			assert(json_last_error() === JSON_ERROR_NONE);
+
+			$bot->incomingUpdate($msg->message);
 		}
 		catch(TelegramException $tex){
 			$tex->release();
@@ -98,9 +101,18 @@ class MessageTester{
 		$response_json = file_get_contents($this->botOutputFile);
 		assert($response_json !== false);
 
-		$response = json_decode($response_json);
+		$response_json = trim($response_json);
+		$sentMessages_json = explode("\n\n", $response_json);
 
-		return $response;
+		$sentMessages = array();
+		foreach($sentMessages_json as $message_json){
+			$currentMessage = json_decode(trim($message_json));
+			assert(json_last_error() === JSON_ERROR_NONE);
+
+			$sentMessages[] = $currentMessage;
+		}
+		
+		return $sentMessages;
 	}
 
 

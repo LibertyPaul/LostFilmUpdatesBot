@@ -29,19 +29,39 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 	private function start(){
 		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
-		$resp = $this->messageTester->send('/start');
+		$sentMessages = $this->messageTester->send('/start');
 
 		if($isExist === false){
-			$this->assertContains('Привет', $resp->text);
-			$this->assertTrue($this->userExists(self::TEST_TELEGRAM_ID));
+			$helloSent = false;
+			$adminNotificationSent = false;
+
+			foreach($sentMessages as $message){
+				if(strpos($message->text, 'Привет') !== false){
+					$helloSent = true;
+				}
+
+				if(strpos($message->text, 'Новый юзер') !== false){
+					$adminNotificationSent = true;
+				}
+			}
+
+			$this->assertTrue($helloSent);
+			$this->assertTrue($adminNotificationSent);
 		}
 		else{
+			assert(count($sentMessages) === 1);
+			$resp = $sentMessages[0];
 			$this->assertContains('знакомы', $resp->text);
 		}
+		
+		$this->assertTrue($this->userExists(self::TEST_TELEGRAM_ID));
 	}
 
 	private function cancel(){
 		$resp = $this->messageTester->send('/cancel');
+
+		assert(count($resp) === 1);
+		$resp = $resp[0];
 		$this->assertEquals('Действие отменено.', $resp->text);
 	}
 
@@ -49,6 +69,8 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
 		$resp = $this->messageTester->send('/stop');
+		assert(count($resp) === 1);
+		$resp = $resp[0];
 
 		if($isExist === false){
 			$this->assertContains('Ты еще не регистрировался', $resp->text);
@@ -56,8 +78,22 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		else{
 			$this->assertContains('Ты уверен?', $resp->text);
 
-			$resp = $this->messageTester->send('Да');
-			$this->assertContains('Прощай', $resp->text);
+			$sentMessages = $this->messageTester->send('Да');
+			
+			$bueSent = false;
+			$adminNotificationSent = false;
+			foreach($sentMessages as $message){
+				if(strpos($message->text, 'Прощай') !== false){
+					$byeSent = true;
+				}
+
+				if(strpos($message->text, 'удалился') !== false){
+					$adminNotificationSent = true;
+				}
+			}
+
+			$this->assertTrue($byeSent);
+			$this->assertTrue($adminNotificationSent);
 		}
 
 		$this->assertFalse($this->userExists(self::TEST_TELEGRAM_ID));
@@ -67,13 +103,13 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();	
 		$this->start();
 
-		$resp = $this->messageTester->send('/start');
+		$resp = $this->messageTester->send('/start')[0];
 		$this->assertContains('знакомы', $resp->text);
 
-		$resp = $this->messageTester->send('/stop');
+		$resp = $this->messageTester->send('/stop')[0];
 		$this->assertContains('Ты уверен?', $resp->text);
 		
-		$resp = $this->messageTester->send('Нет');
+		$resp = $this->messageTester->send('Нет')[0];
 		$this->assertContains('Фух', $resp->text);
 
 		$this->stop();
@@ -83,7 +119,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();
 		$this->start();
 
-		$resp = $this->messageTester->send('/add_show');
+		$resp = $this->messageTester->send('/add_show')[0];
 		$this->assertContains('Как называется сериал?', $resp->text);
 
 		$keyboard = $resp->reply_markup->keyboard;
@@ -106,7 +142,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$col = ($randomIndex - 1) % 2;
 
 		$randomShow = $keyboard[$row][$col];
-		$resp = $this->messageTester->send($randomShow);
+		$resp = $this->messageTester->send($randomShow)[0];
 		$this->assertEquals($randomShow.' добавлен', $resp->text);
 
 		$this->stop();
