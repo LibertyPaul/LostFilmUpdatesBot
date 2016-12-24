@@ -8,7 +8,6 @@ require_once(__DIR__.'/ShowAboutParser.php');
 class ShowParser extends Parser{
 	protected $getShowIdQuery;
 	protected $addShowQuery;
-	protected $updateShowStateQuery;
 	protected $showAboutParser;
 	
 	const showPageTemplate = 'https://www.lostfilm.tv/browse.php?cat=#url_id';
@@ -30,11 +29,6 @@ class ShowParser extends Parser{
 			VALUES (:title_ru, :title_en, :onAir)
 		');
 		
-		$this->updateShowStateQuery = $pdo->prepare('
-			UPDATE `shows`
-			SET `onAir` = :onAir
-			WHERE `id` = :id
-		');
 	}
 	
 	protected function getShowId($title_ru, $title_en){
