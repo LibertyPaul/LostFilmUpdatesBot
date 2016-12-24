@@ -34,14 +34,45 @@ class SeriesParserExecutor{
 			try{
 				$this->addSeriesQuery->execute($newSeries);
 			}
+			catch(PDOException $ex){
+				$date = date('Y.m.d H:i:s');
+				echo "[DB ERROR]\t$date\t".__FILE__.':'.__LINE__.PHP_EOL;
+				
+				switch($ex->getCode()){
+					case '02000': 
+						echo 'Show wasn\'t found'.PHP_EOL;
+						break;
+					
+					default:
+						echo 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL;
+						break;
+				}
+					
+				print_r($newSeries);
+				echo PHP_EOL.PHP_EOL;
+			}
 			catch(Exception $ex){
-				echo __FILE__.':'.__LINE__."\t".$ex->getMessage().PHP_EOL;
+				$date = date('Y.M.d H:i:s');
+				echo "[UNKNOWN ERROR]\t".__FILE__.':'.__LINE__."\t$date\t".$ex->getMessage().PHP_EOL;
 			}
 		}
 	}
-
 }
 
 $parser = new SeriesParser();
 $SPE = new SeriesParserExecutor($parser);
 $SPE->run();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
