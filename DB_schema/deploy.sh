@@ -1,6 +1,6 @@
 #!/bin/bash
 
-readonly path="$1"
+readonly path=$(readlink -m "$1")
 
 if [ ! -z "$path" ]; then
 
@@ -12,15 +12,17 @@ if [ ! -z "$path" ]; then
 	cd "$path"
 fi
 
-if [ ! -f DB.sql ]; then
-	echo "DB.sql is not exist"
+readonly initPath="$path/DB.sql";
+
+if [ ! -r "$initPath" ]; then
+	echo "$initPath is not exist"
 	exit
 fi
 
 tmpFile="$(mktemp --suffix=.sql)"
 
 printf "/*    Schema definition:    */\n\n" >> "$tmpFile"
-cat DB.sql >> "$tmpFile"
+cat "$initPath" >> "$tmpFile"
 printf "\n\n" >> "$tmpFile"
 
 

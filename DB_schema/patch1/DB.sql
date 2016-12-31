@@ -1,1 +1,1 @@
-USE LostFilmUpdatesBot_dev;
+USE LostFilmUpdatesBot_clone;
