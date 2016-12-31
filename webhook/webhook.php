@@ -1,11 +1,11 @@
 <?php
-require_once(__DIR__."/../config/config.php");
-require_once(__DIR__."/../config/stuff.php");
-require_once(__DIR__."/../TelegramBot.php");
+require_once(__DIR__.'/../config/config.php');
+require_once(__DIR__.'/../config/stuff.php');
+require_once(__DIR__.'/../TelegramBotFactory.php');
 
 function logError($message){
-	$log = createOrOpenLogFile(__DIR__."/../logs/webhookErrorLog.txt");
-	$errorTextTemplate = "[ERROR]\t#DATETIME]\t#MESSAGE\n\n";
+	$log = createOrOpenLogFile(__DIR__.'/../logs/webhookErrorLog.txt');
+	$errorTextTemplate = "[ERROR]\t[#DATETIME]\t#MESSAGE\n\n";
 	
 	$errorText = str_replace(
 		array('#DATETIME', '#MESSAGE'),
@@ -13,8 +13,8 @@ function logError($message){
 		$errorTextTemplate
 	);
 	echo $errorText;
-	fwrite($log, $errorText);
-	fclose($log);
+	assert(fwrite($log, $errorText));
+	assert(fclose($log));
 }
 
 function exception_handler($ex){
@@ -49,7 +49,7 @@ elseif($_GET['password'] !== WEBHOOK_PASSWORD){
 	exit('incorrect password');
 }
 
-$update_json = file_get_contents("php://input");
+$update_json = file_get_contents('php://input');
 $update = json_decode($update_json);
 if($update === null || $update === false){
 	exit('incorrect JSON input');
@@ -59,13 +59,13 @@ $debugOutput = true;
 if($debugOutput){
 	$log = createOrOpenLogFile(__DIR__.'/../logs/webhookInput.json');
 	$readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-	fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n");
-	fclose($log);
+	assert(fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n"));
+	assert(fclose($log));
 }
 
 if(isset($_GET['ignore_msg_id']) && $_GET['ignore_msg_id'] === 'true'){
 	if(intval($update->update_id) < getLastRecievedId()){
-		exit("outdated message");
+		exit('outdated message');
 	}
 	else{
 		setLastRecievedId($update->update_id);
@@ -73,11 +73,16 @@ if(isset($_GET['ignore_msg_id']) && $_GET['ignore_msg_id'] === 'true'){
 }
 
 if(isset($update->message) === false){
-	exit("no message provided in update");
+	exit('no message provided in update');
 }
 
-$bot = new TelegramBot(intval($update->message->from->id), intval($update->message->chat->id));
-$bot->incomingUpdate($update->message);
+$telegram_id = intval($update->message->from->id);
+$chat_id = intval($update->message->chat->id);
+
+$botFactory = new TelegramBotFactory();
+$botFactory->createBot($telegram_id, $chat_id)->incomingUpdate($update->message);
+
+
 
 
 

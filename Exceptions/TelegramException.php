@@ -1,19 +1,21 @@
 <?php
-require_once(__DIR__."/UserException.php");
-require_once(__DIR__."/../TelegramBot_base.php");
+require_once(__DIR__.'/UserException.php');
+require_once(__DIR__.'/../TelegramBot.php');
+require_once(__DIR__.'/../HTTPRequester.php');
 
 
 class TelegramException extends UserException{
-	protected $telegram_id;
+	private $bot;
 
-	public function __construct($telegram_id, $errorText){
+	public function __construct(TelegramBot $bot, $errorText){
 		parent::__construct($errorText);
-		$this->telegram_id = $telegram_id;
+
+		assert($bot !== null);
+		$this->bot = $bot;
 	}
 	
-	public function showErrorText(){
-		$bot = new TelegramBot(intval($this->telegram_id), intval($this->telegram_id));
-		$bot->sendMessage(
+	public function release(){
+		$this->bot->sendMessage(
 			array(
 				'text' => $this->getMessage(),
 				'reply_markup' => array(
@@ -21,7 +23,6 @@ class TelegramException extends UserException{
 				)
 			)
 		);
-		
-		
 	}
+
 }

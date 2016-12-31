@@ -11,7 +11,7 @@ class StuffTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals($res, $openingPos);
 	}
 	
-	private function checkException($str, $openingPos){
+	private function checkFindParenthesisThrows($str, $openingPos){
 		$throws = false;
 		
 		try{
@@ -43,9 +43,42 @@ class StuffTest extends PHPUnit_Framework_TestCase{
 		$this->assertFalse($res);
 		
 		$case5 = '##############';
-		$this->checkException($case5, 0);
+		$this->checkFindParenthesisThrows($case5, 0);
 		
 		$case6 = 'zzz';
-		$this->checkException($case6, 100500);
+		$this->checkFindParenthesisThrows($case6, 100500);
 	}
+
+	public function testDBConnection(){
+		$this->assertThat(
+			createPDO(),
+			$this->logicalNot(
+				$this->equalTo(null)
+			)
+		);
+	}
+
+	public function testMemcache(){
+		
+		$this->assertThat(
+			createMemcache(),
+			$this->logicalNot(
+				$this->equalTo(null)
+			)
+		);
+	
+	}
+
+	
+	
+	
+
+
+		
 }
+
+
+
+
+
+

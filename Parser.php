@@ -3,13 +3,9 @@ abstract class Parser{
 	protected $pageSrc;
 	protected $srcEncoding;
 
-	public function __construct($srcEncoding){
-		if(isset($srcEncoding)){
-			$this->srcEncoding = $srcEncoding;
-		}
-		else{
-			$this->srcEncoding = null;
-		}
+	public function __construct($srcEncoding = null){
+		$this->srcEncoding = $srcEncoding;
+		$this->pageSrc = null;
 	}
 	
 	public function loadSrc($path){
