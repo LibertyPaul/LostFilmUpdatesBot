@@ -77,10 +77,9 @@ if(isset($update->message) === false){
 }
 
 $telegram_id = intval($update->message->from->id);
-$chat_id = intval($update->message->chat->id);
 
 $botFactory = new TelegramBotFactory();
-$botFactory->createBot($telegram_id, $chat_id)->incomingUpdate($update->message);
+$botFactory->createBot($telegram_id)->incomingUpdate($update->message);
 
 
 
