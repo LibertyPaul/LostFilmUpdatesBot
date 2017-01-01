@@ -23,7 +23,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 	}
 
 	public function __destruct(){
-		assert(curl_close($this->curl));
+		curl_close($this->curl);
 	}
 
 	public function sendJSONRequest($destination, $content_json){
