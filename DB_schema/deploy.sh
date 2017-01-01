@@ -19,6 +19,24 @@ if [ ! -r "$initPath" ]; then
 	exit
 fi
 
+
+DB_name=$(grep -oP 'USE[\s]+\K[\w$]+(?=;)' "$initPath")
+
+read -e -p "DB name is '$DB_name', correct? [Y/n]: " -i "Y" yn
+case $yn in
+	[Yy])
+		;;
+	[Nn])
+		echo "Please set proper DB name in '$initPath'"
+		exit
+		;;
+	*)
+		echo 'Incorrect response. Aborting.'
+		exit
+		;;
+esac
+
+
 tmpFile="$(mktemp --suffix=.sql)"
 
 printf "/*    Schema definition:    */\n\n" >> "$tmpFile"
