@@ -11,5 +11,5 @@ date_default_timezone_set('Europe/Moscow');
 
 $debug = false;
 
-const PERFORM_ACTUAL_MESSAGE_SEND = false; // if false - no messages will actaully be sent to the Tegegram API, instead they will be stored in file
+const PERFORM_ACTUAL_MESSAGE_SEND = true; // if false - no messages will actaully be sent to the Tegegram API, instead they will be stored in file
 const UNDELIVERED_MESSAGE_STORAGE = __DIR__.'/../logs/UndeliviredMessages.log';
