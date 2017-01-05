@@ -17,8 +17,8 @@ class SeriesParser extends Parser{
 	protected $addSeries;
 	protected $latestSeriesQuery;
 
-	public function __construct(){
-		parent::__construct(null);
+	public function __construct(HTTPRequesterInterface $requester){
+		parent::__construct($requester, null);
 	}
 
 	public function loadSrc($path){

@@ -12,10 +12,10 @@ class ShowParser extends Parser{
 	
 	const showPageTemplate = 'https://www.lostfilm.tv/browse.php?cat=#url_id';
 
-	public function __construct($pageEncoding = "utf-8"){
-		parent::__construct($pageEncoding);
+	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
+		parent::__construct($requester, $pageEncoding);
 		$pdo = createPDO();
-		$this->showAboutParser = new ShowAboutParser('CP1251');
+		$this->showAboutParser = new ShowAboutParser($requester, 'CP1251');
 		
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`

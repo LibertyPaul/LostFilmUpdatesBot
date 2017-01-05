@@ -27,7 +27,15 @@ class SeriesParserExecutor{
 	}
 
 	public function run(){
-		$this->seriesParser->loadSrc(self::$rssURL);
+		try{
+			$this->seriesParser->loadSrc(self::$rssURL);
+		}
+		catch(HTTPException $ex){
+			$date = date('Y.m.d H:i:s');
+			echo "[HTTP ERROR]\t$date\t".showListURL."\t".$ex->getMessage().PHP_EOL;
+			exit;
+		}
+		
 		$newSeriesList = $this->seriesParser->run();
 		
 		foreach($newSeriesList as $newSeries){
@@ -59,7 +67,9 @@ class SeriesParserExecutor{
 	}
 }
 
-$parser = new SeriesParser();
+
+$requester = new HTTPRequester();
+$parser = new SeriesParser($requester);
 $SPE = new SeriesParserExecutor($parser);
 $SPE->run();
 

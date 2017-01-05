@@ -2,8 +2,8 @@
 require_once(__DIR__.'/Parser.php');
 
 class ShowAboutParser extends Parser{
-	public function __construct($pageEncoding = "utf-8"){
-		parent::__construct($pageEncoding);
+	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = "utf-8"){
+		parent::__construct($requester, $pageEncoding);
 	}
 	
 	public function run(){
