@@ -124,3 +124,14 @@ function findMatchingParenthesis($str, $parenthesisPos){
 	return false;
 }
 
+
+function debug_tag($tag, $file, $line, $message = null){
+	$date = date('Y.m.d H:i:s');
+
+	$result = "$tag\t$date\t".basename($file).":$line";
+	if($message !== null){
+		$result .= "\t$message";
+	}
+
+	return $result;
+}

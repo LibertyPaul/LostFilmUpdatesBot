@@ -31,8 +31,7 @@ class SeriesParserExecutor{
 			$this->seriesParser->loadSrc(self::$rssURL);
 		}
 		catch(HTTPException $ex){
-			$date = date('Y.m.d H:i:s');
-			echo "[HTTP ERROR]\t$date\t".showListURL."\t".$ex->getMessage().PHP_EOL;
+			echo debug_tag('[HTTP ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
 			exit;
 		}
 		
@@ -43,8 +42,7 @@ class SeriesParserExecutor{
 				$this->addSeriesQuery->execute($newSeries);
 			}
 			catch(PDOException $ex){
-				$date = date('Y.m.d H:i:s');
-				echo "[DB ERROR]\t$date\t".__FILE__.':'.__LINE__.PHP_EOL;
+				echo debug_tag('[DB ERROR]', __FILE__, __LINE__).PHP_EOL;
 				
 				switch($ex->getCode()){
 					case '02000': 
@@ -60,8 +58,7 @@ class SeriesParserExecutor{
 				echo PHP_EOL.PHP_EOL;
 			}
 			catch(Exception $ex){
-				$date = date('Y.M.d H:i:s');
-				echo "[UNKNOWN ERROR]\t".__FILE__.':'.__LINE__."\t$date\t".$ex->getMessage().PHP_EOL;
+				echo debug_tag('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
 			}
 		}
 	}
