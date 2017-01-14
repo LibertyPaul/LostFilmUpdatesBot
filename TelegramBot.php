@@ -324,10 +324,11 @@ class TelegramBot extends TelegramBot_base{
 		$helpText .= "Список команд:\n";
 		$helpText .= "/add_show - Добавить уведомления о сериале\n";
 		$helpText .= "/remove_show - Удалить уведомления о сериале\n";
-		$helpText .= "/mute - Выключить уведомления на время\n";
-		$helpText .= "/cancel - отменить команду\n";
-		$helpText .= "/help - показать это сообщение\n";
-		$helpText .= "/stop - удалиться из контакт-листа бота\n\n";
+		$helpText .= "/get_my_shows - Показать, на что ты подписан\n";
+		$helpText .= "/mute - Выключить уведомления\n";
+		$helpText .= "/cancel - Отменить команду\n";
+		$helpText .= "/help - Показать это сообщение\n";
+		$helpText .= "/stop - Удалиться из контакт-листа бота\n\n";
 
 		$helpText .= "Telegram создателя: @libertypaul\n";
 		$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n\n";
