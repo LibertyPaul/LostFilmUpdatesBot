@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -z "$1" ]; then
+	echo "Usage: $0 <patch_directory>"
+	exit 1
+fi
+
 readonly path=$(readlink -m "$1")
 
 if [ ! -z "$path" ]; then
@@ -11,6 +16,17 @@ if [ ! -z "$path" ]; then
 
 	cd "$path"
 fi
+
+if [ -f "$path/.my.cnf" ]; then
+	readonly myCnfPath="$path/.my.cnf"
+elif [ -f ".my.cnf" ]; then
+	readonly myCnfPath=".my.cnf"
+else
+	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script."
+	exit 1
+fi
+
+echo "Using $myCnfPath as MySQL config"
 
 readonly initPath="$path/DB.sql";
 
@@ -70,7 +86,7 @@ done
 
 
 echo "Uploading schema on MySQL server..."
-res=$(mysql --defaults-file=.my.cnf < "$tmpFile" 2>&1)
+res=$(mysql --defaults-file="$myCnfPath" < "$tmpFile" 2>&1)
 if [[ -z "$res" ]]; then
 	rm $tmpFile
 	echo "Success."

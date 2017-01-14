@@ -12,10 +12,10 @@ class ShowParser extends Parser{
 	
 	const showPageTemplate = 'https://www.lostfilm.tv/browse.php?cat=#url_id';
 
-	public function __construct($pageEncoding = "utf-8"){
-		parent::__construct($pageEncoding);
+	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
+		parent::__construct($requester, $pageEncoding);
 		$pdo = createPDO();
-		$this->showAboutParser = new ShowAboutParser('CP1251');
+		$this->showAboutParser = new ShowAboutParser($requester, 'CP1251');
 		
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`
@@ -106,17 +106,14 @@ class ShowParser extends Parser{
 				}
 			}
 			catch(PDOException $ex){
-				$date = date('Y.m.d H:i:s');
-				echo "[DB ERROR]\t$date\t".__FILE__.':'.__LINE__.PHP_EOL;
+				echo debug_tag('[DB ERROR]', __FILE__, __LINE__).PHP_EOL;
 				echo "\tError code: ".$ex->getCode().PHP_EOL;
 				echo "\t".$ex->getMessage().PHP_EOL;
 				echo "\turl_id = $url_id, showId = $showId, onAir = $onAir".PHP_EOL;
 				print_r($titles);
 			}
 			catch(Exception $ex){
-				$date = date('Y.m.d H:i:s');
-				echo "[ERROR]\t$date\t".__FILE__.':'.__LINE__.PHP_EOL;
-				echo "\t".$ex->getMessage().PHP_EOL;
+				echo debug_tag('[ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
 			}
 		}
 	}

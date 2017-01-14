@@ -30,4 +30,14 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		
 		return $this->successResponse();
 	}
+
+	public function sendGETRequest($destination){
+		$res = file_put_contents($this->destinationFilePath, "\n\n$destination", FILE_APPEND);
+		if($res === false){
+			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
+		}
+		
+		return $this->successResponse();
+	}
+
 }		

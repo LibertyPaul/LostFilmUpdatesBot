@@ -1,0 +1,22 @@
+<?php
+
+$update_json = '{
+    "update_id": XXXXXXXXXXX,
+    "message": {
+        "message_id": XXXX,
+        "from": {
+            "id": XXXXXXXX,
+            "first_name": "foo",
+            "username": "bar"
+        },
+        "chat": {
+            "id": XXXXXXXX,
+            "first_name": "foo",
+            "username": "bar",
+            "type": "private"
+        },
+        "date": XXXXXXXXXX,
+        "text": "/stop"
+    }
+}
+';
