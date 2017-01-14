@@ -1,0 +1,19 @@
+<?php
+
+const BOT_USERNAME = '';
+const TELEGRAM_BOT_TOKEN = '';
+
+const WEBHOOK_PASSWORD = '';
+
+const BOTAN_API_KEY = '';
+
+const HOST = '';
+const DBuser = '';
+const DBpass = '';
+const DBname = '';
+
+const MEMCACHE_MESSAGE_CHAIN_PREFIX = 'pma_dev_';
+const MEMCACHE_LATEST_UPDATE_ID_KEY = 'lfub_dev_latestUpdate';
+
+const LOSTFILM_LOGIN = '';
+const LOSTFILM_PASSWORD = '';
