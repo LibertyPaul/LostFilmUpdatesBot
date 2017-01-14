@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z $1 ]; then
+if [ -z "$1" ]; then
 	echo "Usage: $0 <patch_directory>"
 	exit 1
 fi
@@ -25,6 +25,8 @@ else
 	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script."
 	exit 1
 fi
+
+echo "Using $myCnfPath as MySQL config"
 
 readonly initPath="$path/DB.sql";
 
