@@ -22,13 +22,35 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $resp; 
 	}
 	
+	private function failureResponse(){
+		$telegram_resp = array(
+			'ok' => false
+		);
+		
+		$resp = array(
+			'value' => json_encode($telegram_resp),
+			'code' => 403
+		);
+		
+		return $resp;
+	}
+	
+	private function randomResponse(){
+		if(rand(0, 100) > 50){
+			return $this->successResponse();
+		}
+		else{
+			return $this->failureResponse();
+		}
+	}
+	
 	public function sendJSONRequest($destination, $content_json){
 		$res = file_put_contents($this->destinationFilePath, "\n\n$content_json", FILE_APPEND);
 		if($res === false){
 			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
 		}
 		
-		return $this->successResponse();
+		return $this->randomResponse();
 	}
 
 	public function sendGETRequest($destination){
@@ -37,7 +59,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
 		}
 		
-		return $this->successResponse();
+		return $this->randomResponse();
 	}
 
 }		
