@@ -46,6 +46,8 @@ class NotificationDispatcher{
 			return true;
 		}
 
+		assert($lastDeliveryAttemptTime !== null);
+
 		if($responseCode >= 400 && $responseCode <= 599 && $retryCount < MAX_NOTIFICATION_RETRY_COUNT){
 
 			$waitTime = null;
@@ -77,7 +79,7 @@ class NotificationDispatcher{
 			$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
 			$currentTime		= new DateTime();
 			
-			return $lastAttemptTime->add($waitTime) >= $currentTime;
+			return $lastAttemptTime->add($waitTime) < $currentTime;
 		}
 		else{
 			return false;
@@ -102,11 +104,12 @@ class NotificationDispatcher{
 		
 		while($notification = $this->getNotificationData->fetch(PDO::FETCH_ASSOC)){
 			$gonnaBeSent = $this->shallBeSent(
-					intval($notification['responseCode']),
-					intval($notification['retryCount']),
-					intval($notification['lastDeliveryAttemptTime'])
+					$notification['responseCode'],
+					$notification['retryCount'],
+					$notification['lastDeliveryAttemptTime']
 			);
 			if($gonnaBeSent){
+				echo "gonna";
 				$result = $this->notifier->newSeriesEvent(
 					intval($notification['telegram_id']), 
 					$notification['showTitle'], 
