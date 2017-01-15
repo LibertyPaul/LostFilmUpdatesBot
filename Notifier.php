@@ -75,7 +75,9 @@ class Notifier{
 	}
 
 	public function newSeriesEvent($telegram_id, $title_ru, $season, $seriesNumber, $seriesTitle){
-		assert(is_int($telegram_id));	
+		assert(is_int($telegram_id));
+		assert(is_int($season));
+		assert(is_int($seriesNumber));
 		
 		$notificationText = $this->generateNotificationText(
 			$title_ru,
