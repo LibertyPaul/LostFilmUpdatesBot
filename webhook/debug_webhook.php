@@ -1,35 +1,33 @@
 <?php
-require_once(__DIR__."/../config/config.php");
-require_once(__DIR__."/../config/stuff.php");
+require_once(__DIR__.'/../config/config.php');
+require_once(__DIR__.'/../config/stuff.php');
 require_once(__DIR__.'/../TelegramBotFactory.php');
-require_once(__DIR__."/input_debug_webhook.php");
 
-function logError($message){
-	$log = createOrOpenLogFile(__DIR__."/../logs/webhookErrorLog.txt");
-	$errorTextTemplate = "[ERROR]\t#DATETIME]\t#MESSAGE\n\n";
-	
-	$errorText = str_replace(
-		array('#DATETIME', '#MESSAGE'),
-		array(date('d.m.Y H:i:s'), $message),
-		$errorTextTemplate
-	);
-	echo $errorText;
-	assert(fwrite($log, $errorText));
-	assert(fclose($log));
+require_once(__DIR__.'/../Tracer.php');
+
+$tracer = null;
+
+try{
+	$tracer = new Tracer('Webhook');
+}
+catch(Exception $ex){
+	$tracer = new EchoTracer();
+	$tracer->logException('[TRACER CRITICAL]'. $ex);
 }
 
 function exception_handler($ex){
-	logError($ex->getMessage());
+	global $tracer;
+	$tracer->logException('[ERROR]', $ex);
 }
 
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
-	logError("$errno $errstr $errfile:$errline");
+	global $tracer;
+	$tracer->log('[ERROR]', $errfile, $errline, "($errno)\t$errstr");
 }
 
 set_error_handler('error_handler');
 set_exception_handler('exception_handler');
-
 
 function setLastRecievedId($value){
 	$memcache = createMemcache();
@@ -57,33 +55,21 @@ if($update === null || $update === false){
 	exit('incorrect JSON input');
 }
 	
-$debugOutput = true;
-if($debugOutput){
-	$log = createOrOpenLogFile(__DIR__.'/../logs/webhookInput.json');
-	$readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-	assert(fwrite($log, "[".date('d.m.Y H:i:s')."]\t".$readableJson."\n"."\n"."\n"));
-	assert(fclose($log));
-}
+$readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
+$tracer->log('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
 /*
-if(isset($_GET['ignore_msg_id']) && $_GET['ignore_msg_id'] === 'true'){
+if(isset($_GET['ignore_msg_id']) === false || $_GET['ignore_msg_id'] !== 'true'){
 	if(intval($update->update_id) < getLastRecievedId()){
-		exit("outdated message");
+		exit('outdated message');
 	}
-	else{
-		setLastRecievedId($update->update_id);
-	}
+	setLastRecievedId($update->update_id);
 }
 */
-
 if(isset($update->message) === false){
-	exit("no message provided in update");
+	exit('no message provided in update');
 }
 
 $telegram_id = intval($update->message->from->id);
-$chat_id = intval($update->message->chat->id);
 
 $botFactory = new TelegramBotFactory();
-$botFactory->createBot($telegram_id, $chat_id)->incomingUpdate($update->message);
-
-
-
+$botFactory->createBot($telegram_id)->incomingUpdate($update->message);

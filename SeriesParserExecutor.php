@@ -1,15 +1,19 @@
 <?php
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/SeriesParser.php');
+require_once(__DIR__.'/EchoTracer.php');
 
 class SeriesParserExecutor{
 	private static $rssURL = 'http://www.lostfilm.tv/rssdd.xml';
 	private $seriesParser;
 	private $addSeriesQuery;
+	private $tracer;
 	
 	public function __construct(Parser $seriesParser){
 		assert($seriesParser !== null);
 		$this->seriesParser = $seriesParser;
+
+		$this->tracer = new EchoTracer(__CLASS__);
 		
 		$pdo = createPDO();
 		
@@ -31,7 +35,7 @@ class SeriesParserExecutor{
 			$this->seriesParser->loadSrc(self::$rssURL);
 		}
 		catch(HTTPException $ex){
-			echo debug_tag('[HTTP ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
+			$this->tracer->logException('[HTTP ERROR]', $ex);
 			exit;
 		}
 		
@@ -42,23 +46,23 @@ class SeriesParserExecutor{
 				$this->addSeriesQuery->execute($newSeries);
 			}
 			catch(PDOException $ex){
-				echo debug_tag('[DB ERROR]', __FILE__, __LINE__).PHP_EOL;
-				
+				$this->tracer->logException('[DB ERROR]', $ex);
+			
 				switch($ex->getCode()){
-					case '02000': 
-						echo 'Show wasn\'t found'.PHP_EOL;
+					case '02000':
+						$this->tracer->log('[WARNING]', __FILE__, __LINE__, 'Show wasn\'t found');
 						break;
 					
 					default:
-						echo 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL;
+						$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL);
 						break;
 				}
-					
-				print_r($newSeries);
-				echo PHP_EOL.PHP_EOL;
+
+
+				$this->tracer->log('[NEW SERIES]', __FILE__, __LINE__, PHP_EOL.print_r($newSeries, true));
 			}
 			catch(Exception $ex){
-				echo debug_tag('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
+				$this->tracer->logException('[UNKNOWN ERROR]', $ex);
 			}
 		}
 	}

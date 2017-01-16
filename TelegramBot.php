@@ -190,7 +190,7 @@ class TelegramBot extends TelegramBot_base{
 			);
 		}
 		catch(PDOException $ex){
-			echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage());
+			$this->botTracer->log('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage());
 			throw new TelegramException($this, 'По неизвестным причинам не могу тебя зарегистрировать. Напиши @libertypaul об этом, он разберется. Код TB'.__LINE__);
 		}
 		
@@ -198,7 +198,7 @@ class TelegramBot extends TelegramBot_base{
 			$this->notifier->newUserEvent($this->getUserId());
 		}
 		catch(Exception $ex){
-			echo debug_tag('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex->getMessage());
+			$this->botTracer->log('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex->getMessage());
 		}
 		
 		
@@ -262,7 +262,7 @@ class TelegramBot extends TelegramBot_base{
 					$this->notifier->userLeftEvent($this->getUserId());
 				}
 				catch(Exception $ex){
-					echo $ex->getMessage().PHP_EOL;
+					$this->botTracer->logException('[NOTIFIER ERROR]', $ex);
 				}
 				
 				$deleteUserQuery = $this->pdo->prepare('
@@ -277,8 +277,8 @@ class TelegramBot extends TelegramBot_base{
 						)
 					);
 				}
-				catch(Exception $ex){
-					echo $ex->getMessage();
+				catch(PDOException $ex){
+					$this->botTracer->logException('[DB ERROR]', $ex);
 					$this->previousMessageArrayErase();
 					throw new TelegramException($this, 'Возникла ошибка: Не получилось удалить тебя из контакт-листа');
 				}
@@ -423,8 +423,7 @@ class TelegramBot extends TelegramBot_base{
 			);
 		}
 		catch(PDOException $ex){
-			echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-			echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+			$this->botTracer->logException('[DB ERROR]',$ex);
 			$this->previousMessageArrayErase();
 			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
@@ -462,8 +461,7 @@ class TelegramBot extends TelegramBot_base{
 			);
 		}
 		catch(PDOException $ex){
-			echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-			echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+			$this->botTracer->logException('[DB ERROR]', $ex);
 			$this->previousMessageArrayErase();
 			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
@@ -549,8 +547,7 @@ class TelegramBot extends TelegramBot_base{
 				);
 			}
 			catch(PDOException $ex){
-				echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-				echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+				$this->botTracer->logException('[DB ERROR]', $ex);
 				$this->previousMessageArrayErase();
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
@@ -613,8 +610,7 @@ class TelegramBot extends TelegramBot_base{
 				);
 			}
 			catch(PDOException $ex){
-				echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-				echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+				$this->botTracer->logException('[DB ERROR]', $ex);
 				$this->previousMessageArrayErase();
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
@@ -635,8 +631,7 @@ class TelegramBot extends TelegramBot_base{
 					);
 				}
 				catch(PDOException $ex){
-					echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-					echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+					$this->botTracer->logException('[DB ERROR]', $ex);
 					throw new TelegramException($this, 'Ошибка добавления в базу данных. Я сообщу об этом создателю.');
 				}
 				
@@ -706,8 +701,7 @@ class TelegramBot extends TelegramBot_base{
 					);
 				}
 				catch(PDOException $ex){
-					echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-					echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+					$this->botTracer->logException('[DB ERROR]', $ex);
 					$this->previousMessageArrayErase();
 					throw new TelegramException($this, 'Упс, возникла ошибка, код: TB'.__LINE__);
 				}
@@ -739,8 +733,7 @@ class TelegramBot extends TelegramBot_base{
 						);
 					}
 					catch(PDOException $ex){
-						echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-						echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+						$this->botTracer->logException('[DB ERROR]', $ex);
 						throw new TelegramException($this, 'Ошибка записи');
 					}
 					
@@ -799,8 +792,7 @@ class TelegramBot extends TelegramBot_base{
 				);
 			}
 			catch(PDOException $ex){
-				echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-				echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+				$this->botTracer->logException('[DB ERROR]', $ex);
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 			
@@ -827,8 +819,7 @@ class TelegramBot extends TelegramBot_base{
 					);
 				}
 				catch(PDOException $ex){
-					echo debug_tag('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
-					echo "\tSQL code: ".$ex->getCode().PHP_EOL;
+					$this->botTracer->logException('[DB ERROR]', $ex);
 					throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 				}
 				

@@ -109,7 +109,6 @@ class NotificationDispatcher{
 					$notification['lastDeliveryAttemptTime']
 			);
 			if($gonnaBeSent){
-				echo "gonna";
 				$result = $this->notifier->newSeriesEvent(
 					intval($notification['telegram_id']), 
 					$notification['showTitle'], 

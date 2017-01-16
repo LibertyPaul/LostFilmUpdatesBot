@@ -4,12 +4,14 @@ require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/Notifier.php');
 require_once(__DIR__.'/TelegramBotFactory.php');
+require_once(__DIR__.'/EchoTracer.php');
 
 
 class FullSeasonWasFoundException extends Exception{}
 
 
 class SeriesParser extends Parser{
+	private $tracer;
 	protected $rssData;
 	protected $notifier;
 	
@@ -19,6 +21,8 @@ class SeriesParser extends Parser{
 
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
+
+		$this->tracer = new EchoTracer(__CLASS__);
 	}
 
 	public function loadSrc($path){
@@ -129,10 +133,10 @@ class SeriesParser extends Parser{
 				$result[] = $this->parseTitle($item->title);
 			}
 			catch(FullSeasonWasFoundException $ex){
-				echo 'Full season entry was found. Skipping'.PHP_EOL;
+				// mmmk, skipping
 			}
 			catch(Exception $ex){
-				echo "[ERROR]".$ex->getMessage().PHP_EOL;
+				$this->tracer->logException('[PARSE ERROR]', $ex);
 			}
 		}
 		
