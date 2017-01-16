@@ -17,3 +17,7 @@ const MEMCACHE_LATEST_UPDATE_ID_KEY = 'lfub_dev_latestUpdate';
 
 const LOSTFILM_LOGIN = '';
 const LOSTFILM_PASSWORD = '';
+
+
+const PERFORM_ACTUAL_MESSAGE_SEND = true; // if false - no messages will actaully be sent to the Tegegram API, instead they will be stored in file
+const UNDELIVERED_MESSAGE_STORAGE = __DIR__.'/../logs/UndeliviredMessages.log';

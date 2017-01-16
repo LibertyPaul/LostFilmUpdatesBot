@@ -3,17 +3,24 @@ require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/ShowAboutParser.php');
+require_once(__DIR__.'/EchoTracer.php');
 
 
 class ShowParser extends Parser{
-	protected $getShowIdQuery;
-	protected $addShowQuery;
-	protected $showAboutParser;
+	private $getShowIdQuery;
+	private $addShowQuery;
+	private $updateOnAirQuery;
+
+	private $showAboutParser;
+	private $tracer;
 	
 	const showPageTemplate = 'https://www.lostfilm.tv/browse.php?cat=#url_id';
 
 	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
 		parent::__construct($requester, $pageEncoding);
+
+		$this->tracer = new EchoTracer(__CLASS__);
+
 		$pdo = createPDO();
 		$this->showAboutParser = new ShowAboutParser($requester, 'CP1251');
 		
@@ -27,6 +34,10 @@ class ShowParser extends Parser{
 		$this->addShowQuery = $pdo->prepare('
 			INSERT INTO `shows` (title_ru, title_en, onAir)
 			VALUES (:title_ru, :title_en, :onAir)
+		');
+
+		$this->updateOnAirQuery = $pdo->prepare('
+			UPDATE `shows` SET `onAir` = :onAir WHERE `id` = :id
 		');
 		
 	}
@@ -87,33 +98,39 @@ class ShowParser extends Parser{
 	
 	public function run(){
 		$showList = $this->parseShowList();
+		print_r($showList);
 		foreach($showList as $url_id => $titles){
 			try{
 				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
-				echo "$titles[title_ru], $titles[title_en] $showId".PHP_EOL;
+				$onAir = $this->isOnAir($url_id);
+				$onAirFlag = $onAir ? 'Y' : 'N';
 				if($showId === null){
-					echo "New show: $titles[title_ru] ($titles[title_en])".PHP_EOL;
-					
-					$onAir = $this->isOnAir($url_id) ? 'Y' : 'N';
+					$this->tracer->log('[NEW SHOW]', __FILE__, __LINE__, "$titles[title_ru] ($titles[title_en])");
 					
 					$this->addShowQuery->execute(
 						array(
 							':title_ru' => $titles['title_ru'],
 							':title_en' => $titles['title_en'],
-							':onAir'	=> $onAir
+							':onAir'	=> $onAirFlag
+						)
+					);
+				}
+				else{
+					$this->updateOnAirQuery->execute(
+						array(
+							':onAir'	=> $onAirFlag,
+							':id'		=> $showId
 						)
 					);
 				}
 			}
 			catch(PDOException $ex){
-				echo debug_tag('[DB ERROR]', __FILE__, __LINE__).PHP_EOL;
-				echo "\tError code: ".$ex->getCode().PHP_EOL;
-				echo "\t".$ex->getMessage().PHP_EOL;
-				echo "\turl_id = $url_id, showId = $showId, onAir = $onAir".PHP_EOL;
-				print_r($titles);
+				$this->tracer->logException('[DB ERROR]', $ex);
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, "url_id = $url_id, showId = $showId, onAir = $onAir");
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($titles, true));
 			}
 			catch(Exception $ex){
-				echo debug_tag('[ERROR]', __FILE__, __LINE__, $ex->getMessage()).PHP_EOL;
+				$this->tracer->logException('[ERROR]', $ex);
 			}
 		}
 	}
