@@ -8,11 +8,25 @@ abstract class TracerBase{
 
 		$this->traceName = $traceName;
 
-		$this->log('[TRACER]', __FILE__, __LINE__, 'Trace '.$this->traceName.' has been started');
+		if(TRACER_LOG_START_END){
+			$this->log(
+				'[TRACER]',
+				__FILE__,
+				__LINE__,
+				'Trace '.$this->traceName.' has been started'
+			);
+		}
 	}
 
 	public function __destruct(){
-		$this->log('[TRACER]', __FILE__, __LINE__, 'Trace '.$this->traceName.' has been ended');
+		if(TRACER_LOG_START_END){
+			$this->log(
+				'[TRACER]',
+				__FILE__,
+				__LINE__,
+				'Trace '.$this->traceName.' has been ended'
+			);
+		}
 	}
 
 	abstract protected function write($text);
@@ -24,8 +38,10 @@ abstract class TracerBase{
 		assert($message === null || is_string($message));
 
 		$date = date('Y.m.d H:i:s');
-
-		$text = "$tag\t$date\t".basename($file).":$line";
+		
+		// basename should never fail on any input
+		$text = "$tag $date ".basename($file).":$line";		
+		
 		if($message !== null){
 			$text .= "\t$message";
 		}
@@ -34,6 +50,11 @@ abstract class TracerBase{
 	}
 
 	public function logException($tag, Exception $exception){
-		return $this->log($tag, $exception->getFile(), $exception->getLine(), $exception->getMessage());
+		return $this->log(
+			$tag,
+			$exception->getFile(),
+			$exception->getLine(),
+			$exception->getMessage()
+		);
 	}
 }
