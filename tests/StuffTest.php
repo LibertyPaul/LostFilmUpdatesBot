@@ -69,15 +69,6 @@ class StuffTest extends PHPUnit_Framework_TestCase{
 	
 	}
 
-	public function testDebugTag(){
-		$this->assertContains('[TEST TAG]', debug_tag('[TEST TAG]', __FILE__, 42));
-		$this->assertContains('test msg', debug_tag('[TEST TAG]', __FILE__, 42, 'test msg'));
-	}
-	
-	
-
-
-		
 }
 
 

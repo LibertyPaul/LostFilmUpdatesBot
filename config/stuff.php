@@ -27,27 +27,6 @@ function createMemcache(){
 }
 
 
-
-function createOrOpenLogFile($path){
-	if(is_file($path)){
-		$hf = fopen($path, 'a');
-		if($hf === false)
-			throw new Exception('log fopen error');
-	}
-	else{
-		$hf = fopen($path, 'a');
-		if($hf === false)
-			throw new Exception("log fopen '$path' O_CREAT error");
-		$res = chmod($path, 0777);
-		if($res === false)
-			throw new Exception("chmod error");
-	}
-	return $hf;
-}
-		
-
-
-
 function findMatchingParenthesis($str, $parenthesisPos){
 	if($parenthesisPos < 0 || $parenthesisPos >= strlen($str)){
 		throw new StdoutTextException('$parenthesisPos is out of $str');
@@ -124,14 +103,3 @@ function findMatchingParenthesis($str, $parenthesisPos){
 	return false;
 }
 
-
-function debug_tag($tag, $file, $line, $message = null){
-	$date = date('Y.m.d H:i:s');
-
-	$result = "$tag\t$date\t".basename($file).":$line";
-	if($message !== null){
-		$result .= "\t$message";
-	}
-
-	return $result;
-}
