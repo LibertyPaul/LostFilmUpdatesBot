@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Notifier.php');
+require_once(__DIR__.'/Tracer.php');
 
 class NotificationDispatcher{
 	private $notifier;
@@ -8,10 +9,13 @@ class NotificationDispatcher{
 	private $getNotificationData;
 	private $setNotificationCode;
 	private $bots;
+	private $tracer;
 	
 	public function __construct(Notifier $notifier){
 		assert($notifier !== null);
 		$this->notifier = $notifier;
+		
+		$this->tracer = new Tracer(__CLASS__);
 		
 		$this->pdo = createPDO();
 		$this->getNotificationData = $this->pdo->prepare('
@@ -45,8 +49,10 @@ class NotificationDispatcher{
 		if($responseCode === null){
 			return true;
 		}
-
-		assert($lastDeliveryAttemptTime !== null);
+		
+		if($lastDeliveryAttemptTime === null){
+			throw new Exception('lastDeliveryAttemptTime is null');
+		}
 
 		if($responseCode >= 400 && $responseCode <= 599 && $retryCount < MAX_NOTIFICATION_RETRY_COUNT){
 
@@ -103,26 +109,45 @@ class NotificationDispatcher{
 
 		
 		while($notification = $this->getNotificationData->fetch(PDO::FETCH_ASSOC)){
-			$gonnaBeSent = $this->shallBeSent(
-					$notification['responseCode'],
-					$notification['retryCount'],
-					$notification['lastDeliveryAttemptTime']
-			);
+			$gonnaBeSent = false;
+			try{
+				$gonnaBeSent = $this->shallBeSent(
+						$notification['responseCode'],
+						$notification['retryCount'],
+						$notification['lastDeliveryAttemptTime']
+				);
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[ERROR]', $ex);
+				$this->tracer->log('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($notification, true));
+				continue;
+			}
+			
 			if($gonnaBeSent){
-				$result = $this->notifier->newSeriesEvent(
-					intval($notification['telegram_id']), 
-					$notification['showTitle'], 
-					intval($notification['seasonNumber']),
-					intval($notification['seriesNumber']), 
-					$notification['seriesTitle']
-				);
+				try{
+					$result = $this->notifier->newSeriesEvent(
+						intval($notification['telegram_id']), 
+						$notification['showTitle'], 
+						intval($notification['seasonNumber']),
+						intval($notification['seriesNumber']), 
+						$notification['seriesTitle']
+					);
 				
-				$this->setNotificationDeliveryResult->execute(
-					array(
-						'notificationId'	=> $notification['id'],
-						'HTTPCode' 			=> $result['code']
-					)
-				);
+					$this->setNotificationDeliveryResult->execute(
+						array(
+							'notificationId'	=> $notification['id'],
+							'HTTPCode' 			=> $result['code']
+						)
+					);
+				}
+				catch(PDOException $ex){
+					$this->tracer->logException('[DB ERROR]', $ex);
+					continue;
+				}
+				catch(Exception $ex){
+					$this->tracer->logException('[ERROR]', $ex);
+					continue;
+				}
 			}
 		}
 
