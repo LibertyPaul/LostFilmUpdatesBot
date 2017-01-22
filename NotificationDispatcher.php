@@ -36,8 +36,7 @@ class NotificationDispatcher{
 				`notificationsQueue`.`responseCode` IS NULL OR
 				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
 			) AND
-				`notificationsQueue`.`retryCount` < :maxRetryCount AND
-				`users`.`mute` = 'N'
+				`notificationsQueue`.`retryCount` < :maxRetryCount
 		");
 		
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
