@@ -19,7 +19,7 @@ fi
 
 if [ -f "$path/.my.cnf" ]; then
 	readonly myCnfPath="$path/.my.cnf"
-elif [ -f ".my.cnf" ]; then
+elif [ -f "./.my.cnf" ]; then
 	readonly myCnfPath=".my.cnf"
 else
 	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script."
