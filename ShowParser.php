@@ -98,7 +98,6 @@ class ShowParser extends Parser{
 	
 	public function run(){
 		$showList = $this->parseShowList();
-		print_r($showList);
 		foreach($showList as $url_id => $titles){
 			try{
 				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
@@ -131,6 +130,8 @@ class ShowParser extends Parser{
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[ERROR]', $ex);
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, "url_id = $url_id, showId = $showId, onAir = $onAir");
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($titles, true));
 			}
 		}
 	}
