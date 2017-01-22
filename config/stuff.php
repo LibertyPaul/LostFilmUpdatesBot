@@ -28,7 +28,9 @@ function createMemcache(){
 
 
 function findMatchingParenthesis($str, $parenthesisPos){
-	if($parenthesisPos < 0 || $parenthesisPos >= strlen($str)){
+	$length = strlen($str);
+
+	if($parenthesisPos < 0 || $parenthesisPos >= $length){
 		throw new StdoutTextException('$parenthesisPos is out of $str');
 	}
 
@@ -68,36 +70,29 @@ function findMatchingParenthesis($str, $parenthesisPos){
 	if($str[$parenthesisPos] === $opening){
 		$step = 1;
 	}
-	else if($str[$parenthesisPos] === $closing){
+	else{
 		$step = -1;
 	}
-	else{
-		throw new StdoutTextException('Given parenthesis does not match');
-	}
 	
 	
-	$parenthesisBalance = $step;
-	$pos = $parenthesisPos + $step;
-	while($pos >= 0 && $pos < strlen($str)){
+	$depth = 0; // how deep we are: (  1  (  2  (  3  )  2  (  3  (  4  )  3  )  2  )  1  )
+	$pos = $parenthesisPos;
+	while($pos >= 0 && $pos < $length){
 		switch($str[$pos]){
-		case $opening:
-			++$parenthesisBalance;
-			break;
+			case $opening:
+				$depth += $step;
+				break;
 	
-		case $closing:
-			--$parenthesisBalance;
-			break;
+			case $closing:
+				$depth -= $step;
+				break;
 		}
 		
-		if($parenthesisBalance === 0){
-			break;
+		if($depth === 0){
+			return $pos;
 		}
 		
 		$pos += $step;
-	}
-	
-	if($parenthesisBalance === 0){
-		return $pos;
 	}
 
 	return false;
