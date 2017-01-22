@@ -18,7 +18,7 @@ class NotificationDispatcher{
 		$this->tracer = new Tracer(__CLASS__);
 		
 		$this->pdo = createPDO();
-		$this->getNotificationData = $this->pdo->prepare('
+		$this->getNotificationData = $this->pdo->prepare("
 			SELECT 	`notificationsQueue`.`id`,
 					`notificationsQueue`.`responseCode`,
 					`notificationsQueue`.`retryCount`,
@@ -36,8 +36,9 @@ class NotificationDispatcher{
 				`notificationsQueue`.`responseCode` IS NULL OR
 				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
 			) AND
-				`notificationsQueue`.`retryCount` < :maxRetryCount
-		');
+				`notificationsQueue`.`retryCount` < :maxRetryCount AND
+				`users`.`mute` = 'N'
+		");
 		
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
 			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
