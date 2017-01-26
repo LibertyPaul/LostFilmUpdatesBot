@@ -331,7 +331,8 @@ class TelegramBot extends TelegramBot_base{
 		$helpText .= "/stop - Удалиться из контакт-листа бота\n\n";
 
 		$helpText .= "Telegram создателя: @libertypaul\n";
-		$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n\n";
+		$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n";
+		$helpText .= "Исходники бота есть на GitHub: https://github.com/LibertyPaul/LostFilmUpdatesBot\n\n";
 		$helpText .= "Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.";
 		
 		$this->sendMessage(
