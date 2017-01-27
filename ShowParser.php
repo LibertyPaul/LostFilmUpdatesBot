@@ -63,6 +63,8 @@ class ShowParser extends Parser{
 		$matches = array();
 		$matchesCount = preg_match_all($regexp, $this->pageSrc, $matches);
 		if($matchesCount === false){
+			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'preg_match_all error: '.preg_last_error());
+			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw new Exception("preg_match_all error: ".preg_last_error());
 		}
 		
@@ -83,10 +85,7 @@ class ShowParser extends Parser{
 	}
 	
 	protected function getShowPageURL($url_id){
-		if(is_int($url_id) === false){
-			throw new StdoutTextException('$url_id should be of an integer type.');
-		}
-		
+		assert(is_int($url_id));		
 		return str_replace('#url_id', $url_id, self::showPageTemplate);
 	}
 	

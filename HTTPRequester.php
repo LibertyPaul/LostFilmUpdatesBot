@@ -1,11 +1,15 @@
 <?php
 
 require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/Tracer.php');
 
 class HTTPRequester implements HTTPRequesterInterface{
 	private $curl;
+	private $tracer;
 
 	public function __construct(){
+		$this->tracer = new Tracer(__CLASS__);
+	
 		$this->curl = curl_init();
 		assert($this->curl !== false);
 		assert(curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true));
@@ -23,6 +27,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 		$response = curl_exec($this->curl);
 		if($response === false){
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, PHP_EOL.$content_json);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 
@@ -40,6 +47,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		
 		$response = curl_exec($this->curl);
 		if($response === false){
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 

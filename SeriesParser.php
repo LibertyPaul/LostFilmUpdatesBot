@@ -27,7 +27,14 @@ class SeriesParser extends Parser{
 
 	public function loadSrc($path){
 		parent::loadSrc($path);
-		$this->rssData = new SimpleXMLElement($this->pageSrc);
+		try{
+			$this->rssData = new SimpleXMLElement($this->pageSrc);
+		}
+		catch(Exception $ex){
+			$this->tracer->logException('[XML ERROR]', $ex);
+			$this->tracer->log('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
+			throw $ex;
+		}
 	}
 			
 	protected function parseTitle($title){
@@ -44,7 +51,7 @@ class SeriesParser extends Parser{
 				throw new FullSeasonWasFoundException();
 			}
 
-			throw new StdoutTextException('seasonSeriesNumberTag parsing error `'.$seasonSeriesNumberTag.'`');
+			throw new StdoutTextException("seasonSeriesNumberTag parsing error: '$seasonSeriesNumberTag'");
 		}
 		
 		$seasonNumber = $matches[1];
@@ -56,8 +63,17 @@ class SeriesParser extends Parser{
 		
 		$formatTag = null;
 		if($formatEndPos !== false){
-			$formatStartPos = findMatchingParenthesis($title, $formatEndPos);
+			try{
+				$formatStartPos = findMatchingParenthesis($title, $formatEndPos);
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[DATA ERROR]', $ex);
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
+				throw $ex;
+			}
+			
 			if($formatStartPos === false){
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
 				throw new StdoutTextException('Broken format tag (opening parenthesis not found)');
 			}
 
@@ -70,8 +86,17 @@ class SeriesParser extends Parser{
 		$seriesNameEn = null;
 		$seriesNameEnEndPos = strlen($title) - 1;
 		if($title[$seriesNameEnEndPos] === ')'){
-			$seriesNameEnStartPos = findMatchingParenthesis($title, $seriesNameEnEndPos);
+			try{
+				$seriesNameEnStartPos = findMatchingParenthesis($title, $seriesNameEnEndPos);
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[DATA ERROR]', $ex);
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
+				throw $ex;
+			}
+			
 			if($seriesNameEnStartPos === false){
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
 				throw new StdoutTextException("Broken series name (opening parenthesis not found)");
 			}
 
@@ -88,6 +113,7 @@ class SeriesParser extends Parser{
 			$seriesNameRuStartPos = strpos($title, '.');
 			$offset = 1;
 			if($seriesNameRuStartPos === false){
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
 				throw new StdoutTextException("Start of show ru name wasn't found");
 			}
 		}
@@ -101,8 +127,17 @@ class SeriesParser extends Parser{
 	
 		$showNameEnEndPos = strrpos($title, ')');
 		if($showNameEnEndPos !== false){
-			$showNameEnStartPos = findMatchingParenthesis($title, $showNameEnEndPos);
+			try{
+				$showNameEnStartPos = findMatchingParenthesis($title, $showNameEnEndPos);
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[DATA ERROR]', $ex);
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
+				throw $ex;
+			}
+			
 			if($showNameEnStartPos === false){
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
 				throw new StdoutTextException('Broken show name (opening parenthesis not found)');
 			}
 			
@@ -126,7 +161,7 @@ class SeriesParser extends Parser{
 		
 	
 	public function run(){
-		$result = array(); // [seriesTitleRu, seriesTitleEn, seasonNumber, seriesNumber]
+		$result = array(); // [showTitleRu, showTitleEn, seriesTitleRu, seriesTitleEn, seasonNumber, seriesNumber]
 		
 		foreach($this->rssData->channel->item as $item){
 			try{
