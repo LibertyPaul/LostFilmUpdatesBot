@@ -1,11 +1,6 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/Exceptions/StdoutTextException.php');
-require_once(__DIR__.'/Notifier.php');
-require_once(__DIR__.'/TelegramBotFactory.php');
 require_once(__DIR__.'/EchoTracer.php');
-
 
 class FullSeasonWasFoundException extends Exception{}
 
@@ -13,12 +8,7 @@ class FullSeasonWasFoundException extends Exception{}
 class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
-	protected $notifier;
 	
-	protected $getUrlIdQuery;
-	protected $addSeries;
-	protected $latestSeriesQuery;
-
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
@@ -36,142 +26,46 @@ class SeriesParser extends Parser{
 			throw $ex;
 		}
 	}
-			
-	protected function parseTitle($title){
-		$lastDotPos = strrpos($title, '.');
-		$seasonSeriesNumberTag = substr($title, $lastDotPos + 1);
-		$seasonSeriesNumberTag = trim($seasonSeriesNumberTag);
-		
+	
+	private function parseLink($link){
+		$regexp = '/https:\/\/[\w\.]*?lostfilm.tv\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
-		$res = preg_match('/S0?(\d+)E0?(\d+)/', $seasonSeriesNumberTag, $matches);
-		if($res !== 1){
-			$res = preg_match('/S\d+/', $seasonSeriesNumberTag, $matches);
-
-			if($res === 1){
-				throw new FullSeasonWasFoundException();
-			}
-
-			throw new StdoutTextException("seasonSeriesNumberTag parsing error: '$seasonSeriesNumberTag'");
+		$matchesRes = preg_match($regexp, $link, $matches);
+		if($matchesRes === false){
+			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
+			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "Link: '$link'");
+			throw new Exception('preg_match has failed');
 		}
-		
-		$seasonNumber = $matches[1];
-		$seriesNumber = $matches[2];
-		
 
-		$title = substr($title, 0, $lastDotPos);
-		$formatEndPos = strrpos($title, ']');
-		
-		$formatTag = null;
-		if($formatEndPos !== false){
-			try{
-				$formatStartPos = findMatchingParenthesis($title, $formatEndPos);
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[DATA ERROR]', $ex);
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw $ex;
-			}
-			
-			if($formatStartPos === false){
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw new StdoutTextException('Broken format tag (opening parenthesis not found)');
-			}
+		if($matchesRes === 0){
+			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Link '$link' doesn't match pattern");
+			throw new Exception("Link doesn't match pattern");
+		}
 
-			$length = $formatEndPos - $formatStartPos - 1;
-			$formatTag = substr($title, $formatStartPos + 1, $length);
-			$title = substr($title, 0, $formatStartPos);
-			$title = rtrim($title);
-		}
-		
-		$seriesNameEn = null;
-		$seriesNameEnEndPos = strlen($title) - 1;
-		if($title[$seriesNameEnEndPos] === ')'){
-			try{
-				$seriesNameEnStartPos = findMatchingParenthesis($title, $seriesNameEnEndPos);
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[DATA ERROR]', $ex);
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw $ex;
-			}
-			
-			if($seriesNameEnStartPos === false){
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw new StdoutTextException("Broken series name (opening parenthesis not found)");
-			}
+		assert($matchesRes === 1);
 
-			$length = $seriesNameEnEndPos - $seriesNameEnStartPos - 1;
-			$seriesNameEn = substr($title, $seriesNameEnStartPos + 1, $length);
-			$title = substr($title, 0, $seriesNameEnStartPos);
-		}
-		
-		$seriesNameRu = null;
-		$offset = 2;
-		
-		$seriesNameRuStartPos = strpos($title, ').');
-		if($seriesNameRuStartPos === false){
-			$seriesNameRuStartPos = strpos($title, '.');
-			$offset = 1;
-			if($seriesNameRuStartPos === false){
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw new StdoutTextException("Start of show ru name wasn't found");
-			}
-		}
-			
-		$seriesNameRu = substr($title, $seriesNameRuStartPos + $offset);
-		$seriesNameRu = trim($seriesNameRu);
-		$title = substr($title, 0, $seriesNameRuStartPos + 1); // + 1 to left closing parenthesis
-	
-	
-		$showNameEn = null;
-	
-		$showNameEnEndPos = strrpos($title, ')');
-		if($showNameEnEndPos !== false){
-			try{
-				$showNameEnStartPos = findMatchingParenthesis($title, $showNameEnEndPos);
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[DATA ERROR]', $ex);
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw $ex;
-			}
-			
-			if($showNameEnStartPos === false){
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Title: '$title'");
-				throw new StdoutTextException('Broken show name (opening parenthesis not found)');
-			}
-			
-			$length = $showNameEnEndPos - $showNameEnStartPos - 1;
-			$showNameEn = substr($title, $showNameEnStartPos + 1, $length);
-			$title = substr($title, 0, $showNameEnStartPos);
-		}
-		
-		$title = trim($title);
-		$showNameRu = $title;
-		
 		return array(
-			'showTitleRu'	=> $showNameRu,
-			'showTitleEn' 	=> $showNameEn,
-			'seriesTitleRu' => $seriesNameRu,
-			'seriesTitleEn' => $seriesNameEn,
-			'seasonNumber' 	=> intval($seasonNumber),
-			'seriesNumber' 	=> intval($seriesNumber)
+			'link'			=> $matches[0],
+			'showAlias'		=> $matches[1],
+			'seasonNumber'	=> $matches[2],
+			'seriesNumber'	=> $matches[3]
 		);
 	}
 		
 	
 	public function run(){
-		$result = array(); // [showTitleRu, showTitleEn, seriesTitleRu, seriesTitleEn, seasonNumber, seriesNumber]
+		$result = array(); // [link, showAlias, seasonNumber, seriesNumber]
 		
 		foreach($this->rssData->channel->item as $item){
 			try{
-				$result[] = $this->parseTitle($item->title);
+				$result[] = $this->parseLink($item->link);
 			}
 			catch(FullSeasonWasFoundException $ex){
 				// mmmk, skipping
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[PARSE ERROR]', $ex);
+				$this->tracer->log('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
 			}
 		}
 		

@@ -1,28 +1,32 @@
 <?php
-require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/ShowAboutParser.php');
 require_once(__DIR__.'/EchoTracer.php');
 
 
-class ShowParser extends Parser{
+class ShowParser{
+	private $requester;
+
 	private $getShowIdQuery;
 	private $addShowQuery;
 	private $updateOnAirQuery;
+	private $updateShowAliasQuery;
 
 	private $showAboutParser;
 	private $tracer;
 	
-	const showPageTemplate = 'https://old.lostfilm.tv/browse.php?cat=#url_id';
+	const showInfoTemplate	= 'https://www.lostfilm.tv/ajaxik.php?act=serial&type=search&o=#FROM&s=3&t=0';
+	const showInfoStep		= 10;
 
 	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
-		parent::__construct($requester, $pageEncoding);
+		assert($requester !== null);
+		$this->requester = $requester;
 
 		$this->tracer = new EchoTracer(__CLASS__);
 
 		$pdo = createPDO();
-		$this->showAboutParser = new ShowAboutParser($requester, 'CP1251');
+		$this->showAboutParser = new ShowAboutParser($requester);
 		
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`
@@ -32,12 +36,16 @@ class ShowParser extends Parser{
 		');
 		
 		$this->addShowQuery = $pdo->prepare('
-			INSERT INTO `shows` (title_ru, title_en, onAir)
-			VALUES (:title_ru, :title_en, :onAir)
+			INSERT INTO `shows` (alias, title_ru, title_en, onAir)
+			VALUES (:alias, :title_ru, :title_en, :onAir)
 		');
 
 		$this->updateOnAirQuery = $pdo->prepare('
 			UPDATE `shows` SET `onAir` = :onAir WHERE `id` = :id
+		');
+
+		$this->updateShowAliasQuery = $pdo->prepare('
+			UPDATE `shows` SET `alias` = :alias WHERE id = :id
 		');
 		
 	}
@@ -57,58 +65,73 @@ class ShowParser extends Parser{
 		
 		return $res['id'];
 	}
+
 	
-	protected function parseShowList(){ // -> array(url_id => array(title_ru => '', title_en => ''), ...)
-		$regexp = '/<a href="\/browse\.php\?cat=_?(\d+)" class="bb_a">([^<]*)<br><span>\(([^(]*)\)<\/span><\/a>/';
-		$matches = array();
-		$matchesCount = preg_match_all($regexp, $this->pageSrc, $matches);
-		if($matchesCount === false){
-			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'preg_match_all error: '.preg_last_error());
-			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
-			throw new Exception("preg_match_all error: ".preg_last_error());
-		}
-		
-		$result = array();
-		
-		for($i = 0; $i < $matchesCount; ++$i){
-			$url_id	= intval($matches[1][$i]);
-			$title_ru = $matches[2][$i];
-			$title_en = $matches[3][$i];
-			
-			$result[$url_id] = array(
-				'title_ru' => $title_ru,
-				'title_en' => $title_en
-			);
-		}
-		
-		return $result;
+	private function getShowsInfoURL($from){
+		assert(is_int($from));
+		return str_replace('#FROM', $from, self::showInfoTemplate);
+	}
+
+	private function getShowInfoList(){
+		$showInfoList = array();
+		$pos = 0;
+
+		do{
+			$url = $this->getShowsInfoURL($pos);
+			try{
+				$result = $this->requester->sendGETRequest($url);
+			}
+			catch(HTTPException $ex){
+				$this->tracer->logException($ex);
+				throw $ex;
+			}
+
+			$result_json = $result['value'];
+
+			$result = json_decode($result_json, true);
+			if($result === false){
+				$this->tracer->log('[JSON ERROR]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
+				$this->tracer->log('[JSON ERROR]', __FILE__, __LINE__, PHP_EOL.$result_json);
+				throw new Exception('json_decode error: '.json_last_error_msg());
+			}
+
+			if(isset($result['data']) === false || is_array($result['data']) === false){
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Incorrect show info');
+				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($result, true));
+				throw new Exception('Incorrect show info');
+			}
+
+			$showInfoList = array_merge($showInfoList, $result['data']);
+			$pos += self::showInfoStep;
+		}while(count($result['data']) > 0);
+
+		return $showInfoList;
 	}
 	
-	protected function getShowPageURL($url_id){
-		assert(is_int($url_id));		
-		return str_replace('#url_id', $url_id, self::showPageTemplate);
-	}
-	
-	private function isOnAir($url_id){
-		$url = $this->getShowPageURL($url_id);
-		$this->showAboutParser->loadSrc($url);
-		return $this->showAboutParser->run();
-	}
 	
 	public function run(){
-		$showList = $this->parseShowList();
-		foreach($showList as $url_id => $titles){
+		$showInfoList = $this->getShowInfoList();
+		foreach($showInfoList as $showInfo){
 			try{
-				$showId = $this->getShowId($titles['title_ru'], $titles['title_en']);
-				$onAir = $this->isOnAir($url_id);
+				$showId = $this->getShowId($showInfo['title'], $showInfo['title_orig']);
+
+				$this->updateShowAliasQuery->execute(
+					array(
+						':id'		=> $showId,
+						':alias'	=> $showInfo['alias']
+					)
+				);
+
+				$onAir = intval($showInfo['status']) !== 5;
 				$onAirFlag = $onAir ? 'Y' : 'N';
 				if($showId === null){
-					$this->tracer->log('[NEW SHOW]', __FILE__, __LINE__, "$titles[title_ru] ($titles[title_en])");
+					$this->tracer->log('[NEW SHOW]', __FILE__, __LINE__, "$showInfo[title] ($showInfo[title_orig])");
 					
 					$this->addShowQuery->execute(
 						array(
-							':title_ru' => $titles['title_ru'],
-							':title_en' => $titles['title_en'],
+							':alias'	=> $showInfo['alias'],
+							':title_ru' => $showInfo['title'],
+							':title_en' => $showInfo['title_orig'],
 							':onAir'	=> $onAirFlag
 						)
 					);
@@ -124,13 +147,11 @@ class ShowParser extends Parser{
 			}
 			catch(PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', $ex);
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, "url_id = $url_id, showId = $showId, onAir = $onAir");
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($titles, true));
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[ERROR]', $ex);
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, "url_id = $url_id, showId = $showId, onAir = $onAir");
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($titles, true));
+				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
 			}
 		}
 	}
