@@ -14,7 +14,7 @@ class ShowParser extends Parser{
 	private $showAboutParser;
 	private $tracer;
 	
-	const showPageTemplate = 'https://www.lostfilm.tv/browse.php?cat=#url_id';
+	const showPageTemplate = 'https://old.lostfilm.tv/browse.php?cat=#url_id';
 
 	public function __construct(HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
 		parent::__construct($requester, $pageEncoding);
