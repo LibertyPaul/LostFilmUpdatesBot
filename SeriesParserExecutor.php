@@ -1,7 +1,7 @@
 <?php
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/SeriesParser.php');
-require_once(__DIR__.'/EchoTracer.php');
+require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/SeriesAboutParser.php');
 require_once(__DIR__.'/HTTPRequester.php');
 
@@ -20,7 +20,7 @@ class SeriesParserExecutor{
 		assert($seriesAboutParser !== null);
 		$this->seriesAboutParser = $seriesAboutParser;
 
-		$this->tracer = new EchoTracer(__CLASS__);
+		$this->tracer = new Tracer(__CLASS__);
 		
 		$this->pdo = createPDO();
 		
@@ -118,6 +118,9 @@ class SeriesParserExecutor{
 				
 
 				$this->tracer->log('[NEW SERIES]', __FILE__, __LINE__, PHP_EOL.print_r($series, true));
+			}
+			catch(SeriesIsNotPublishedYet $ex){
+				continue;
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[UNKNOWN ERROR]', $ex);
