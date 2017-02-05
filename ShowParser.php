@@ -2,7 +2,7 @@
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/ShowAboutParser.php');
-require_once(__DIR__.'/EchoTracer.php');
+require_once(__DIR__.'/Tracer.php');
 
 
 class ShowParser{
@@ -23,7 +23,7 @@ class ShowParser{
 		assert($requester !== null);
 		$this->requester = $requester;
 
-		$this->tracer = new EchoTracer(__CLASS__);
+		$this->tracer = new Tracer(__CLASS__);
 
 		$pdo = createPDO();
 		$this->showAboutParser = new ShowAboutParser($requester);
@@ -98,7 +98,7 @@ class ShowParser{
 			if(isset($result['data']) === false || is_array($result['data']) === false){
 				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Incorrect show info');
 				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($result, true));
-				throw new Exception('Incorrect show info');
+				throw new RuntimeException('Incorrect show info: data element is not found');
 			}
 
 			$showInfoList = array_merge($showInfoList, $result['data']);
