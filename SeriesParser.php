@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/EchoTracer.php');
+require_once(__DIR__.'/Tracer.php');
 
 class FullSeasonWasFoundException extends Exception{}
 
@@ -12,7 +12,7 @@ class SeriesParser extends Parser{
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
-		$this->tracer = new EchoTracer(__CLASS__);
+		$this->tracer = new Tracer(__CLASS__);
 	}
 
 	public function loadSrc($path){
