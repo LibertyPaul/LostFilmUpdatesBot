@@ -54,6 +54,8 @@ class SeriesParser extends Parser{
 		
 	
 	public function run(){
+		assert($this->pageSrc !== null);
+
 		$result = array(); // [link, showAlias, seasonNumber, seriesNumber]
 		
 		foreach($this->rssData->channel->item as $item){
