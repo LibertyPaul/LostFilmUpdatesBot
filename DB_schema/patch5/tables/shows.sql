@@ -24,3 +24,8 @@ ALTER TABLE `shows`
 
 UPDATE `shows` SET `title_en` = 'The 100' WHERE `title_ru` = 'Сотня';
 UPDATE `shows` SET `title_en` = 'Stargate: Universe' WHERE `title_ru` = 'Звездные врата: Вселенная';
+UPDATE `shows` SET `title_en` = 'Iron Fist' WHERE `title_ru` = 'Железный кулак';
+UPDATE `shows` SET `title_en` = 'Luke Cage' WHERE `title_ru` = 'Люк Кейдж';
+UPDATE `shows` SET `title_en` = 'Legends of Tomorrow' WHERE `title_ru` = 'Легенды завтрашнего дня';
+UPDATE `shows` SET `title_en` = 'Agents of S.H.I.E.L.D.' WHERE `title_ru` = 'Агенты Щ.И.Т.';
+
