@@ -147,5 +147,35 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 
 		$this->stop();
 	}
-
+	
+	public function testMute(){
+		$this->cancel();
+		$this->start();
+		
+		$pdo = createPDO();
+		$getMute = $pdo->prepare('SELECT mute FROM users WHERE telegram_id = :telegram_id');
+		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$res = $getMute->fetch();
+		$this->assertEquals('N', $res[0]);
+		
+		$resp = $this->messageTester->send('/mute')[0];
+		$this->assertContains('Выключил все уведомления', $resp->text);
+		
+		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$res = $getMute->fetch();
+		$this->assertEquals('Y', $res[0]);
+		
+		$resp = $this->messageTester->send('/mute')[0];
+		$this->assertContains('Включил все уведомления', $resp->text);
+		
+		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$res = $getMute->fetch();
+		$this->assertEquals('N', $res[0]);
+		
+		$this->stop();
+	}
 }
+
+
+
+

@@ -438,12 +438,13 @@ class TelegramBot extends TelegramBot_base{
 		
 		$action = null;
 		$newMode = null;
-		if(intval($user['mute']) === 0){
-			$newMode = 1;
+		if($user['mute'] === 'N'){
+			$newMode = 'Y';
 			$action = 'Выключил';
 		}
 		else{
-			$newMode = 0;
+			assert($user['mute'] === 'Y');
+			$newMode = 'N';
 			$action = 'Включил';
 		}
 		
