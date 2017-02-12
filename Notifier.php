@@ -56,7 +56,7 @@ class Notifier{
 			'Вышла новая серия <b>#showName</b>'				.PHP_EOL.
 			'Сезон #season, серия #seriesNumber, "#seriesTitle"'.PHP_EOL.
 			'Серию можно скачать по ссылке:'					.PHP_EOL.
-			'https://www.lostfilm.tv/browse.php'
+			'https://old.lostfilm.tv/browse.php'
 		;
 			
 		
