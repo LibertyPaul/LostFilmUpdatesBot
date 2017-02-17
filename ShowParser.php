@@ -67,6 +67,11 @@ class ShowParser extends Parser{
 			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw new Exception("preg_match_all error: ".preg_last_error());
 		}
+
+		if($matchesCount === 0){
+			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "No shows match regex $regexp");
+			$this->tracer->log('[ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
+		}
 		
 		$result = array();
 		
