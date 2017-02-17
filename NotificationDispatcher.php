@@ -25,6 +25,7 @@ class NotificationDispatcher{
 					`notificationsQueue`.`lastDeliveryAttemptTime`,
 					`users`.`telegram_id`,
 					`shows`.`title_ru` AS showTitle,
+					`shows`.`alias` AS showAlias,
 					`series`.`title_ru` AS seriesTitle,
 					`series`.`seasonNumber`,
 					`series`.`seriesNumber`
@@ -92,6 +93,15 @@ class NotificationDispatcher{
 		}
 	}
 	
+	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
+		$template = 'https://www.lostfilm.tv/series/#ALIAS/season_#SEASON_NUMBER/episode_#SERIES_NUMBER';
+		return str_replace(
+			array('#ALIAS', '#SEASON_NUMBER', '#SERIES_NUMBER'),
+			array($showAlias, $seasonNumber, $seriesNumber),
+			$template
+		);
+	}
+
 	public function run(){
 		$this->pdo->query('
 			LOCK TABLES 
@@ -125,12 +135,14 @@ class NotificationDispatcher{
 			
 			if($gonnaBeSent){
 				try{
+					$url = self::makeURL($notification['showAlias'], intval($notification['seasonNumber']), intval($notification['seriesNumber']));	
 					$result = $this->notifier->newSeriesEvent(
 						intval($notification['telegram_id']), 
 						$notification['showTitle'], 
 						intval($notification['seasonNumber']),
 						intval($notification['seriesNumber']), 
-						$notification['seriesTitle']
+						$notification['seriesTitle'],
+						$url
 					);
 				
 					$this->setNotificationDeliveryResult->execute(

@@ -13,6 +13,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$this->curl = curl_init();
 		assert($this->curl !== false);
 		assert(curl_setopt($this->curl, CURLOPT_RETURNTRANSFER, true));
+		assert(curl_setopt($this->curl, CURLOPT_FOLLOWLOCATION, true));
+		assert(curl_setopt($this->curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP | CURLPROTO_HTTPS));
 	}
 
 	public function __destruct(){
@@ -28,7 +30,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$response = curl_exec($this->curl);
 		if($response === false){
 			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
+			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
 			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, PHP_EOL.$content_json);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}

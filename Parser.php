@@ -29,6 +29,10 @@ abstract class Parser{
 			$this->pageSrc = mb_convert_encoding($result['value'], 'UTF-8', $this->srcEncoding);
 		}
 	}
-	
+
+	public function getSrc(){
+		return $this->pageSrc;
+	}
+
 	abstract public function run();
 }

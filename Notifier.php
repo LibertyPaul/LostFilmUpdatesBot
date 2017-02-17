@@ -51,22 +51,23 @@ class Notifier{
 		return $this->usersToNotifyQuery->fetchAll(PDO::FETCH_COLUMN);
 	}
 	
-	protected function generateNotificationText($showTitleRu, $season, $seriesNumber, $seriesTitle){
+	protected function generateNotificationText($showTitleRu, $season, $seriesNumber, $seriesTitle, $url){
 		$template = 
 			'Вышла новая серия <b>#showName</b>'				.PHP_EOL.
 			'Сезон #season, серия #seriesNumber, "#seriesTitle"'.PHP_EOL.
 			'Серию можно скачать по ссылке:'					.PHP_EOL.
-			'https://old.lostfilm.tv/browse.php'
+			'#URL'
 		;
 			
 		
 		$text = str_replace(
-			array('#showName', '#season', '#seriesNumber', '#seriesTitle'),
+			array('#showName', '#season', '#seriesNumber', '#seriesTitle', '#URL'),
 			array(
 				htmlspecialchars($showTitleRu),
 				$season,
 				$seriesNumber,
-				htmlspecialchars($seriesTitle)
+				htmlspecialchars($seriesTitle),
+				$url
 			),
 			$template
 		);
@@ -74,7 +75,7 @@ class Notifier{
 		return $text;
 	}
 
-	public function newSeriesEvent($telegram_id, $title_ru, $season, $seriesNumber, $seriesTitle){
+	public function newSeriesEvent($telegram_id, $title_ru, $season, $seriesNumber, $seriesTitle, $url){
 		assert(is_int($telegram_id));
 		assert(is_int($season));
 		assert(is_int($seriesNumber));
@@ -83,7 +84,8 @@ class Notifier{
 			$title_ru,
 			$season,
 			$seriesNumber,
-			$seriesTitle
+			$seriesTitle,
+			$url
 		);
 		
 		$bot = $this->getBot($telegram_id);
