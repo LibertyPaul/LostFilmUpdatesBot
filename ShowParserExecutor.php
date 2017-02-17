@@ -3,7 +3,7 @@ require_once(__DIR__.'/ShowParser.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/EchoTracer.php');
 
-const showListURL = "https://www.lostfilm.tv/serials.php";
+const showListURL = "https://old.lostfilm.tv/serials.php";
 
 $tracer = new EchoTracer('ShowParserExecutor');
 
