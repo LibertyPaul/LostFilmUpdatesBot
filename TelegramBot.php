@@ -4,13 +4,11 @@ require_once(__DIR__.'/Exceptions/TelegramException.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/config/config.php');
-require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/Notifier.php');
 
 class TelegramBot extends TelegramBot_base{
 	private $user_id;
 	private $telegram_id;
-	private $botan;
 	private $notifier;
 	private $previousMessageArray;
 	
@@ -22,9 +20,6 @@ class TelegramBot extends TelegramBot_base{
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
 		
-		$this->botan = new Botan(BOTAN_API_KEY);
-		
-
 		assert($notifier !== null);
 		$this->notifier = $notifier;
 		
@@ -40,52 +35,6 @@ class TelegramBot extends TelegramBot_base{
 		catch(TelegramException $tex){
 			assert(false, 'parent::sendMessage has thrown TelegramException');
 		}
-	}
-	
-	private function getPreviousMessageArrayKey(){
-		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
-	}
-	
-	private function fetchPreviousMessageArray(){
-		$previousMessageArray_serialized = $this->memcache->get($this->getPreviousMessageArrayKey());
-		if($previousMessageArray_serialized === false){
-			$this->previousMessageArray = array();
-		}
-		else{
-			$this->previousMessageArray = unserialize($previousMessageArray_serialized);
-		}
-	}
-	
-	private function commitPreviousMessageArray(){
-		$previousMessageArray_serialized = serialize($this->previousMessageArray);
-		
-		$res = $this->memcache->set($this->getPreviousMessageArrayKey(), $previousMessageArray_serialized);
-		if($res === false){
-			throw new StdoutTextException('Memcache set() error');
-		}
-	}
-	
-	protected function getPreviousMessageArray(){
-		return $this->previousMessageArray;
-	}
-	
-	protected function previousMessageArraySize(){
-		return count($this->getPreviousMessageArray());
-	}
-	
-	protected function previousMessageArrayInsert($item){
-		$this->previousMessageArray[] = $item;
-		$this->commitPreviousMessageArray();
-	}
-	
-	protected function previousMessageArrayErase(){
-		$this->previousMessageArray = array();
-		$this->commitPreviousMessageArray();
-	}
-	
-	protected function previousMessageArrayPop(){
-		array_pop($this->previousMessageArray);
-		$this->commitPreviousMessageArray();
 	}
 	
 	protected function getUserId(){
@@ -111,24 +60,6 @@ class TelegramBot extends TelegramBot_base{
 			$this->user_id = intval($result[0]['id']);
 		}
 		return $this->user_id;
-	}
-	
-	protected function updateUserInfo($telegram_username, $telegram_firstName){
-		$updateUserInfoQuery = $this->pdo->prepare('
-			UPDATE `users`
-			SET 
-				`telegram_username` 	= :username,
-				`telegram_firstName` 	= :firstName
-			WHERE `id` = :user_id
-		');
-		
-		$updateUserInfoQuery->execute(
-			array(
-				':username' 	=> $telegram_username,
-				':firstName'	=> $telegram_firstName,
-				':user_id'		=> $this->getUserId()
-			)
-		);
 	}
 	
 	protected function repeatQuestion(){
@@ -847,37 +778,40 @@ mute - Выключить уведомления на время
 cancel - Отменить команду
 stop - Удалиться из контакт-листа бота
 */
-	protected function sendToBotan($message, $eventName){
-		$message_array = json_decode(json_encode($message), true);
-		$this->botan->track($message_array, $eventName);
+
+	private function updateUserInfo($message){
+		if(isset($message->from) === false){
+			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Message from Telegram API has no "from" field: '.PHP_EOL.print_r($message, true));
+			return;
+		}
+
+		$updateUserInfoQuery = $this->pdo->prepare('
+			UPDATE `users`
+			SET `telegram_username`		= :telegram_username,
+				`telegram_firstName`	= :telegram_firstName,
+				`telegram_lastName`		= :telegram_lastName
+			WHERE `id` = :id
+		');
+
+		try{
+			$updateUserInfoQuery->execute(
+				array(
+					'telegram_username'		=> $message->from->username,
+					'telegram_firstName'	=> $message->from->first_name,
+					'telegram_lastName'		=> $message->from->last_name,
+					'id'					=> $this->getUserId()
+				)
+			);
+		}
+		catch(PDOException $ex){
+			$this->tracer->logException('[DB ERROR]', $ex);
+			$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
+		}
 	}
 	
-	protected function extractCommand($text){//в чатах команда, посылаемая боту имеет вид /cmd@LostFilmUpdatesBot
-		if(strlen($text) === 0){
-			return '';
-		}
-	
-		$regexp = '/([^@]+)[\s\S]*/';
-		$matches = array();
-		$res = preg_match($regexp, $text, $matches);
-		if($res === false){
-			$this->previousMessageArrayErase();
-			throw new TelegramException($this, 'Не знаю такой команды');
-		}
-		
-		return $matches[1];
-	}
-	
-	public function incomingUpdate($message){
-		if($message->from->id !== $this->telegram_id){
-			throw new StdoutTextException("update telegram id, and stored id doesn't match");
-		}
-		
-		if(isset($message->text) === false){
-			throw new StdoutTextException('$message->text is empty');
-		}
-		
-		$cmd = $this->extractCommand($message->text);
+	public function incomingUpdate(ConversationStorage $conversationStorage){
+		assert($conversationStorage !== null);
+		assert($message->from->id === $this->telegram_id);
 		
 		if($cmd === '/cancel'){
 			$this->previousMessageArrayErase();
@@ -891,29 +825,17 @@ stop - Удалиться из контакт-листа бота
 		}
 		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
 		
-		//print_r($messagesTextArray);
 		$argc = count($messagesTextArray);
 		
 		if($argc < 1)
 			throw new StdoutTextException('PreviousMessageArray is empty');
 		switch($messagesTextArray[0]){
 		case '/start':
-			$username = null;
-			if(isset($message->from->username)){
-				$username = $message->from->username;
-			}
-			
-			$firstName = null;
-			if(isset($message->from->first_name)){
-				$firstName = $message->from->first_name;
-			}
-			
-			$lastName = null;
-			if(isset($message->from->last_name)){
-				$lastName = $message->from->last_name;
-			}
-			
-			$this->registerUser($username, $firstName, $lastName);
+			$this->registerUser(
+				isset($message->from->username)		?	$message->from->username	: null,
+				isset($message->from->first_name)	?	$message->from->first_name	: null,
+				isset($message->from->last_name)	?	$message->from->last_name	: null
+			);
 			break;
 		case '/cancel':
 			$this->previousMessageArrayErase();
@@ -952,13 +874,6 @@ stop - Удалиться из контакт-листа бота
 		default:
 			$this->previousMessageArrayErase();
 			throw new TelegramException($this, 'Я хз чё это значит');
-		}
-		
-		try{
-			$this->sendToBotan($message, $messagesTextArray[0]);
-		}
-		catch(Exception $ex){
-			//log error
 		}
 		
 	}
