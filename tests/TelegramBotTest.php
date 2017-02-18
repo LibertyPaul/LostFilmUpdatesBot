@@ -8,7 +8,12 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 	private $messageTester;
 
 	public function __construct(){
-		$this->messageTester = new MessageTester(self::TEST_TELEGRAM_ID);
+		$this->messageTester = new MessageTester(
+			self::TEST_TELEGRAM_ID,
+			'🇩 🇮 🇲  🇦  🇳 ',
+			'🇩 🇮 🇲  🇦  🇳 ', // once such shitty nickname was unable to register
+			'🇩 🇮 🇲  🇦  🇳 '
+		);
 	}
 
 	private function userExists($telegram_id){
