@@ -5,9 +5,8 @@ require_once(__DIR__.'/../Exceptions/StdoutTextException.php');
 function createPDO(){
 	static $pdo;
 	if(isset($pdo) === false){
-		$dsn = 'mysql:dbname='.DBname.';host='.HOST;
+		$dsn = 'mysql:dbname='.DBname.';host='.HOST.';charset=utf8mb4';
 		$pdo = new PDO($dsn, DBuser, DBpass, array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
-		$pdo->exec('set names utf8');
 	}
 	return $pdo;
 }
