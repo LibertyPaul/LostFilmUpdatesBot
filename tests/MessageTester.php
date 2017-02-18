@@ -30,14 +30,26 @@ class MessageTester{
 		array('key' => '#FIRST_NAME', 	'defaultValue' => 'test first name'),
 		array('key' => '#USERNAME', 	'defaultValue' => 'test username')
 	);
+
+	private $username;
+	private $firstName;
+	private $lastName;
 	
 	private $telegram_id;
 	private $botFactory;
 	private $botOutputFile;
 
-	public function __construct($telegram_id){
+	public function __construct(
+		$telegram_id,
+		$username = 'test username',
+		$firstName = 'test first name',
+		$lastName = 'test last name'
+	){
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
+		$this->username = $username;
+		$this->firstName = $firstName;
+		$this->lastName = $lastName;
 		
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
 
@@ -82,7 +94,13 @@ class MessageTester{
 	}
 
 	public function send($message){
-		$json_msg = $this->fillTemplate(array('#TEXT' => $message));
+		$json_msg = $this->fillTemplate(
+			array(
+				'#TEXT'			=> $message,
+				'#USERNAME'		=> $this->username,
+				'#FIRST_NAME'	=> $this->lastName
+			)
+		);
 
 		$this->truncateBotOutputFile();
 
