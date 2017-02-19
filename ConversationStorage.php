@@ -49,7 +49,7 @@ class ConversationStorage{
 		$res = $this->memcache->set($this->getMemcacheKey(), $conversation_serialized);
 		if($res === false){
 			$this->tracer->log('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
-			throw new RuntimeError('memcache->set has failed');
+			throw new RuntimeException('memcache->set has failed');
 		}
 	}
 
@@ -58,10 +58,16 @@ class ConversationStorage{
 	}
 
 	public function getFirstMessage(){
+		if($this->getConversationSize() < 1){
+			throw new RuntimeException('ConversationStorage is empty');
+		}
 		return $this->conversation[0];
 	}
 
 	public function getLastMessage(){
+		if($this->getConversationSize() < 1){
+			throw new RuntimeException('ConversationStorage is empty');
+		}
 		return $this->conversation[count($this->conversation) - 1];
 	}
 
