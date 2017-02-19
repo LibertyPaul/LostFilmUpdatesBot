@@ -2,6 +2,7 @@
 
 require_once(__DIR__.'/TelegramBotMockFactory.php');
 require_once(__DIR__.'/../Exceptions/TelegramException.php');
+require_once(__DIR__.'/../UpdateHandler.php');
 
 class MessageTester{
 
@@ -36,8 +37,8 @@ class MessageTester{
 	private $lastName;
 	
 	private $telegram_id;
-	private $botFactory;
 	private $botOutputFile;
+	private $updateHandler;
 
 	public function __construct(
 		$telegram_id,
@@ -53,7 +54,10 @@ class MessageTester{
 		
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
 
-		$this->botFactory = new TelegramBotMockFactory($this->botOutputFile);
+		$botFactory = new TelegramBotMockFactory($this->botOutputFile);
+
+		$this->updateHandler = new UpdateHandler($botFactory);
+
 	}
 	
 	private function fillTemplate(array $fields){
@@ -93,10 +97,10 @@ class MessageTester{
 		assert(fclose($hFile));
 	}
 
-	public function send($message){
-		$json_msg = $this->fillTemplate(
+	public function send($text){
+		$json_update = $this->fillTemplate(
 			array(
-				'#TEXT'			=> $message,
+				'#TEXT'			=> $text,
 				'#USERNAME'		=> $this->username,
 				'#FIRST_NAME'	=> $this->lastName
 			)
@@ -104,13 +108,11 @@ class MessageTester{
 
 		$this->truncateBotOutputFile();
 
-		$bot = $this->botFactory->createBot($this->telegram_id);
-		
 		try{
-			$msg = json_decode($json_msg);
+			$update = json_decode($json_update);
 			assert(json_last_error() === JSON_ERROR_NONE);
-
-			$bot->incomingUpdate($msg->message);
+			
+			$this->updateHandler->handleUpdate($update);
 		}
 		catch(TelegramException $tex){
 			$tex->release();

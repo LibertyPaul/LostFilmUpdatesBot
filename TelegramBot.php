@@ -4,13 +4,11 @@ require_once(__DIR__.'/Exceptions/TelegramException.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/config/config.php');
-require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/Notifier.php');
 
 class TelegramBot extends TelegramBot_base{
 	private $user_id;
 	private $telegram_id;
-	private $botan;
 	private $notifier;
 	private $previousMessageArray;
 	
@@ -22,13 +20,8 @@ class TelegramBot extends TelegramBot_base{
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
 		
-		$this->botan = new Botan(BOTAN_API_KEY);
-		
-
 		assert($notifier !== null);
 		$this->notifier = $notifier;
-		
-		$this->fetchPreviousMessageArray();
 	}	
 	
 	public function sendMessage($args){
@@ -41,101 +34,8 @@ class TelegramBot extends TelegramBot_base{
 			assert(false, 'parent::sendMessage has thrown TelegramException');
 		}
 	}
-	
-	private function getPreviousMessageArrayKey(){
-		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
-	}
-	
-	private function fetchPreviousMessageArray(){
-		$previousMessageArray_serialized = $this->memcache->get($this->getPreviousMessageArrayKey());
-		if($previousMessageArray_serialized === false){
-			$this->previousMessageArray = array();
-		}
-		else{
-			$this->previousMessageArray = unserialize($previousMessageArray_serialized);
-		}
-	}
-	
-	private function commitPreviousMessageArray(){
-		$previousMessageArray_serialized = serialize($this->previousMessageArray);
-		
-		$res = $this->memcache->set($this->getPreviousMessageArrayKey(), $previousMessageArray_serialized);
-		if($res === false){
-			throw new StdoutTextException('Memcache set() error');
-		}
-	}
-	
-	protected function getPreviousMessageArray(){
-		return $this->previousMessageArray;
-	}
-	
-	protected function previousMessageArraySize(){
-		return count($this->getPreviousMessageArray());
-	}
-	
-	protected function previousMessageArrayInsert($item){
-		$this->previousMessageArray[] = $item;
-		$this->commitPreviousMessageArray();
-	}
-	
-	protected function previousMessageArrayErase(){
-		$this->previousMessageArray = array();
-		$this->commitPreviousMessageArray();
-	}
-	
-	protected function previousMessageArrayPop(){
-		array_pop($this->previousMessageArray);
-		$this->commitPreviousMessageArray();
-	}
-	
-	protected function getUserId(){
-		if($this->user_id === null){
-			$getUserIdQuery = $this->pdo->prepare('
-				SELECT `id`
-				FROM `users`
-				WHERE `telegram_id` = :telegram_id
-			');
-			
-			$getUserIdQuery->execute(
-				array(
-					':telegram_id' => $this->telegram_id
-				)
-			);
-			
-			$result = $getUserIdQuery->fetchAll();
-			if(empty($result)){// TODO: move error handling to another place
-				$this->previousMessageArrayErase();			
-				throw new TelegramException($this, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
-			}
-				
-			$this->user_id = intval($result[0]['id']);
-		}
-		return $this->user_id;
-	}
-	
-	protected function updateUserInfo($telegram_username, $telegram_firstName){
-		$updateUserInfoQuery = $this->pdo->prepare('
-			UPDATE `users`
-			SET 
-				`telegram_username` 	= :username,
-				`telegram_firstName` 	= :firstName
-			WHERE `id` = :user_id
-		');
-		
-		$updateUserInfoQuery->execute(
-			array(
-				':username' 	=> $telegram_username,
-				':firstName'	=> $telegram_firstName,
-				':user_id'		=> $this->getUserId()
-			)
-		);
-	}
-	
-	protected function repeatQuestion(){
-		$this->previousMessageArrayPop();
-	}
-	
-	protected function isUserRegistred(){
+
+	private function getUserIdByTelegramId($telegram_id){
 		$isUserExistsQuery = $this->pdo->prepare('
 			SELECT `id`
 			FROM `users`
@@ -148,13 +48,39 @@ class TelegramBot extends TelegramBot_base{
 			)
 		);
 		
-		return empty($isUserExistsQuery->fetchAll()) === false;
+		$user = $isUserExistsQuery->fetch();
+		if($user !== false){
+			return $user['id'];
+		}
+		else{
+			return null;
+		}
+	}
+
+	private function getUserId(){
+		if($this->user_id === null){
+			$this->user_id = $this->getUserIdByTelegramId($this->telegram_id);
+			if($this->user_id === null){// TODO: move error handling to another place
+				$conversationStorage->deleteConversation();
+				$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Unknown Telegram Id: '.$this->telegram_id);
+				throw new TelegramException($this, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
+			}
+		}
+		return $this->user_id;
 	}
 	
-	protected function registerUser($username, $firstName, $lastName){
-		$this->previousMessageArrayErase();
+	private function repeatQuestion(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteLastMessage();
+	}
+	
+	private function isUserRegistred(){
+		return $this->getUserIdByTelegramId($this->telegram_id) !== null;
+	}
+	
+	private function registerUser(ConversationStorage $conversationStorage, $username, $firstName, $lastName){
+		$conversationStorage->deleteConversation();
+		
 		if($this->isUserRegistred()){
-			//throw new TelegramException($this, 'Мы ведь уже знакомы, правда?');
 			$this->sendMessage(
 				array(
 					'text' => 'Мы ведь уже знакомы, правда?'
@@ -213,10 +139,24 @@ class TelegramBot extends TelegramBot_base{
 			)
 		);
 	}
+
+	private function cancelRequest(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteConversation();
+
+		$this->sendMessage(
+			array(
+				'text' => 'Действие отменено.',
+				'reply_markup' => array(
+					'hide_keyboard' => true
+				)
+			)
+		);
+	}
 	
-	protected function unregisterUser(){
+	private function unregisterUser(ConversationStorage $conversationStorage){
 		$user_id = $this->getUserId();
 		if($user_id === null){
+			$conversationStorage->deleteConversation();
 			$this->sendMessage(
 				array(
 					'text' => 
@@ -238,7 +178,7 @@ class TelegramBot extends TelegramBot_base{
 			)
 		);
 		
-		switch($this->previousMessageArraySize()){
+		switch($conversationStorage->getConversationSize()){
 		case 1:
 			$this->sendMessage(
 				array(
@@ -253,11 +193,11 @@ class TelegramBot extends TelegramBot_base{
 			break;
 		
 		case 2:
-			$fullMessageArray = $this->getPreviousMessageArray();
-			$resp = $fullMessageArray[1];
+			$conversation = $conversationStorage->getConversation();
+			$resp = $conversation[1];
 			switch($resp){
 			case $ANSWER_YES:
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				try{
 					$this->notifier->userLeftEvent($this->getUserId());
 				}
@@ -279,7 +219,7 @@ class TelegramBot extends TelegramBot_base{
 				}
 				catch(PDOException $ex){
 					$this->botTracer->logException('[DB ERROR]', $ex);
-					$this->previousMessageArrayErase();
+					$conversationStorage->deleteConversation();
 					throw new TelegramException($this, 'Возникла ошибка: Не получилось удалить тебя из контакт-листа');
 				}
 				
@@ -294,7 +234,7 @@ class TelegramBot extends TelegramBot_base{
 				break;
 				
 			case $ANSWER_NO:
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				$this->sendMessage(
 					array(
 						'text' => 'Фух, а то я уже испугался',
@@ -317,8 +257,8 @@ class TelegramBot extends TelegramBot_base{
 		}
 	}
 	
-	protected function showHelp(){
-		$this->previousMessageArrayErase();
+	private function showHelp(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteConversation();
 		
 		$helpText  = "LostFilm updates - бот, который оповещает о новых сериях на https://lostfilm.tv/\n\n";
 		$helpText .= "Список команд:\n";
@@ -346,8 +286,8 @@ class TelegramBot extends TelegramBot_base{
 		);
 	}
 	
-	protected function showUserShows(){
-		$this->previousMessageArrayErase();
+	private function showUserShows(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteConversation();
 		$getUserShowsQuery = $this->pdo->prepare("
 			SELECT 
 				CONCAT(
@@ -358,7 +298,7 @@ class TelegramBot extends TelegramBot_base{
 				) AS `title`,
 				`shows`.`onAir`
 			FROM `tracks`
-			LEFT JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
+			JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
 			WHERE `tracks`.`user_id` = :user_id
 			ORDER BY `shows`.`title_ru`
 		");
@@ -371,27 +311,34 @@ class TelegramBot extends TelegramBot_base{
 		
 		$userShows = $getUserShowsQuery->fetchAll();
 		
-		$textByLines = array();
-		
 		if(count($userShows) === 0){
-			$textByLines[] = 'Вы не выбрали ни одного сериала';
+			$this->sendMessage(
+				array(
+					'text'	=> 'Вы не выбрали ни одного сериала',
+					'reply_markup' => array(
+						'hide_keyboard' => true
+					)
+				)
+			);
+
+			return;
 		}
-		else{
-			$textByLines[] = 'Ваши сериалы:';
-			
-			$showTemplate = '#ICON #TITLE';
-			foreach($userShows as $show){
-				$icon = '•';
-				if($show['onAir'] === 'N'){
-					$icon = '✕';
-				}
-				
-				$textByLines[] = str_replace(
-					array('#ICON', '#TITLE'),
-					array($icon, $show['title']),
-					$showTemplate
-				);
+
+		$textByLines = array();
+		$textByLines[] = 'Ваши сериалы:';
+		
+		$showTemplate = '#ICON #TITLE';
+		foreach($userShows as $show){
+			$icon = '•';
+			if($show['onAir'] === 'N'){
+				$icon = '✕';
 			}
+			
+			$textByLines[] = str_replace(
+				array('#ICON', '#TITLE'),
+				array($icon, $show['title']),
+				$showTemplate
+			);
 		}
 		
 		$eol = PHP_EOL.PHP_EOL;
@@ -408,8 +355,8 @@ class TelegramBot extends TelegramBot_base{
 		);
 	}
 	
-	protected function toggleMute(){
-		$this->previousMessageArrayErase();
+	private function toggleMute(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteConversation();
 		$isMutedQuery = $this->pdo->prepare('
 			SELECT `mute`
 			FROM `users`
@@ -425,25 +372,24 @@ class TelegramBot extends TelegramBot_base{
 		}
 		catch(PDOException $ex){
 			$this->botTracer->logException('[DB ERROR]',$ex);
-			$this->previousMessageArrayErase();
 			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
 		
-		$res = $isMutedQuery->fetchAll();
-		if(count($res) === 0){
+		$user = $isMutedQuery->fetch();
+		if($user === false){
+			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'User was not found '.$this->telegram_id);
 			throw new TelegramException($this, 'Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова');
 		}
-		
-		$user = $res[0];
-		
+
 		$action = null;
 		$newMode = null;
-		if(intval($user['mute']) === 0){
-			$newMode = 1;
+		if($user['mute'] === 'N'){
+			$newMode = 'Y';
 			$action = 'Выключил';
 		}
 		else{
-			$newMode = 0;
+			assert($user['mute'] === 'Y');
+			$newMode = 'N';
 			$action = 'Включил';
 		}
 		
@@ -463,7 +409,6 @@ class TelegramBot extends TelegramBot_base{
 		}
 		catch(PDOException $ex){
 			$this->botTracer->logException('[DB ERROR]', $ex);
-			$this->previousMessageArrayErase();
 			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
 		
@@ -477,9 +422,8 @@ class TelegramBot extends TelegramBot_base{
 		);
 	}
 	
-	protected function insertOrDeleteShow($in_out_flag){//$in_out_flag
-		$fullMessageArray = $this->getPreviousMessageArray();
-		$argc = count($fullMessageArray);
+	private function insertOrDeleteShow(ConversationStorage $conversationStorage, $in_out_flag){
+		$conversation = $conversationStorage->getConversation();
 		
 		$successText = '';
 		$action = null;
@@ -500,7 +444,7 @@ class TelegramBot extends TelegramBot_base{
 		}
 	
 	
-		switch($argc){
+		switch($conversationStorage->getConversationSize()){
 		case 1:
 			$query = null;
 			if($in_out_flag){//true -> add_show, false -> remove show
@@ -549,14 +493,14 @@ class TelegramBot extends TelegramBot_base{
 			}
 			catch(PDOException $ex){
 				$this->botTracer->logException('[DB ERROR]', $ex);
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 			
 			$showTitles = $query->fetchAll(PDO::FETCH_COLUMN, 'title');
 			
 			if(count($showTitles) === 0){
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				
 				$reply = null;
 				if($in_out_flag){
@@ -606,19 +550,19 @@ class TelegramBot extends TelegramBot_base{
 			try{
 				$getShowId->execute(
 					array(
-						':title' => $fullMessageArray[1]
+						':title' => $conversation[1]
 					)
 				);
 			}
 			catch(PDOException $ex){
 				$this->botTracer->logException('[DB ERROR]', $ex);
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 				
 			$res = $getShowId->fetchAll();
 			if(count($res) > 0){//нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, сам ввел точное название
-				$this->previousMessageArrayErase();
+				$conversationStorage->deleteConversation();
 				
 				$show_id = intval($res[0]['id']);
 				$title_all = $res[0]['title_all'];
@@ -697,13 +641,13 @@ class TelegramBot extends TelegramBot_base{
 					$query->execute(
 						array(
 							':user_id' 		=> $this->getUserId(),
-							':show_name'	=> $fullMessageArray[1]
+							':show_name'	=> $conversation[1]
 						)
 					);
 				}
 				catch(PDOException $ex){
 					$this->botTracer->logException('[DB ERROR]', $ex);
-					$this->previousMessageArrayErase();
+					$conversationStorage->deleteConversation();
 					throw new TelegramException($this, 'Упс, возникла ошибка, код: TB'.__LINE__);
 				}
 				
@@ -719,11 +663,11 @@ class TelegramBot extends TelegramBot_base{
 							)
 						)
 					);
-					$this->previousMessageArrayErase();
+					$conversationStorage->deleteConversation();
 					break;
 								
 				case 1://найдено только одно подходящее название
-					$this->previousMessageArrayErase();
+					$conversationStorage->deleteConversation();
 					$show = $res[0];
 					try{
 						$action->execute(
@@ -770,7 +714,7 @@ class TelegramBot extends TelegramBot_base{
 			}
 			break;
 		case 3:
-			$this->previousMessageArrayErase();
+			$conversationStorage->deleteConversation();
 			$query = $this->pdo->prepare("
 				SELECT 
 					`id`,
@@ -788,7 +732,7 @@ class TelegramBot extends TelegramBot_base{
 			try{
 				$query->execute(
 					array(
-						':exactShowName' => $fullMessageArray[2]
+						':exactShowName' => $conversation[2]
 					)
 				);
 			}
@@ -847,118 +791,87 @@ mute - Выключить уведомления на время
 cancel - Отменить команду
 stop - Удалиться из контакт-листа бота
 */
-	protected function sendToBotan($message, $eventName){
-		$message_array = json_decode(json_encode($message), true);
-		$this->botan->track($message_array, $eventName);
-	}
-	
-	protected function extractCommand($text){//в чатах команда, посылаемая боту имеет вид /cmd@LostFilmUpdatesBot
-		if(strlen($text) === 0){
-			return '';
+
+	private function updateUserInfo($message){
+		if(isset($message->from) === false){
+			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Message from Telegram API has no "from" field: '.PHP_EOL.print_r($message, true));
+			return;
 		}
-	
-		$regexp = '/([^@]+)[\s\S]*/';
-		$matches = array();
-		$res = preg_match($regexp, $text, $matches);
-		if($res === false){
-			$this->previousMessageArrayErase();
-			throw new TelegramException($this, 'Не знаю такой команды');
-		}
-		
-		return $matches[1];
-	}
-	
-	public function incomingUpdate($message){
-		if($message->from->id !== $this->telegram_id){
-			throw new StdoutTextException("update telegram id, and stored id doesn't match");
-		}
-		
-		if(isset($message->text) === false){
-			throw new StdoutTextException('$message->text is empty');
-		}
-		
-		$cmd = $this->extractCommand($message->text);
-		
-		if($cmd === '/cancel'){
-			$this->previousMessageArrayErase();
-		}
-		
-		if($this->previousMessageArraySize() === 0){
-			$this->previousMessageArrayInsert($cmd);
-		}
-		else{
-			$this->previousMessageArrayInsert($message->text);//добавляем сообщение к n предыдущих
-		}
-		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
-		
-		//print_r($messagesTextArray);
-		$argc = count($messagesTextArray);
-		
-		if($argc < 1)
-			throw new StdoutTextException('PreviousMessageArray is empty');
-		switch($messagesTextArray[0]){
-		case '/start':
-			$username = null;
-			if(isset($message->from->username)){
-				$username = $message->from->username;
-			}
-			
-			$firstName = null;
-			if(isset($message->from->first_name)){
-				$firstName = $message->from->first_name;
-			}
-			
-			$lastName = null;
-			if(isset($message->from->last_name)){
-				$lastName = $message->from->last_name;
-			}
-			
-			$this->registerUser($username, $firstName, $lastName);
-			break;
-		case '/cancel':
-			$this->previousMessageArrayErase();
-			$this->sendMessage(
+
+		$updateUserInfoQuery = $this->pdo->prepare('
+			UPDATE `users`
+			SET `telegram_username`		= :telegram_username,
+				`telegram_firstName`	= :telegram_firstName,
+				`telegram_lastName`		= :telegram_lastName
+			WHERE `id` = :id
+		');
+
+		try{
+			$updateUserInfoQuery->execute(
 				array(
-					'text' => 'Действие отменено.',
-					'reply_markup' => array(
-						'hide_keyboard' => true
-					)
+					'telegram_username'		=> $message->from->username,
+					'telegram_firstName'	=> $message->from->first_name,
+					'telegram_lastName'		=> $message->from->last_name,
+					'id'					=> $this->getUserId()
 				)
 			);
+		}
+		catch(PDOException $ex){
+			$this->tracer->logException('[DB ERROR]', $ex);
+			$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
+		}
+	}
+	
+	public function incomingUpdate(ConversationStorage $conversationStorage, $userInfo){
+		assert($conversationStorage !== null);
+		assert($conversationStorage->getConversationSize() > 0);
+
+		if($conversationStorage->getLastMessage() === '/cancel'){
+			$this->cancelRequest($conversationStorage);
+			return;
+		}
+
+		switch($conversationStorage->getFirstMessage()){
+		case '/start':
+			$this->registerUser(
+				$conversationStorage,
+				$userInfo['username'],
+				$userInfo['first_name'],
+				$userInfo['last_name']
+			);
 			break;
+
+		case '/cancel':
+			$this->cancelRequest($conversationStorage);
+			break;
+
 		case '/stop':
-			$this->unregisterUser();
+			$this->unregisterUser($conversationStorage);
 			break;
 		
 		case '/help':
-			$this->showHelp();
+			$this->showHelp($conversationStorage);
 			break;
 		
 		case '/mute':
-			$this->toggleMute();
+			$this->toggleMute($conversationStorage);
 			break;
 		
 		case '/get_my_shows':
-			$this->showUserShows();
+			$this->showUserShows($conversationStorage);
 			break;
 			
 		case '/add_show':
-			$this->insertOrDeleteShow(true, $argc);
+			$this->insertOrDeleteShow($conversationStorage, true);
 			break;
 		
 		case '/remove_show':
-			$this->insertOrDeleteShow(false, $argc);
+			$this->insertOrDeleteShow($conversationStorage, false);
 			break;
+
 		default:
-			$this->previousMessageArrayErase();
+			$conversationStorage->deleteConversation();
 			throw new TelegramException($this, 'Я хз чё это значит');
-		}
-		
-		try{
-			$this->sendToBotan($message, $messagesTextArray[0]);
-		}
-		catch(Exception $ex){
-			//log error
 		}
 		
 	}
