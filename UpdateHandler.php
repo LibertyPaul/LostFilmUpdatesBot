@@ -47,10 +47,10 @@ class UpdateHandler{
 
 	private function verifyUpdateId($update_id){
 		assert(is_int($update_id));
-		return $update_id > $this->getLastUpdateId();
+		return IGNORE_UPDATE_ID || $update_id > $this->getLastUpdateId();
 	}
 
-	private function validateFields($update){
+	private static function validateFields($update){
 		return
 			isset($update->update_id)			&&
 			isset($update->message)				&&
@@ -61,7 +61,7 @@ class UpdateHandler{
 			isset($update->message->text);
 	}
 
-	private function normalizeFields($update){
+	private static function normalizeFields($update){
 		$result = clone $update;
 		
 		$result->update_id = intval($result->update_id);
@@ -72,7 +72,7 @@ class UpdateHandler{
 	}
 
 	private function extractCommand($text){
-		$regex = '/\/(\w+)/';
+		$regex = '/(\/\w+)/';
 		$matches = array();
 		$res = preg_match($regex, $text, $matches);
 		if($res === false){
@@ -87,29 +87,42 @@ class UpdateHandler{
 		return $matches[1];
 	}
 
-	private function validateData($update){
+	private function verifyData($update){
 		return 
 			$this->verifyUpdateId($update->update_id) &&
-			$update->message->from->id !== $update->message->chat->id;
+			$update->message->from->id === $update->message->chat->id;
 	}
 
 	private function sendToBotan($message, $event){
 		$message_assoc = json_decode(json_encode($message), true);
-		$this->botan->track($message_array, $eventName);
+		$this->botan->track($message_assoc, $event);
 	}
 
+	private static function extractUserInfo($message){
+		$chat = $message->chat;
+
+		return array(
+			'username'		=> isset($chat->username)	? $chat->username	: null,
+			'first_name' 	=> isset($chat->first_name)	? $chat->first_name	: null,
+			'last_name' 	=> isset($chat->last_name)	? $chat->last_name	: null
+		);
+	}
+
+
 	private function handleMessage($message){
+		$firstMessage = null;
 		try{
-			$conversationStorage = new ConversationStorage($update->message->from->id);
+			$conversationStorage = new ConversationStorage($message->from->id);
 			
 			if($conversationStorage->getConversationSize() === 0){
 				$message->text = $this->extractCommand($message->text);
 			}
 			
 			$conversationStorage->insertMessage($message->text);
+			$firstMessage = $conversationStorage->getFirstMessage();
 
 			$bot = $this->botFactory->createBot($message->from->id);
-			$bot->incomingMessage($conversationStorage);
+			$bot->incomingUpdate($conversationStorage, self::extractUserInfo($message));
 		}
 		catch(TelegramException $ex){
 			$this->tracer->logException('[TELEGRAM EXCEPTION]', $ex);
@@ -120,7 +133,7 @@ class UpdateHandler{
 		}
 		
 		try{
-			$this->sendToBotan($message, $conversationStorage->getConversation[0]);
+			$this->sendToBotan($message, $firstMessage);
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[BOTAN ERROR]', $ex);
@@ -128,16 +141,16 @@ class UpdateHandler{
 	}
 
 	public function handleUpdate($update){
-		if($this->validateFields($update) === false){
+		if(self::validateFields($update) === false){
 			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Update is invalid:'.PHP_EOL.print_r($update, true));
-			throw new RuntimeError('Invalid update');
+			throw new RuntimeException('Invalid update');
 		}
 
-		$update = $this->normalizeFields($update);
+		$update = self::normalizeFields($update);
 
-		if($this->validateData($update) === false){
+		if($this->verifyData($update) === false){
 			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
-			throw new RuntimeError('Invalid update_id'); // TODO: check if we should gently skip in such case
+			throw new RuntimeException('Invalid update data'); // TODO: check if we should gently skip in such case
 		}
 
 		$this->handleMessage($update->message);
