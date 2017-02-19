@@ -139,6 +139,19 @@ class TelegramBot extends TelegramBot_base{
 			)
 		);
 	}
+
+	private function cancelRequest(ConversationStorage $conversationStorage){
+		$conversationStorage->deleteConversation();
+
+		$this->sendMessage(
+			array(
+				'text' => 'Действие отменено.',
+				'reply_markup' => array(
+					'hide_keyboard' => true
+				)
+			)
+		);
+	}
 	
 	private function unregisterUser(ConversationStorage $conversationStorage){
 		$user_id = $this->getUserId();
@@ -396,7 +409,6 @@ class TelegramBot extends TelegramBot_base{
 		}
 		catch(PDOException $ex){
 			$this->botTracer->logException('[DB ERROR]', $ex);
-			$conversationStorage->deleteConversation();
 			throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 		}
 		
@@ -410,9 +422,8 @@ class TelegramBot extends TelegramBot_base{
 		);
 	}
 	
-	private function insertOrDeleteShow($in_out_flag){//$in_out_flag
-		$fullMessageArray = $this->getPreviousMessageArray();
-		$argc = count($fullMessageArray);
+	private function insertOrDeleteShow(ConversationStorage $conversationStorage, $in_out_flag){
+		$conversation = $conversationStorage->getConversation();
 		
 		$successText = '';
 		$action = null;
@@ -433,7 +444,7 @@ class TelegramBot extends TelegramBot_base{
 		}
 	
 	
-		switch($argc){
+		switch($conversationStorage->getConversationSize()){
 		case 1:
 			$query = null;
 			if($in_out_flag){//true -> add_show, false -> remove show
@@ -539,7 +550,7 @@ class TelegramBot extends TelegramBot_base{
 			try{
 				$getShowId->execute(
 					array(
-						':title' => $fullMessageArray[1]
+						':title' => $conversation[1]
 					)
 				);
 			}
@@ -630,7 +641,7 @@ class TelegramBot extends TelegramBot_base{
 					$query->execute(
 						array(
 							':user_id' 		=> $this->getUserId(),
-							':show_name'	=> $fullMessageArray[1]
+							':show_name'	=> $conversation[1]
 						)
 					);
 				}
@@ -721,7 +732,7 @@ class TelegramBot extends TelegramBot_base{
 			try{
 				$query->execute(
 					array(
-						':exactShowName' => $fullMessageArray[2]
+						':exactShowName' => $conversation[2]
 					)
 				);
 			}
@@ -811,68 +822,53 @@ stop - Удалиться из контакт-листа бота
 		}
 	}
 	
-	public function incomingUpdate(ConversationStorage $conversationStorage){
-		assert($conversationeStorage !== null);
-		assert($message->from->id === $this->telegram_id);
-		
-		if($cmd === '/cancel'){
-			$conversationStorage->deleteConversation();
+	public function incomingUpdate(ConversationStorage $conversationStorage, $userInfo){
+		assert($conversationStorage !== null);
+		assert($conversationStorage->getConversationSize() > 0);
+
+		if($conversationStorage->getLastMessage() === '/cancel'){
+			$this->cancelRequest($conversationStorage);
+			return;
 		}
-		
-		if($this->previousMessageArraySize() === 0){
-			$this->previousMessageArrayInsert($cmd);
-		}
-		else{
-			$this->previousMessageArrayInsert($message->text);//добавляем сообщение к n предыдущих
-		}
-		$messagesTextArray = $this->getPreviousMessageArray();//забираем n + 1 сообщений
-		
-		$argc = count($messagesTextArray);
-		
-		if($argc < 1)
-			throw new StdoutTextException('PreviousMessageArray is empty');
-		switch($messagesTextArray[0]){
+
+		switch($conversationStorage->getFirstMessage()){
 		case '/start':
 			$this->registerUser(
-				isset($message->from->username)		?	$message->from->username	: null,
-				isset($message->from->first_name)	?	$message->from->first_name	: null,
-				isset($message->from->last_name)	?	$message->from->last_name	: null
+				$conversationStorage,
+				$userInfo['username'],
+				$userInfo['first_name'],
+				$userInfo['last_name']
 			);
 			break;
+
 		case '/cancel':
-			$conversationStorage->deleteConversation();
-			$this->sendMessage(
-				array(
-					'text' => 'Действие отменено.',
-					'reply_markup' => array(
-						'hide_keyboard' => true
-					)
-				)
-			);
+			$this->cancelRequest($conversationStorage);
 			break;
+
 		case '/stop':
-			$this->unregisterUser();
+			$this->unregisterUser($conversationStorage);
 			break;
 		
 		case '/help':
-			$this->showHelp();
+			$this->showHelp($conversationStorage);
 			break;
 		
 		case '/mute':
-			$this->toggleMute();
+			$this->toggleMute($conversationStorage);
 			break;
 		
 		case '/get_my_shows':
-			$this->showUserShows();
+			$this->showUserShows($conversationStorage);
 			break;
 			
 		case '/add_show':
-			$this->insertOrDeleteShow(true, $argc);
+			$this->insertOrDeleteShow($conversationStorage, true);
 			break;
 		
 		case '/remove_show':
-			$this->insertOrDeleteShow(false, $argc);
+			$this->insertOrDeleteShow($conversationStorage, false);
 			break;
+
 		default:
 			$conversationStorage->deleteConversation();
 			throw new TelegramException($this, 'Я хз чё это значит');
