@@ -11,12 +11,6 @@ ALTER TABLE `shows`
 		NOT NULL;
 
 ALTER TABLE `shows`
-	DROP `seasonNumber`,
-	DROP `seriesNumber`;
-
-
-
-ALTER TABLE `shows`
 	ADD
 		`onAir_` ENUM('Y', 'N')
 		NOT NULL
