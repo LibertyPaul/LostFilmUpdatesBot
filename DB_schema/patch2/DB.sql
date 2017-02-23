@@ -1,1 +1,1 @@
-USE LostFilmUpdatesBot;
+USE LostFilmUpdatesBot_test;
