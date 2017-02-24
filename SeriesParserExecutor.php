@@ -24,19 +24,6 @@ class SeriesParserExecutor{
 		
 		$this->pdo = createPDO();
 		
-		/*
-		$this->addSeriesQuery = $this->pdo->prepare('
-			CALL addSeriesIfNotExist(
-				:showTitleRu,
-				:showTitleEn,
-				:seasonNumber,
-				:seriesNumber,
-				:seriesTitleRu,
-				:seriesTitleEn
-			);
-		');
-		*/
-
 		$this->addSeriesQuery = $this->pdo->prepare('
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
 			SELECT id, :seasonNumber, :seriesNumber, :title_ru, :title_en
