@@ -5,6 +5,7 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
+readonly selfPath=$(pwd)
 readonly path=$(readlink -m "$1")
 
 if [ ! -z "$path" ]; then
@@ -17,50 +18,21 @@ if [ ! -z "$path" ]; then
 	cd "$path"
 fi
 
-if [ -f "$path/.my.cnf" ]; then
-	readonly myCnfPath="$path/.my.cnf"
-elif [ -f "./.my.cnf" ]; then
-	readonly myCnfPath=".my.cnf"
+if [ -f "./.my.cnf" ]; then
+	readonly myCnfPath="./.my.cnf"
+elif [ -f "$selfPath/.my.cnf" ]; then
+	readonly myCnfPath="$selfPath/.my.cnf"
 else
-	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script."
+	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script ($selfPath)."
 	exit 1
 fi
 
 echo "Using $myCnfPath as MySQL config"
 
-readonly initPath="$path/DB.sql";
-
-if [ ! -r "$initPath" ]; then
-	echo "$initPath is not exist"
-	exit
-fi
-
-
-DB_name=$(grep -oP 'USE[\s]+\K[\w$]+(?=;)' "$initPath")
-
-read -e -p "DB name is '$DB_name', correct? [Y/n]: " -i "Y" yn
-case $yn in
-	[Yy])
-		;;
-	[Nn])
-		echo "Please set proper DB name in '$initPath'"
-		exit
-		;;
-	*)
-		echo 'Incorrect response. Aborting.'
-		exit
-		;;
-esac
-
-
 tmpFile="$(mktemp --suffix=.sql)"
 
-printf "/*    Schema definition:    */\n\n" >> "$tmpFile"
-cat "$initPath" >> "$tmpFile"
-printf "\n\n" >> "$tmpFile"
-
-
 declare -a elementsOrder=(
+	database
 	constraints_drop
 	indexes_drop
 	tables
@@ -68,13 +40,15 @@ declare -a elementsOrder=(
 	constraints_create
 	triggers
 	procedures
+	users
+	permissions
 )
 
 for element in "${elementsOrder[@]}"; do
-	if [[ -d "./$element" && $(ls ./$element/*.sql | wc -l) > 0 ]]; then
+	if [[ -d "./$element" && $(find "./$element/" -type f -name "*.sql" | wc -l) > 0 ]]; then
 		echo "Copying $element: "
 		printf "/*    $element definition:    */\n\n" >> "$tmpFile"
-		for f in $(ls ./$element/*.sql); do
+		for f in $(find "./$element/" -type f -name "*.sql"); do
 			echo "$f "
 			cat "$f" >> "$tmpFile"
 			printf "\n" >> "$tmpFile"
@@ -85,10 +59,12 @@ for element in "${elementsOrder[@]}"; do
 done
 
 
+
 echo "Uploading schema on MySQL server..."
 res=$(mysql --defaults-file="$myCnfPath" < "$tmpFile" 2>&1)
 if [[ -z "$res" ]]; then
 	rm $tmpFile
+	
 	echo "Success."
 else
 	echo "Mysql server has returned a message: '$res'"
