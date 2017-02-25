@@ -1,5 +1,6 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
+
+require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/Notifier.php');
 require_once(__DIR__.'/Tracer.php');
 
@@ -17,7 +18,7 @@ class NotificationDispatcher{
 		
 		$this->tracer = new Tracer(__CLASS__);
 		
-		$this->pdo = createPDO();
+		$this->pdo = BotPDO::getInstance();
 		$this->getNotificationData = $this->pdo->prepare("
 			SELECT 	`notificationsQueue`.`id`,
 					`notificationsQueue`.`responseCode`,
