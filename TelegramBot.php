@@ -446,48 +446,31 @@ class TelegramBot extends TelegramBot_base{
 	
 		switch($conversationStorage->getConversationSize()){
 		case 1:
-			$query = null;
-			if($in_out_flag){//true -> add_show, false -> remove show
-				$query = $this->pdo->prepare("
-					SELECT
-						CONCAT(
-							`title_ru`,
-							' (',
-							`title_en`,
-							')'
-						) AS `title`
-					FROM `shows`
-					LEFT JOIN(
-						SELECT `tracks`.`id`, `tracks`.`show_id`
+			$query = $this->pdo->prepare("
+				SELECT
+					CONCAT(
+						`title_ru`,
+						' (',
+						`title_en`,
+						')'
+					) AS `title`
+				FROM `shows`
+				WHERE (
+					`id` IN(
+						SELECT `show_id`
 						FROM `tracks`
-						JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-						WHERE `tracks`.`user_id` = :user_id
-					) AS `tracked`
-					ON `shows`.`id` = `tracked`.`show_id`
-					WHERE `tracked`.`id` IS NULL
-					AND `shows`.`onAir` = 'Y'
-					ORDER BY `title`
-				");
-			}
-			else{				
-				$query = $this->pdo->prepare("
-					SELECT
-						CONCAT(
-							`title_ru`,
-							' (',
-							`title_en`,
-							')'
-						) AS `title`
-					FROM `tracks`
-					JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-					WHERE `tracks`.`user_id` = :user_id
-					ORDER BY `title`
-				");
-			}
+						WHERE `user_id` = :user_id
+					)
+					XOR :in_out_flag
+				)
+				AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+			");
+
 			try{
 				$query->execute(
 					array(
-						':user_id' => $this->getUserId()
+						':user_id'		=> $this->getUserId(),
+						':in_out_flag'	=> $in_out_flag
 					)
 				);
 			}
@@ -544,13 +527,24 @@ class TelegramBot extends TelegramBot_base{
 						')'
 					) AS `title_all`
 				FROM `shows`
-				HAVING STRCMP(`title_all`, :title) = 0
+				WHERE ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				AND (
+					`id` IN(
+						SELECT `show_id`
+						FROM `tracks`
+						WHERE `user_id` = :user_id
+					)
+					XOR :in_out_flag
+				)
+				HAVING `title_all` = :title
 			");
 			
 			try{
 				$getShowId->execute(
 					array(
-						':title' => $conversation[1]
+						':title'		=> $conversation[1],
+						':user_id'		=> $this->getUserId(),
+						':in_out_flag'	=> $in_out_flag
 					)
 				);
 			}
@@ -560,12 +554,12 @@ class TelegramBot extends TelegramBot_base{
 				throw new TelegramException($this, 'Ошибка БД, код TB:'.__LINE__);
 			}
 				
-			$res = $getShowId->fetchAll();
-			if(count($res) > 0){//нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, сам ввел точное название
+			$res = $getShowId->fetch();
+			if($res !== false){//нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, сам ввел точное название
 				$conversationStorage->deleteConversation();
 				
-				$show_id = intval($res[0]['id']);
-				$title_all = $res[0]['title_all'];
+				$show_id = intval($res['id']);
+				$title_all = $res['title_all'];
 				
 				try{
 					$action->execute(
@@ -591,57 +585,36 @@ class TelegramBot extends TelegramBot_base{
 				
 			}
 			else{//совпадения не найдено. Скорее всего юзверь проебланил с названием. Придется угадывать.
-				//TODO: если ненулевой результат у нескольких вариантов - дать пользователю выбрать
-				$query = null;
-				if($in_out_flag){//true -> add_show, false -> remove show
-					$query = $this->pdo->prepare("
-						SELECT
-							`shows`.`id` AS `id`,
-							MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
-							CONCAT(
-								`title_ru`,
-								' (',
-								`title_en`,
-								')'
-							) AS `title`
-						FROM `shows`
-						LEFT JOIN(
-							SELECT `tracks`.`id`, `tracks`.`show_id`
+				$query = $this->pdo->prepare("
+					SELECT
+						`id`,
+						MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
+						CONCAT(
+							`title_ru`,
+							' (',
+							`title_en`,
+							')'
+						) AS `title_all`
+					FROM `shows`
+					WHERE (
+						`id` IN(
+							SELECT `show_id`
 							FROM `tracks`
-							JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-							WHERE `tracks`.`user_id` = :user_id
-						) AS `tracked`
-						ON `shows`.`id` = `tracked`.`show_id`
-						WHERE `tracked`.`id` IS NULL
-						AND `shows`.`onAir` = 'Y'
-						HAVING `score` > 0.1
-						ORDER BY `score` DESC
-					");
-				}
-				else{				
-					$query = $this->pdo->prepare("
-						SELECT
-							`shows`.`id` AS `id`,
-							MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
-							CONCAT(
-								`title_ru`,
-								' (',
-								`title_en`,
-								')'
-							) AS `title`
-						FROM `tracks`
-						JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-						WHERE `tracks`.`user_id` = :user_id
-						HAVING `score` > 0.1
-						ORDER BY `score` DESC
-					");
-				}
+							WHERE `user_id` = :user_id
+						)
+						XOR :in_out_flag
+					)
+					AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+					HAVING `score` > 0.1
+					ORDER BY `score` DESC
+				");
 				
 				try{
 					$query->execute(
 						array(
 							':user_id' 		=> $this->getUserId(),
-							':show_name'	=> $conversation[1]
+							':show_name'	=> $conversation[1],
+							':in_out_flag'	=> $in_out_flag
 						)
 					);
 				}
@@ -684,7 +657,7 @@ class TelegramBot extends TelegramBot_base{
 					
 					$this->sendMessage(
 						array(
-							'text' => "$show[title] $successText",
+							'text' => "$show[title_all] $successText",
 							'reply_markup' => array(
 								'hide_keyboard' => true
 							)
@@ -696,7 +669,7 @@ class TelegramBot extends TelegramBot_base{
 				default://подходят несколько вариантов
 					$showTitles = array();
 					foreach($res as $predictedShow){
-						$showTitles[] = $predictedShow['title'];
+						$showTitles[] = $predictedShow['title_all'];
 					}
 					$keyboard = $this->createKeyboard($showTitles);
 				
@@ -723,15 +696,25 @@ class TelegramBot extends TelegramBot_base{
 						' (',
 						`title_en`,
 						')'
-					) AS `title_all`,
-					`title_ru`
+					) AS `title_all`
 				FROM `shows`
-				HAVING STRCMP(`title_all`, :exactShowName) = 0
+				WHERE ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				AND (
+					`id` IN(
+						SELECT `show_id`
+						FROM `tracks`
+						WHERE `user_id` = :user_id
+					)
+					XOR :in_out_flag
+				)
+				HAVING `title_all` = :exactShowName
 			");
 			
 			try{
 				$query->execute(
 					array(
+						':user_id' 		=> $this->getUserId(),
+						':in_out_flag'	=> $in_out_flag,
 						':exactShowName' => $conversation[2]
 					)
 				);
@@ -770,7 +753,7 @@ class TelegramBot extends TelegramBot_base{
 				
 				$this->sendMessage(
 					array(
-					'text' => "$show[title_ru] $successText",
+					'text' => "$show[title_all] $successText",
 						'reply_markup' => array(
 							'hide_keyboard' => true
 						)
