@@ -1,6 +1,7 @@
 <?php
 
 require_once(__DIR__.'/config/config.php');
+require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
@@ -29,7 +30,7 @@ class TelegramBot_base{
 		
 		$this->HTTPRequester = $HTTPRequester;
 	
-		$this->pdo = createPDO();
+		$this->pdo = BotPDO::getInstance();
 		$this->memcache = createMemcache();
 		
 		$this_ptr = $this;
