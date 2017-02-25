@@ -10,4 +10,4 @@ CREATE TABLE `notificationsQueue` (
   KEY `series_id` (`series_id`),
   KEY `user_id` (`user_id`),
   KEY `retryCount` (`retryCount`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+) ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=utf8;

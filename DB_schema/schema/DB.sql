@@ -1,2 +1,0 @@
-CREATE DATABASE LFUB_deploy;
-USE LFUB_deploy;

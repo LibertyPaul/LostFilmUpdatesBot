@@ -1,7 +1,7 @@
 <?php
 
+require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/MessageTester.php');
-require_once(__DIR__.'/../config/stuff.php');
 
 class TelegramBotTest extends PHPUnit_Framework_TestCase{
 	const TEST_TELEGRAM_ID = 100500;
@@ -17,7 +17,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 	}
 
 	private function userExists($telegram_id){
-		$pdo = createPDO();
+		$pdo = BotPDO::getInstance();
 		$userExists = $pdo->prepare('
 			SELECT COUNT(*) FROM `users` WHERE `telegram_id` = :telegram_id
 		');
@@ -187,7 +187,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();
 		$this->start();
 		
-		$pdo = createPDO();
+		$pdo = BotPDO::getInstance();
 		$getMute = $pdo->prepare('SELECT mute FROM users WHERE telegram_id = :telegram_id');
 		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
 		$res = $getMute->fetch();
