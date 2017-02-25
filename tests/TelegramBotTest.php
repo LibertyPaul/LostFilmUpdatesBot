@@ -182,7 +182,6 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 		$this->stop();
 	}
 
-	
 	public function testMute(){
 		$this->cancel();
 		$this->start();
