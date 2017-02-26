@@ -43,22 +43,39 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			return $this->failureResponse();
 		}
 	}
-	
-	public function sendJSONRequest($destination, $content_json){
-		$res = file_put_contents($this->destinationFilePath, "\n\n$content_json", FILE_APPEND);
+
+	private function writeOut($text){
+		$dir = dirname($this->destinationFilePath);
+		if(file_exists($dir)){
+			if(is_dir($dir) === false){
+				syslog(LOG_CRIT, "[FAKE HTTP Rq] logs dir is not a directory ($dir)");
+				throw new Exception("Unable to open $dir directory");
+			}
+			$exists = file_exists($this->destinationFilePath);
+		}
+		else{
+			assert(mkdir($dir, 0777, true));
+			$exists = false;
+		}
+
+		if($exists === false){
+			assert(touch($this->destinationFilePath));
+			assert(chmod($this->destinationFilePath, 0666));
+		}
+			
+		$res = file_put_contents($this->destinationFilePath, PHP_EOL.PHP_EOL.$text, FILE_APPEND);
 		if($res === false){
 			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
 		}
-		
+	}
+	
+	public function sendJSONRequest($destination, $content_json){
+		$this->writeOut($content_json);	
 		return $this->randomResponse();
 	}
 
 	public function sendGETRequest($destination){
-		$res = file_put_contents($this->destinationFilePath, "\n\n$destination", FILE_APPEND);
-		if($res === false){
-			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
-		}
-		
+		$this->writeOut($destination);	
 		return $this->randomResponse();
 	}
 
