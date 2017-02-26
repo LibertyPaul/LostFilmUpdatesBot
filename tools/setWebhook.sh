@@ -1,16 +1,16 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
 	echo "Usage:"
-	echo "	$0 <bot_token> <webhok_path> <link_path> <URL> [webhook_password]"
+	echo "	$0 <bot_token> <link_path> <URL> [webhook_password]"
 	exit 1
 fi
 
 readonly token="$1"
-readonly webhookPath="$2"
-readonly linkPath="$3"
-webhookURL="$4"
-readonly webhookPassword="$5"
+readonly webhookPath="../webhook/webhook.php"
+readonly linkPath="$2"
+webhookURL="$3"
+readonly webhookPassword="$4"
 
 readonly linkDir=$(dirname "$linkPath")
 if [ ! -d "$linkDir" ]; then
@@ -43,6 +43,10 @@ fi
 
 echo "[INFO] Setting url=$webhookURL and allowed_updates=message"
 echo "[INFO] Telegram API URL: 'https://api.telegram.org/bot$token/setWebhook'"
+read -p "please confirm[y/n]: " yn
+if [ "$yn" != "y" ] && [ "$yn" != "Y" ]; then
+	exit
+fi
 
 http_code=$(\
 	curl											\
