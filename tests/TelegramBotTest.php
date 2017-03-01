@@ -177,7 +177,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 
 		$randomShow = self::randomShowFromKeyboard($keyboard);
 		$resp = $this->messageTester->send($randomShow)[0];
-		$this->assertEquals($randomShow.' добавлен', $resp->text);
+		$this->assertContains('добавлен', $resp->text);
 		
 		$this->stop();
 	}
