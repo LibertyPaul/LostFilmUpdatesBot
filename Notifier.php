@@ -1,5 +1,6 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
+
+require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/TelegramBotFactory.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 
@@ -17,7 +18,7 @@ class Notifier{
 		
 		$this->bots = array();
 		
-		$pdo = createPDO();
+		$pdo = BotPDO::getInstance();
 		
 		$this->getUserInfoQuery = $pdo->prepare('
 			SELECT *

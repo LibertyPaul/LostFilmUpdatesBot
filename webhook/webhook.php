@@ -6,6 +6,8 @@ require_once(__DIR__.'/../TelegramBotFactory.php');
 require_once(__DIR__.'/../Tracer.php');
 require_once(__DIR__.'/../EchoTracer.php');
 
+require_once(__DIR__.'/../HTTPRequester.php');
+
 $tracer = null;
 try{
 	$tracer = new Tracer('Webhook');
@@ -73,6 +75,13 @@ $botFactory = new TelegramBotFactory();
 $botFactory->createBot($telegram_id)->incomingUpdate($update->message);
 
 
+try{
+	$testStream = new HTTPRequester();
+	$url = MESSAGE_STREAM_URL.'?password='.MESSAGE_STREAM_PASSWORD;
+	$testStream->sendJSONRequest($url, $update_json);
+}
+catch(Exception $ex){
 
+}
 
 

@@ -1,0 +1,1 @@
+CREATE USER 'LFUB_parser_test'@'localhost' IDENTIFIED BY 'X9zzX4ATlVCGyjFLZ0nm6Cm9eJkT8IY3yGUEcju2B48=';

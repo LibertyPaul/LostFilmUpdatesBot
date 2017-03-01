@@ -4,6 +4,7 @@ require_once(__DIR__.'/../config/stuff.php');
 require_once(__DIR__.'/../TelegramBotFactory.php');
 
 require_once(__DIR__.'/../Tracer.php');
+require_once(__DIR__.'/input_debug_webhook.php');
 
 $tracer = null;
 
@@ -50,9 +51,9 @@ elseif($_GET['password'] !== WEBHOOK_PASSWORD){
 */
 
 //$update_json = file_get_contents("php://input");
-$update = json_decode($update_json);
+$update = json_decode(update_json);
 if($update === null || $update === false){
-	exit('incorrect JSON input');
+	exit('incorrect JSON input: '.json_last_error_msg().PHP_EOL);
 }
 	
 $readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);

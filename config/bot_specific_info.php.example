@@ -1,23 +1,24 @@
 <?php
 
-const BOT_USERNAME = '';
-const TELEGRAM_BOT_TOKEN = '';
+const TELEGRAM_BOT_TOKEN			= '';
+const PERFORM_ACTUAL_MESSAGE_SEND	= true; 
+const UNDELIVERED_MESSAGE_STORAGE	= __DIR__.'/../logs/UndeliviredMessages.log';
+const WEBHOOK_PASSWORD				= '';
 
-const WEBHOOK_PASSWORD = '';
 
 const BOTAN_API_KEY = '';
 
-const HOST = '';
-const DBuser = '';
-const DBpass = '';
-const DBname = '';
 
-const MEMCACHE_MESSAGE_CHAIN_PREFIX = 'pma_dev_';
-const MEMCACHE_LATEST_UPDATE_ID_KEY = 'lfub_dev_latestUpdate';
-
-const LOSTFILM_LOGIN = '';
-const LOSTFILM_PASSWORD = '';
+const db_name				= '';
+const db_bot_username		= '';
+const db_bot_password		= '';
+const db_parser_username	= '';
+const db_parser_password	= '';
 
 
-const PERFORM_ACTUAL_MESSAGE_SEND = true; // if false - no messages will actaully be sent to the Tegegram API, instead they will be stored in file
-const UNDELIVERED_MESSAGE_STORAGE = __DIR__.'/../logs/UndeliviredMessages.log';
+const MEMCACHE_MESSAGE_CHAIN_PREFIX = '';
+const MEMCACHE_LATEST_UPDATE_ID_KEY = '';
+
+
+const MESSAGE_STREAM_URL = '';
+const MESSAGE_STREAM_PASSWORD = '';

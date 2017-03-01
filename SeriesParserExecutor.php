@@ -1,5 +1,5 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/SeriesParser.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/SeriesAboutParser.php');
@@ -22,21 +22,8 @@ class SeriesParserExecutor{
 
 		$this->tracer = new Tracer(__CLASS__);
 		
-		$this->pdo = createPDO();
+		$this->pdo = ParserPDO::getInstance();
 		
-		/*
-		$this->addSeriesQuery = $this->pdo->prepare('
-			CALL addSeriesIfNotExist(
-				:showTitleRu,
-				:showTitleEn,
-				:seasonNumber,
-				:seriesNumber,
-				:seriesTitleRu,
-				:seriesTitleEn
-			);
-		');
-		*/
-
 		$this->addSeriesQuery = $this->pdo->prepare('
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
 			SELECT id, :seasonNumber, :seriesNumber, :title_ru, :title_en
