@@ -6,3 +6,4 @@ webhook/input_debug_webhook.php
 
 *.swp
 .my.cnf
+*.sql_t.sql

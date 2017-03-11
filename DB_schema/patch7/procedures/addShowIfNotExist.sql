@@ -1,1 +1,1 @@
-DROP PROCEDURE addShowIfNotExist;
+DROP PROCEDURE IF EXISTS addShowIfNotExist;

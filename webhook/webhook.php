@@ -58,7 +58,7 @@ if($update === null || $update === false){
 $readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 $tracer->log('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
 
-if(isset($_GET['ignore_msg_id']) === false || $_GET['ignore_msg_id'] !== 'true'){
+if((isset($_GET['ignore_msg_id']) === false || $_GET['ignore_msg_id'] !== 'true') && IGNORE_UPDATE_ID === false){
 	if(intval($update->update_id) < getLastRecievedId()){
 		exit('outdated message');
 	}
