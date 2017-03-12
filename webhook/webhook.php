@@ -6,6 +6,8 @@ require_once(__DIR__.'/../UpdateHandler.php');
 require_once(__DIR__.'/../Tracer.php');
 require_once(__DIR__.'/../EchoTracer.php');
 
+require_once(__DIR__.'/../HTTPRequester.php');
+
 $tracer = null;
 try{
 	$tracer = new Tracer('Webhook');
@@ -48,11 +50,17 @@ if($update === null || $update === false){
 $readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 $tracer->log('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
 
-
 $botFactory = new TelegramBotFactory();
 $updateHandler = new UpdateHandler($botFactory);
 $updateHandler->handleUpdate($update);
 
+try{
+	$testStream = new HTTPRequester();
+	$url = MESSAGE_STREAM_URL.'?password='.MESSAGE_STREAM_PASSWORD;
+	$testStream->sendJSONRequest($url, $update_json);
+}
+catch(Exception $ex){
 
+}
 
 

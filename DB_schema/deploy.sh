@@ -33,6 +33,7 @@ tmpFile="$(mktemp --suffix=.sql)"
 
 declare -a elementsOrder=(
 	database
+	data_before
 	constraints_drop
 	indexes_drop
 	tables
@@ -42,6 +43,7 @@ declare -a elementsOrder=(
 	procedures
 	users
 	permissions
+	data_after
 )
 
 for element in "${elementsOrder[@]}"; do

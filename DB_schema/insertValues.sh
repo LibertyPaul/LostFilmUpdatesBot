@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -z "$1" ]; then
+	echo "Usage: $0 <patch directory>"
+	exit 1
+fi
+
 readonly path="$1"
 
 for sql_t_sql in $(find "$path" -type f -name *.sql_t.sql); do

@@ -18,3 +18,7 @@ const db_parser_password	= '';
 
 const MEMCACHE_MESSAGE_CHAIN_PREFIX = '';
 const MEMCACHE_LATEST_UPDATE_ID_KEY = '';
+
+
+const MESSAGE_STREAM_URL = '';
+const MESSAGE_STREAM_PASSWORD = '';
