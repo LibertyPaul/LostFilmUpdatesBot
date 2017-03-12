@@ -12,7 +12,7 @@ if [ ! -z "$path" ]; then
 
 	if [ ! -d "$path" ]; then
 		echo 'Invalid schema directory path'
-		exit
+		exit 1
 	fi
 
 	cd "$path"
@@ -23,7 +23,7 @@ if [ -f "./.my.cnf" ]; then
 elif [ -f "$selfPath/.my.cnf" ]; then
 	readonly myCnfPath="$selfPath/.my.cnf"
 else
-	echo ".my.cnf file not fount neither in patch directory ($path) nor near this script ($selfPath)."
+	echo ".my.cnf wasn't found in patch directory ($path) or near this script ($selfPath)."
 	exit 1
 fi
 
@@ -66,10 +66,10 @@ echo "Uploading schema on MySQL server..."
 res=$(mysql --defaults-file="$myCnfPath" < "$tmpFile" 2>&1)
 if [[ -z "$res" ]]; then
 	rm $tmpFile
-	
 	echo "Success."
 else
 	echo "Mysql server has returned a message: '$res'"
 	echo "Please review file $tmpFile"
+	exit 1
 fi
 
