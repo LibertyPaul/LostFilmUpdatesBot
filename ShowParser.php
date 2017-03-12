@@ -1,7 +1,6 @@
 <?php
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
-require_once(__DIR__.'/ShowAboutParser.php');
 require_once(__DIR__.'/Tracer.php');
 
 
@@ -14,7 +13,6 @@ class ShowParser{
 	private $updateOnAirQuery;
 	private $updateShowAliasQuery;
 
-	private $showAboutParser;
 	private $tracer;
 	
 	const showInfoTemplate	= 'https://www.lostfilm.tv/ajaxik.php?act=serial&type=search&o=#FROM&s=3&t=0';
@@ -27,7 +25,6 @@ class ShowParser{
 		$this->tracer = new Tracer(__CLASS__);
 
 		$pdo = ParserPDO::getInstance();
-		$this->showAboutParser = new ShowAboutParser($requester);
 		
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`
