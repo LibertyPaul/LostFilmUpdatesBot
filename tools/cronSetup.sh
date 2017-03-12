@@ -3,6 +3,7 @@
 if [ -z "$1" ] || [ -z "$2" ]; then
 	echo "Usage:"
 	echo "	$0 <bot directory> <cron section label>"
+	exit 1
 fi
 
 botDir="$(readlink -f "$1")"
