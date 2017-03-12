@@ -82,6 +82,7 @@ class TelegramBot_base{
 		}
 		catch(HTTPException $HTTPException){
 			$this->botTracer->log('[HTTP ERROR]', $HTTPException->getFile(), $HTTPException->getLine(), $HTTPException->getMessage());
+			throw $HTTPException;
 		}
 		
 		$this->sentMessagesTracer->log('[OUTGOING MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);

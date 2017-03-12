@@ -88,9 +88,7 @@ class UpdateHandler{
 	}
 
 	private function verifyData($update){
-		return 
-			$this->verifyUpdateId($update->update_id) &&
-			$update->message->from->id === $update->message->chat->id;
+		return $this->verifyUpdateId($update->update_id);
 	}
 
 	private function sendToBotan($message, $event){
@@ -121,7 +119,7 @@ class UpdateHandler{
 			$conversationStorage->insertMessage($message->text);
 			$firstMessage = $conversationStorage->getFirstMessage();
 
-			$bot = $this->botFactory->createBot($message->from->id);
+			$bot = $this->botFactory->createBot($message->chat->id);
 			$bot->incomingUpdate($conversationStorage, self::extractUserInfo($message));
 		}
 		catch(TelegramException $ex){
