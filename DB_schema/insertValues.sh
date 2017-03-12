@@ -5,7 +5,8 @@ if [ -z "$1" ]; then
 	exit 1
 fi
 
-readonly path="$1"
+readonly schema_dir="$(dirname $0)"
+readonly path="$schema_dir/$1"
 
 for sql_t_sql in $(find "$path" -type f -name *.sql_t.sql); do
 	echo "[INFO] Removing $sql_t_sql"
