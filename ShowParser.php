@@ -1,8 +1,9 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/ShowAboutParser.php');
 require_once(__DIR__.'/Tracer.php');
+
 
 
 class ShowParser{
@@ -25,14 +26,13 @@ class ShowParser{
 
 		$this->tracer = new Tracer(__CLASS__);
 
-		$pdo = createPDO();
+		$pdo = ParserPDO::getInstance();
 		$this->showAboutParser = new ShowAboutParser($requester);
 		
 		$this->getShowIdQuery = $pdo->prepare('
 			SELECT `id`
 			FROM `shows`
-			WHERE	STRCMP(`title_ru`, :title_ru) = 0
-			AND		STRCMP(`title_en`, :title_en) = 0
+			WHERE `alias` = :alias
 		');
 		
 		$this->addShowQuery = $pdo->prepare('
@@ -41,20 +41,24 @@ class ShowParser{
 		');
 
 		$this->updateOnAirQuery = $pdo->prepare('
-			UPDATE `shows` SET `onAir` = :onAir WHERE `id` = :id
+			UPDATE `shows`
+			SET `onAir` = :onAir
+			WHERE `id` = :id
 		');
 
-		$this->updateShowAliasQuery = $pdo->prepare('
-			UPDATE `shows` SET `alias` = :alias WHERE id = :id
+		$this->updateShowTitlesQuery = $pdo->prepare('
+			UPDATE `shows`
+			SET `title_ru` = :title_ru,
+				`title_en` = :title_en
+			WHERE id = :id
 		');
 		
 	}
 	
-	protected function getShowId($title_ru, $title_en){
+	protected function getShowId($alias){
 		$this->getShowIdQuery->execute(
 			array(
-				':title_ru' => $title_ru,
-				':title_en' => $title_en
+				':alias' => $alias
 			)
 		);
 		
@@ -113,12 +117,13 @@ class ShowParser{
 		$showInfoList = $this->getShowInfoList();
 		foreach($showInfoList as $showInfo){
 			try{
-				$showId = $this->getShowId($showInfo['title'], $showInfo['title_orig']);
+				$showId = $this->getShowId($showInfo['alias']);
 
-				$this->updateShowAliasQuery->execute(
+				$this->updateShowTitlesQuery->execute(
 					array(
 						':id'		=> $showId,
-						':alias'	=> $showInfo['alias']
+						':title_ru'	=> $showInfo['title'],
+						':title_en'	=> $showInfo['title_orig']
 					)
 				);
 

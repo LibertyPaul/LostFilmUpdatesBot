@@ -28,24 +28,24 @@ class SeriesParserExecutor{
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
 			SELECT id, :seasonNumber, :seriesNumber, :title_ru, :title_en
 			FROM `shows`
-			WHERE `alias` LIKE :showAlias
+			WHERE `alias` = :alias
 		');
 
 		$this->wasSeriesNotificationSentQuery = $this->pdo->prepare('
 			SELECT COUNT(*)
 			FROM `series`
 			JOIN `shows` ON `series`.`show_id` = `shows`.`id`
-			WHERE 	`shows`.`alias`	LIKE :showAlias
+			WHERE 	`shows`.`alias`	= :alias
 			AND		`series`.`seasonNumber`	= :seasonNumber
 			AND		`series`.`seriesNumber`	= :seriesNumber
 		');
 
 	}
 
-	private function wasSeriesNotificationSent($showAlias, $seasonNumber, $seriesNumber){
+	private function wasSeriesNotificationSent($alias, $seasonNumber, $seriesNumber){
 		$this->wasSeriesNotificationSentQuery->execute(
 			array(
-				':showAlias'	=> $showAlias,
+				':alias'		=> $alias,
 				':seasonNumber'	=> $seasonNumber,
 				':seriesNumber'	=> $seriesNumber
 			)
@@ -74,7 +74,7 @@ class SeriesParserExecutor{
 		');
 		
 		foreach($latestSeriesList as $series){
-			if($this->wasSeriesNotificationSent($series['showAlias'], $series['seasonNumber'], $series['seriesNumber'])){
+			if($this->wasSeriesNotificationSent($series['alias'], $series['seasonNumber'], $series['seriesNumber'])){
 				continue;
 			}
 			try{
@@ -86,7 +86,7 @@ class SeriesParserExecutor{
 						':seriesNumber'	=> $series['seriesNumber'],
 						':title_ru'		=> $about['title_ru'],
 						':title_en'		=> $about['title_en'],
-						':showAlias'	=> $series['showAlias']
+						':alias'		=> $series['alias']
 					)
 				);
 			}

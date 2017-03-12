@@ -46,7 +46,7 @@ class SeriesParser extends Parser{
 
 		return array(
 			'link'			=> $matches[0],
-			'showAlias'		=> $matches[1],
+			'alias'			=> $matches[1],
 			'seasonNumber'	=> $matches[2],
 			'seriesNumber'	=> $matches[3]
 		);
