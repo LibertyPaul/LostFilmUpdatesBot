@@ -54,13 +54,15 @@ $botFactory = new TelegramBotFactory();
 $updateHandler = new UpdateHandler($botFactory);
 $updateHandler->handleUpdate($update);
 
-try{
-	$testStream = new HTTPRequester();
-	$url = MESSAGE_STREAM_URL.'?password='.MESSAGE_STREAM_PASSWORD;
-	$testStream->sendJSONRequest($url, $update_json);
-}
-catch(Exception $ex){
 
-}
+if(defined('MESSAGE_STREAM_URL')){
+	try{
+		$testStream = new HTTPRequester();
+		$url = MESSAGE_STREAM_URL.'?password='.MESSAGE_STREAM_PASSWORD;
+		$testStream->sendJSONRequest($url, $update_json);
+	}
+	catch(Exception $ex){
 
+	}
+}
 
