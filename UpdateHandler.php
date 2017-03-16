@@ -5,28 +5,38 @@ require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Botan/Botan.php');
+require_once(__DIR__.'/BotPDO.php');
 
 class UpdateHandler{
 	private $tracer;
 	private $memcache;
 	private $botFactory;
 	private $botan;
+	private $logMessageQuery;
 
 	public function __construct(TelegramBotFactoryInterface $botFactory){
+		assert($botFactory !== null);
+		$this->botFactory = $botFactory;
+		
 		$this->tracer = new Tracer(__CLASS__);
 		
+		$pdo = null;
+
 		try{
 			$this->memcache = createMemcache();
+			$pdo = BotPDO::getInstance();
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[ERROR]', $ex);
 			throw $ex;
 		}
 
-		assert($botFactory !== null);
-		$this->botFactory = $botFactory;
-
 		$this->botan = new Botan(BOTAN_API_KEY);
+
+		$this->logMessageQuery = $pdo->prepare("
+			INSERT INTO `messagesHistory` (direction, chat_id, text)
+			VALUES ('INCOMING', :chat_id, :text)
+		");
 	}
 
 	private function getLastUpdateId(){ // TODO: move to the DB in order to be able to lock it
@@ -38,7 +48,7 @@ class UpdateHandler{
 
 		$current = $this->getLastUpdateId();
 		if($value <= $current){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "New update_id($value) is less or equal with current($current)");
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "New update_id($value) is less or equal with current($current)");
 			throw new RuntimeException("New update_id($value) is less than current($current)");
 		}
 
@@ -76,11 +86,11 @@ class UpdateHandler{
 		$matches = array();
 		$res = preg_match($regex, $text, $matches);
 		if($res === false){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'preg_match error: '.preg_last_error());
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match error: '.preg_last_error());
 			throw new LogicException('preg_match error: '.preg_last_error());
 		}
 		if($res === 0){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "Invalid command '$text'");
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Invalid command '$text'");
 			return $text;
 		}
 
@@ -108,6 +118,19 @@ class UpdateHandler{
 
 
 	private function handleMessage($message){
+		try{
+			$this->logMessageQuery->execute(
+				array(
+					':chat_id'	=> $message->chat->id,
+					':text'		=> $message->text
+				)
+			);
+		}
+		catch(PDOException $ex){
+			$this->tracer->logException('[DB ERROR]', $ex);
+			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
+		}
+
 		$firstMessage = null;
 		try{
 			$conversationStorage = new ConversationStorage($message->from->id);
@@ -140,14 +163,14 @@ class UpdateHandler{
 
 	public function handleUpdate($update){
 		if(self::validateFields($update) === false){
-			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Update is invalid:'.PHP_EOL.print_r($update, true));
+			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Update is invalid:'.PHP_EOL.print_r($update, true));
 			throw new RuntimeException('Invalid update');
 		}
 
 		$update = self::normalizeFields($update);
 
 		if($this->verifyData($update) === false){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
 			throw new RuntimeException('Invalid update data'); // TODO: check if we should gently skip in such case
 		}
 
