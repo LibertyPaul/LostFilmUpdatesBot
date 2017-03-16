@@ -130,7 +130,7 @@ class NotificationDispatcher{
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[ERROR]', $ex);
-				$this->tracer->log('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($notification, true));
+				$this->tracer->logEvent('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($notification, true));
 				continue;
 			}
 			

@@ -91,14 +91,14 @@ class ShowParser{
 
 			$result = json_decode($result_json, true);
 			if($result === false){
-				$this->tracer->log('[JSON ERROR]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
-				$this->tracer->log('[JSON ERROR]', __FILE__, __LINE__, PHP_EOL.$result_json);
+				$this->tracer->logError('[JSON ERROR]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
+				$this->tracer->logError('[JSON ERROR]', __FILE__, __LINE__, PHP_EOL.$result_json);
 				throw new Exception('json_decode error: '.json_last_error_msg());
 			}
 
 			if(isset($result['data']) === false || is_array($result['data']) === false){
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Incorrect show info');
-				$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($result, true));
+				$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Incorrect show info');
+				$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($result, true));
 				throw new RuntimeException('Incorrect show info: data element is not found');
 			}
 
@@ -127,7 +127,7 @@ class ShowParser{
 				$onAir = intval($showInfo['status']) !== 5;
 				$onAirFlag = $onAir ? 'Y' : 'N';
 				if($showId === null){
-					$this->tracer->log('[NEW SHOW]', __FILE__, __LINE__, "$showInfo[title] ($showInfo[title_orig])");
+					$this->tracer->logEvent('[NEW SHOW]', __FILE__, __LINE__, "$showInfo[title] ($showInfo[title_orig])");
 					
 					$this->addShowQuery->execute(
 						array(
@@ -149,11 +149,11 @@ class ShowParser{
 			}
 			catch(PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', $ex);
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
+				$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[ERROR]', $ex);
-				$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
+				$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($showInfo, true));
 			}
 		}
 	}

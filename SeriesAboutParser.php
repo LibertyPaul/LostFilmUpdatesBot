@@ -26,9 +26,9 @@ class SeriesAboutParser extends Parser{
 		$matches = array();
 		$matchesCount = preg_match($regex, $this->pageSrc, $matches);
 		if($matchesCount === false){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "Regex string: '$regex'");
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Source:'.PHP_EOL.$this->pageSrc);
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Regex string: '$regex'");
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Source:'.PHP_EOL.$this->pageSrc);
 			throw new Exception('preg_match has failed');
 		}
 

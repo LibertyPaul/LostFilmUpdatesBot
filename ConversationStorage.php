@@ -48,7 +48,7 @@ class ConversationStorage{
 
 		$res = $this->memcache->set($this->getMemcacheKey(), $conversation_serialized);
 		if($res === false){
-			$this->tracer->log('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
+			$this->tracer->logError('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
 			throw new RuntimeException('memcache->set has failed');
 		}
 	}

@@ -7,4 +7,3 @@ const MAX_NOTIFICATION_RETRY_COUNT = 5;
 
 date_default_timezone_set('UTC');
 
-const TRACER_LOG_START_END = false;

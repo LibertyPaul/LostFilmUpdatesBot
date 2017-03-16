@@ -22,7 +22,7 @@ class SeriesParser extends Parser{
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[XML ERROR]', $ex);
-			$this->tracer->log('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
+			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
 		}
 	}
@@ -32,13 +32,13 @@ class SeriesParser extends Parser{
 		$matches = array();
 		$matchesRes = preg_match($regexp, $link, $matches);
 		if($matchesRes === false){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, "Link: '$link'");
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Link: '$link'");
 			throw new Exception('preg_match has failed');
 		}
 
 		if($matchesRes === 0){
-			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, "Link '$link' doesn't match pattern");
+			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, "Link '$link' doesn't match pattern");
 			throw new Exception("Link doesn't match pattern");
 		}
 
@@ -67,7 +67,7 @@ class SeriesParser extends Parser{
 			}
 			catch(Exception $ex){
 				$this->tracer->logException('[PARSE ERROR]', $ex);
-				$this->tracer->log('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
+				$this->tracer->logError('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
 			}
 		}
 		

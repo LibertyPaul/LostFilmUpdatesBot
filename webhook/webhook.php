@@ -25,7 +25,7 @@ function exception_handler($ex){
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
 	global $tracer;
-	$tracer->log('[ERROR]', $errfile, $errline, "($errno)\t$errstr");
+	$tracer->logError('[ERROR]', $errfile, $errline, "($errno)\t$errstr");
 }
 
 set_error_handler('error_handler');
@@ -34,8 +34,8 @@ set_exception_handler('exception_handler');
 $update_json = file_get_contents('php://input');
 
 if(isset($_GET['password']) === false){
-	$tracer->log('[ERROR]', __FILE__, __LINE__, 'No password provided');
-	$tracer->log('[ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($_REQUEST, true));
+	$tracer->logError('[ERROR]', __FILE__, __LINE__, 'No password provided');
+	$tracer->logError('[ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($_REQUEST, true));
 	exit('no password provided');
 }
 elseif($_GET['password'] !== WEBHOOK_PASSWORD){
@@ -48,7 +48,7 @@ if($update === null || $update === false){
 }
 	
 $readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-$tracer->log('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
+$tracer->logEvent('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
 
 $botFactory = new TelegramBotFactory();
 $updateHandler = new UpdateHandler($botFactory);

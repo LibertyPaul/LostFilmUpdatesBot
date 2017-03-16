@@ -8,7 +8,6 @@ require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/Exceptions/UserBlockedBotException.php');
 
 require_once(__DIR__.'/Tracer.php');
-require_once(__DIR__.'/EchoTracer.php');
 
 
 class TelegramBot_base{
@@ -39,21 +38,8 @@ class TelegramBot_base{
 			$this_ptr->exception_handler($ex);
 		});
 		
-		try{
-			$this->botTracer = new Tracer(__CLASS__);
-		}
-		catch(Exception $ex){
-			echo '[CRITICAL] '.$ex;
-			$this->botTracer = new EchoTracer();
-		}
-
-		try{
-			$this->sentMessagesTracer = new Tracer('sentMessages');
-		}
-		catch(Exception $ex){
-			$this->botTracer->logException('[TRACER ERROR]', $ex);
-			$this->sentMessagesTracer = new EchoTracer();
-		}
+		$this->botTracer = new Tracer(__CLASS__);
+		$this->sentMessagesTracer = new Tracer('sentMessages');
 	}
 	
 	private function exception_handler(Exception $ex){
@@ -61,7 +47,7 @@ class TelegramBot_base{
 			$ex->release();
 		}
 		else{	
-			$this->botTracer->log('[UNKNOWN EXCEPTION]', $ex->getFile(), $ex->getLine(), $ex->getMessage());
+			$this->botTracer->logException('[UNKNOWN EXCEPTION]', $ex);
 		}
 		exit;
 	}
@@ -73,7 +59,7 @@ class TelegramBot_base{
 	protected function sendMessage($data){//should NOT throw TelegramException
 		$content_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
 		
-		$this->sentMessagesTracer->log('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
+		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
 		
 		$result = null;
 		
@@ -81,11 +67,11 @@ class TelegramBot_base{
 			$result = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
 		}
 		catch(HTTPException $HTTPException){
-			$this->botTracer->log('[HTTP ERROR]', $HTTPException->getFile(), $HTTPException->getLine(), $HTTPException->getMessage());
+			$this->botTracer->logException('[HTTP ERROR]', $HTTPException);
 			throw $HTTPException;
 		}
 		
-		$this->sentMessagesTracer->log('[OUTGOING MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);
+		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);
 				
 		return $result;
 	}
@@ -124,14 +110,14 @@ class TelegramBot_base{
 		}
 
 		foreach($messages as $content_json){
-			$this->sentMessagesTracer->log('[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
+			$this->sentMessagesTracer->logEvent('[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
 			
 			$result = $this->HTTPRequester->sendJSONRequest(
 				$this->getSendMessageURL(),
 				$content_json
 			);
 			
-			$this->sentMessagesTracer->log('[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);
+			$this->sentMessagesTracer->logEvent('[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);
 		}
 	}
 	

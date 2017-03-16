@@ -95,16 +95,16 @@ class SeriesParserExecutor{
 					
 				switch($ex->getCode()){
 					case '02000':
-						$this->tracer->log('[WARNING]', __FILE__, __LINE__, 'Show wasn\'t found');
+						$this->tracer->logError('[WARNING]', __FILE__, __LINE__, 'Show wasn\'t found');
 						break;
 					
 					default:
-						$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL);
+						$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL);
 						break;
 				}
 				
 
-				$this->tracer->log('[NEW SERIES]', __FILE__, __LINE__, PHP_EOL.print_r($series, true));
+				$this->tracer->logEvent('[NEW SERIES]', __FILE__, __LINE__, PHP_EOL.print_r($series, true));
 			}
 			catch(SeriesIsNotPublishedYet $ex){
 				continue;

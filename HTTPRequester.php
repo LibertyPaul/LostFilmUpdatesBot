@@ -27,17 +27,26 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($this->curl, CURLOPT_POSTFIELDS, $content_json));
 		assert(curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Content-type: application/json')));
 
+
 		$response = curl_exec($this->curl);
 		if($response === false){
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, PHP_EOL.$content_json);
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, PHP_EOL.$content_json);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
+		}
+
+		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
+		if($code !== 200){
+			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
+			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
+			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Response: '.$response);
+			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
 		}
 
 		return array(
 			'value' => $response,
-			'code' => intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE))
+			'code' => $code
 		);
 
 	}
@@ -49,8 +58,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		
 		$response = curl_exec($this->curl);
 		if($response === false){
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->log('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 

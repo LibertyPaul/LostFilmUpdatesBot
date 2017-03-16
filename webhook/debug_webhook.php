@@ -2,6 +2,7 @@
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../config/stuff.php');
 require_once(__DIR__.'/../TelegramBotFactory.php');
+require_once(__DIR__.'/../UpdateHandler.php');
 
 require_once(__DIR__.'/../Tracer.php');
 require_once(__DIR__.'/input_debug_webhook.php');
@@ -24,7 +25,7 @@ function exception_handler($ex){
 
 function error_handler($errno, $errstr, $errfile, $errline, $errcontext){
 	global $tracer;
-	$tracer->log('[ERROR]', $errfile, $errline, "($errno)\t$errstr");
+	$tracer->logError('[ERROR]', $errfile, $errline, "($errno)\t$errstr");
 }
 
 set_error_handler('error_handler');
@@ -51,13 +52,13 @@ elseif($_GET['password'] !== WEBHOOK_PASSWORD){
 */
 
 //$update_json = file_get_contents("php://input");
-$update = json_decode(update_json);
+$update = json_decode($update_json);
 if($update === null || $update === false){
 	exit('incorrect JSON input: '.json_last_error_msg().PHP_EOL);
 }
 	
 $readableJson = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
-$tracer->log('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
+$tracer->logEvent('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$readableJson);
 /*
 if(isset($_GET['ignore_msg_id']) === false || $_GET['ignore_msg_id'] !== 'true'){
 	if(intval($update->update_id) < getLastRecievedId()){
@@ -70,7 +71,17 @@ if(isset($update->message) === false){
 	exit('no message provided in update');
 }
 
-$telegram_id = intval($update->message->from->id);
-
 $botFactory = new TelegramBotFactory();
-$botFactory->createBot($telegram_id)->incomingUpdate($update->message);
+$updateHandler = new UpdateHandler($botFactory);
+$updateHandler->handleUpdate($update);
+
+if(defined('MESSAGE_STREAM_URL')){
+	try{
+		$testStream = new HTTPRequester();
+		$url = MESSAGE_STREAM_URL.'?password='.MESSAGE_STREAM_PASSWORD;
+		$testStream->sendJSONRequest($url, $update_json);
+	}
+	catch(Exception $ex){
+
+	}
+}

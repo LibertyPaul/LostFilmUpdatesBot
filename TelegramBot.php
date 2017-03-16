@@ -62,7 +62,7 @@ class TelegramBot extends TelegramBot_base{
 			$this->user_id = $this->getUserIdByTelegramId($this->telegram_id);
 			if($this->user_id === null){// TODO: move error handling to another place
 				$conversationStorage->deleteConversation();
-				$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'Unknown Telegram Id: '.$this->telegram_id);
+				$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Unknown Telegram Id: '.$this->telegram_id);
 				throw new TelegramException($this, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
 			}
 		}
@@ -116,7 +116,7 @@ class TelegramBot extends TelegramBot_base{
 			);
 		}
 		catch(PDOException $ex){
-			$this->botTracer->log('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage());
+			$this->botTracer->logError('[DB ERROR]', __FILE__, __LINE__, $ex->getMessage());
 			throw new TelegramException($this, 'По неизвестным причинам не могу тебя зарегистрировать. Напиши @libertypaul об этом, он разберется. Код TB'.__LINE__);
 		}
 		
@@ -124,7 +124,7 @@ class TelegramBot extends TelegramBot_base{
 			$this->notifier->newUserEvent($this->getUserId());
 		}
 		catch(Exception $ex){
-			$this->botTracer->log('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex->getMessage());
+			$this->botTracer->logError('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex->getMessage());
 		}
 		
 		
@@ -377,7 +377,7 @@ class TelegramBot extends TelegramBot_base{
 		
 		$user = $isMutedQuery->fetch();
 		if($user === false){
-			$this->tracer->log('[ERROR]', __FILE__, __LINE__, 'User was not found '.$this->telegram_id);
+			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'User was not found '.$this->telegram_id);
 			throw new TelegramException($this, 'Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start и попробовать снова');
 		}
 
@@ -777,7 +777,7 @@ stop - Удалиться из контакт-листа бота
 
 	private function updateUserInfo($message){
 		if(isset($message->from) === false){
-			$this->tracer->log('[DATA ERROR]', __FILE__, __LINE__, 'Message from Telegram API has no "from" field: '.PHP_EOL.print_r($message, true));
+			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Message from Telegram API has no "from" field: '.PHP_EOL.print_r($message, true));
 			return;
 		}
 
@@ -801,7 +801,7 @@ stop - Удалиться из контакт-листа бота
 		}
 		catch(PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', $ex);
-			$this->tracer->log('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
+			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
 		}
 	}
 	

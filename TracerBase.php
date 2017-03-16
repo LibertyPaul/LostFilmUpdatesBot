@@ -5,11 +5,10 @@ abstract class TracerBase{
 
 	protected function __construct($traceName){
 		assert(is_string($traceName));
-
 		$this->traceName = $traceName;
 
 		if(TRACER_LOG_START_END){
-			$this->log(
+			$this->logEvent(
 				'[TRACER]',
 				__FILE__,
 				__LINE__,
@@ -20,7 +19,7 @@ abstract class TracerBase{
 
 	public function __destruct(){
 		if(TRACER_LOG_START_END){
-			$this->log(
+			$this->logEvent(
 				'[TRACER]',
 				__FILE__,
 				__LINE__,
@@ -29,9 +28,10 @@ abstract class TracerBase{
 		}
 	}
 
-	abstract protected function write($text);
+	abstract protected function writeEvent($text);
+	abstract protected function writeError($text);
 
-	public function log($tag, $file, $line, $message = null){
+	private static function compileRecord($tag, $file, $line, $message){
 		assert(is_string($tag));
 		assert(is_string($file));
 		assert(is_int($line));
@@ -40,17 +40,27 @@ abstract class TracerBase{
 		$date = date('Y.m.d H:i:s');
 		
 		// basename should never fail on any input
-		$text = "$tag $date ".basename($file).":$line";		
+		$record = "$tag $date ".basename($file).":$line";		
 		
 		if($message !== null){
-			$text .= "\t$message";
+			$record .= "\t$message";
 		}
+		
+		return $record;
+	}
 
-		$this->write($text);
+	public function logEvent($tag, $file, $line, $message = null){
+		$record = self::compileRecord($tag, $file, $line, $message);
+		$this->writeEvent($record);
+	}
+
+	public function logError($tag, $file, $line, $message = null){
+		$record = self::compileRecord($tag, $file, $line, $message);
+		$this->writeError($record);
 	}
 
 	public function logException($tag, Exception $exception){
-		return $this->log(
+		return $this->logError(
 			$tag,
 			$exception->getFile(),
 			$exception->getLine(),

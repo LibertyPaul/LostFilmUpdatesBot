@@ -1,0 +1,3 @@
+[mysql]
+user="&&DB_root_username"
+password="&&DB_root_password"
