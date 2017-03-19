@@ -26,6 +26,14 @@ class SeriesParser extends Parser{
 			throw $ex;
 		}
 	}
+
+	private static function isUsualSeriesLink($link){
+		if(strpos($link, '/additional/') !== false){
+			return false;
+		}
+
+		return true;
+	}
 	
 	private function parseLink($link){
 		$regexp = '/https:\/\/[\w\.]*?lostfilm.tv\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
@@ -59,6 +67,10 @@ class SeriesParser extends Parser{
 		$result = array(); // [link, showAlias, seasonNumber, seriesNumber]
 		
 		foreach($this->rssData->channel->item as $item){
+			if(self::isUsualSeriesLink($item->link) === false){
+				continue;
+			}
+
 			try{
 				$result[] = $this->parseLink($item->link);
 			}
