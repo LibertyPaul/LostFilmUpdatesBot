@@ -26,7 +26,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($this->curl, CURLOPT_POST, true));
 		assert(curl_setopt($this->curl, CURLOPT_POSTFIELDS, $content_json));
 		assert(curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Content-type: application/json')));
-
+		
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
 
 		$response = curl_exec($this->curl);
 		if($response === false){
@@ -37,12 +39,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 		}
 
 		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
-		if($code !== 200){
-			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
-			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
-			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Response: '.$response);
-			$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
-		}
+		
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response);
 
 		return array(
 			'value' => $response,
@@ -56,12 +55,18 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($this->curl, CURLOPT_HTTPGET, true));
 		assert(curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Content-type: text/html')));
 		
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $destination);
+		
 		$response = curl_exec($this->curl);
 		if($response === false){
 			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'url: '.$destination);
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
+
+		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
+		
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response);
 
 		return array(
 			'value' => $response,
