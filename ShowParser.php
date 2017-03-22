@@ -1,5 +1,5 @@
 <?php
-require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/Exceptions/StdoutTextException.php');
 require_once(__DIR__.'/ShowAboutParser.php');
 require_once(__DIR__.'/Tracer.php');
@@ -25,7 +25,7 @@ class ShowParser{
 
 		$this->tracer = new Tracer(__CLASS__);
 
-		$pdo = createPDO();
+		$pdo = ParserPDO::getInstance();
 		$this->showAboutParser = new ShowAboutParser($requester);
 		
 		$this->getShowIdQuery = $pdo->prepare('
