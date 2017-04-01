@@ -33,7 +33,7 @@ abstract class TracerLevel{
 			return self::$levelMap[$name];
 		}
 		else{
-			throw OutOfBoundsException("Invalid trace level name: '$name'");
+			throw new OutOfBoundsException("Invalid trace level name: '$name'");
 		}
 	}
 
@@ -42,7 +42,7 @@ abstract class TracerLevel{
 			return self::$codeMap[$level];
 		}
 		else{
-			throw OutOfBoundsException("Invalid trace level: '$level'");
+			throw new OutOfBoundsException("Invalid trace level: '$level'");
 		}
 	}
 }
