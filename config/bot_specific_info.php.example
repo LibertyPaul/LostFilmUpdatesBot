@@ -3,6 +3,8 @@
 const TELEGRAM_BOT_TOKEN			= '';
 const PERFORM_ACTUAL_MESSAGE_SEND	= true; 
 const UNDELIVERED_MESSAGE_STORAGE	= __DIR__.'/../logs/UndeliviredMessages.log';
+
+const WEBHOOK_URL					= 'https://example.com/LostFilmUpdatesBot_dev/webhook/webhook.php';
 const WEBHOOK_PASSWORD				= '';
 
 
@@ -22,3 +24,7 @@ const MEMCACHE_LATEST_UPDATE_ID_KEY = '';
 
 const MESSAGE_STREAM_URL = '';
 const MESSAGE_STREAM_PASSWORD = '';
+
+
+const TRACER_LOG_START_END = false;
+const TRACER_LEVEL = 'WARNING';
