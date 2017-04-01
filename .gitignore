@@ -1,8 +1,8 @@
-*_dev*
-/logs/*
-/locks/*
+logs/*
+logsBackup/*
+locks/*
 config/bot_specific_info.php
-webhook/input_debug_webhook.php
+tests/debug_webhook/input_debug_webhook.php
 
 *.swp
 .my.cnf
