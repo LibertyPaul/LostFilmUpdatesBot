@@ -41,7 +41,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
 		
 		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response);
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response.PHP_EOL);
 
 		return array(
 			'value' => $response,
@@ -66,7 +66,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
 		
 		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response);
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response.PHP_EOL);
 
 		return array(
 			'value' => $response,
