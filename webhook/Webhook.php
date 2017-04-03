@@ -106,7 +106,7 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::OK);
 		}
 		catch(Exception $ex){
-			$this->tracer->logException($ex);
+			$this->tracer->logException('[UPDATE HANDLER]', $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
 				
@@ -115,7 +115,7 @@ class Webhook{
 				$this->resendUpdate($postData, MESSAGE_STREAM_URL);
 			}
 			catch(Exception $ex){
-				$this->tracer->logException($ex);
+				$this->tracer->logException('[MESSAGE STREAM]', $ex);
 			}
 		}
 	}
