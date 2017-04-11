@@ -1,73 +1,40 @@
 <?php
-
 require_once(__DIR__.'/config/config.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
-require_once(__DIR__.'/Exceptions/StdoutTextException.php');
-require_once(__DIR__.'/Exceptions/UserBlockedBotException.php');
-
 require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/Message.php');
+require_once(__DIR__.'/MessageList.php');
 
 
-class TelegramBot_base{
-	const tokenLength = 32;
-	const expireTime = 3600;
-	
-	protected $pdo;
-	protected $memcache;
-	
+class TelegramAPI{
 	private $HTTPRequester;
-
-	protected $botTracer;
-	protected $sentMessagesTracer;
+	private $tracer;
+	private $sentMessagesTracer;
 	
-	protected function __construct(HTTPRequesterInterface $HTTPRequester){
-		if(isset($HTTPRequester) === false){
-			throw new StdoutTextException('$HTTPRequester should not be a null pointer');
-		}
+	public function __construct(HTTPRequesterInterface $HTTPRequester){
+		assert($HTTPRequester !== null);
 		
 		$this->HTTPRequester = $HTTPRequester;
 	
-		$this->pdo = BotPDO::getInstance();
-		$this->memcache = createMemcache();
-		
-		$this_ptr = $this;
-		
-		set_exception_handler(function(Exception $ex) use ($this_ptr){
-			$this_ptr->exception_handler($ex);
-		});
-		
-		$this->botTracer = new Tracer(__CLASS__);
+		$this->tracer = new Tracer(__CLASS__);
 		$this->sentMessagesTracer = new Tracer('sentMessages');
 	}
 	
-	private function exception_handler(Exception $ex){
-		if(method_exists($ex, 'release')){
-			$ex->release();
-		}
-		else{	
-			$this->botTracer->logException('[UNKNOWN EXCEPTION]', $ex);
-		}
-		exit;
-	}
-	
-	private function getSendMessageURL(){
+	private static function getSendMessageURL(){
 		return 'https://api.telegram.org/bot'.TELEGRAM_BOT_TOKEN.'/sendMessage';
 	}
 	
-	protected function sendMessage($data){//should NOT throw TelegramException
-		$content_json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_NUMERIC_CHECK);
+	public function sendMessage(Message $message){
+		$content_json = $message->toPrettyJSON();
 		
 		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
 		
-		$result = null;
-		
+		$URL = self::getSendMessageURL();		
 		try{
-			$result = $this->HTTPRequester->sendJSONRequest($this->getSendMessageURL(), $content_json);
+			$result = $this->HTTPRequester->sendJSONRequest($URL, $content_json);
 		}
 		catch(HTTPException $HTTPException){
-			$this->botTracer->logException('[HTTP ERROR]', $HTTPException);
+			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
 			throw $HTTPException;
 		}
 		
@@ -76,7 +43,7 @@ class TelegramBot_base{
 		return $result;
 	}
 	
-	protected function sendTextByLines($messageData, array $lines, $eol){
+	public function sendTextByLines($messageData, array $lines, $eol){
 		$emptyMessage = json_encode($messageData);
 		$emptyMessageLength = strlen($emptyMessage);
 		
@@ -119,24 +86,6 @@ class TelegramBot_base{
 			
 			$this->sentMessagesTracer->logEvent('[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__, 'Return code: '.$result['code']);
 		}
-	}
-	
-	
-	protected function createKeyboard($items){
-		$rowSize = 2;
-		$keyboard = array();
-		$currentRow = array("/cancel");
-		$currentRowPos = 1;
-		foreach($items as $item){
-			$currentRow[] = $item;
-			if(++$currentRowPos % $rowSize == 0){
-				$keyboard[] = $currentRow;
-				$currentRow = array();
-			}
-		}
-		if(count($currentRow) !== 0)
-			$keyboard[] = $currentRow;
-		return $keyboard;
 	}
 }
 

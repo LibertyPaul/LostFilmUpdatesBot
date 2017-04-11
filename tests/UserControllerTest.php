@@ -1,11 +1,10 @@
 <?php
-
 require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/MessageTester.php');
 
-class TelegramBotTest extends PHPUnit_Framework_TestCase{
+class UserControllerTest extends PHPUnit_Framework_TestCase{
 	const TEST_TELEGRAM_ID = 100500;
-	private $messageTester;
+	private $userController;
 
 	public function __construct(){
 		$this->messageTester = new MessageTester(
@@ -14,6 +13,7 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 			'🇩 🇮 🇲  🇦  🇳 ', // once such shitty nickname was unable to register
 			'🇩 🇮 🇲  🇦  🇳 '
 		);
+
 	}
 
 	private function userExists($telegram_id){
@@ -34,13 +34,13 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 	private function start(){
 		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
-		$sentMessages = $this->messageTester->send('/start');
+		$response = $this->messageTester->send('/start');
 
 		if($isExist === false){
 			$helloSent = false;
 			$adminNotificationSent = false;
 
-			foreach($sentMessages as $message){
+			foreach($response as $message){
 				if(strpos($message->text, 'Привет') !== false){
 					$helloSent = true;
 				}
@@ -54,8 +54,8 @@ class TelegramBotTest extends PHPUnit_Framework_TestCase{
 			$this->assertTrue($adminNotificationSent);
 		}
 		else{
-			assert(count($sentMessages) === 1);
-			$resp = $sentMessages[0];
+			assert(count($response) === 1);
+			$resp = $response[0];
 			$this->assertContains('знакомы', $resp->text);
 		}
 		

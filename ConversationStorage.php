@@ -21,7 +21,7 @@ class ConversationStorage{
 			$this->memcache = createMemcache();
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[FATAL]', $ex);
+			$this->tracer->logException('[FATAL]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 

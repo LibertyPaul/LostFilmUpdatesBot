@@ -28,16 +28,16 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 
 	public function testPassword(){
 		$resp = $this->send(null, '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send('', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send('asdfgh', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send(WEBHOOK_PASSWORD, '{}');
-		$this->assertEquals($resp['code'], 200);
+		$this->assertEquals(200, $resp['code']);
 	}
 
 	public function testMessageLogging(){

@@ -110,7 +110,7 @@ class ShowParserExecutor{
 				);
 			}
 			catch(PDOException $ex){
-				$this->tracer->logException('[DATABASE]', $ex);
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 				continue;
 			}
 			$this->tracer->logEvent('[NEW SHOW]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
@@ -129,7 +129,7 @@ class ShowParserExecutor{
 				);
 			}
 			catch(PDOException $ex){
-				$this->tracer->logException('[DATABASE]', $ex);
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 				continue;
 			}
 		}
@@ -140,6 +140,10 @@ class ShowParserExecutor{
 		}
 
 		$this->pdo->query('UNLOCK TABLES');
+
+		print_r($newAliasList);
+		#print_r();
+		print_r($outdatedAliasList);#TODO: fixxx
 	}
 }
 

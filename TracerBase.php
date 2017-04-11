@@ -109,7 +109,7 @@ abstract class TracerBase{
 					$this->storeStandalone($record);
 				}
 				catch(RuntimeException $ex){
-					$this->logException('[TRACER]', $ex);
+					$this->logException('[TRACER]', __FILE__, __LINE__, $ex);
 					$this->write($record);
 				}	
 			}
@@ -143,8 +143,14 @@ abstract class TracerBase{
 		$this->log('NOTICE', $tag, $file, $line, $message);
 	}
 
-	public function logException($tag, Exception $exception){
-		$this->logError($tag, $exception->getFile(), $exception->getLine(), $exception->getMessage());
+	public function logException($tag, $file, $line, Exception $exception){
+		$exceptionInfo = str_replace(
+			array('#FILE', '#LINE', '#REASON'),
+			array(basename($exception->getFile()), $exception->getLine(), $exception->getMessage()),
+			'Raised from #FILE:#LINE #REASON'
+		);
+
+		$this->logError($tag, $file, $line, $exceptionInfo);
 	}
 
 	public static function syslogCritical($tag, $file, $line, $message = null){
