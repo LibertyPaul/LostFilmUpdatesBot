@@ -44,6 +44,7 @@ declare -a elementsOrder=(
 	users
 	permissions
 	data_after
+	database_after
 )
 
 for element in "${elementsOrder[@]}"; do
