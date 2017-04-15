@@ -7,6 +7,6 @@ CREATE TABLE IF NOT EXISTS `messagesHistory`(
 	
 	PRIMARY KEY (`id`),
 	KEY `direction` (`direction`),
-	KEY `user_id` (`user_id`),
+	KEY `chat_id` (`chat_id`),
 	KEY `inResponseTo` (`inResponseTo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
