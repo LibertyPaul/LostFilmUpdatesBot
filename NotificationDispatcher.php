@@ -1,25 +1,28 @@
 <?php
-
 require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/Notifier.php');
+require_once(__DIR__.'/NotificationGenerator.php');
+require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/Tracer.php');
 
 class NotificationDispatcher{
-	private $notifier;
+	private $notificationGenerator;
+	private $telegramAPI;
 	private $pdo;
-	private $getNotificationData;
-	private $setNotificationCode;
-	private $bots;
+	private $getNotificationDataQuery;
+	private $setNotificationCodeQuery;
 	private $tracer;
 	
-	public function __construct(Notifier $notifier){
-		assert($notifier !== null);
-		$this->notifier = $notifier;
+	public function __construct(NotificationGenerator $notificationGenerator, TelegramAPI $telegramAPI){
+		assert($notificationGenerator !== null);
+		$this->notificationGenerator = $notificationGenerator;
+
+		assert($telegramAPI !== null);
+		$this->telegramAPI = $telegramAPI;
 		
 		$this->tracer = new Tracer(__CLASS__);
 		
 		$this->pdo = BotPDO::getInstance();
-		$this->getNotificationData = $this->pdo->prepare("
+		$this->getNotificationDataQuery = $this->pdo->prepare("
 			SELECT 	`notificationsQueue`.`id`,
 					`notificationsQueue`.`responseCode`,
 					`notificationsQueue`.`retryCount`,
@@ -47,51 +50,57 @@ class NotificationDispatcher{
 		
 	}
 
-	private function shallBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
+	private static function wasDelivered($code){
+		return $code < 400;
+	}
+
+	private static function shallBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
 		if($responseCode === null){
 			return true;
 		}
 		
 		if($lastDeliveryAttemptTime === null){
-			throw new Exception('lastDeliveryAttemptTime is null');
+			throw new Exception('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
-		if($responseCode >= 400 && $responseCode <= 599 && $retryCount < MAX_NOTIFICATION_RETRY_COUNT){
-
-			$waitTime = null;
-			switch($retryCount){
-				case 0:
-					$waitTime = new DateInterval('PT0S');
-					break;
-				
-				case 1:
-					$waitTime = new DateInterval('PT1M');
-					break;
-
-				case 2:
-					$waitTime = new DateInterval('PT15M');
-					break;
-
-				case 3:
-					$waitTime = new DateInterval('PT1H');
-					break;
-
-				case 4:
-					$waitTime = new DateInterval('P1D');
-					break;
-
-				default:
-					throw Exception("Incorrect retryCount ($retryCount)");
-			}
-			
-			$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
-			$currentTime		= new DateTime();
-			
-			return $lastAttemptTime->add($waitTime) < $currentTime;
-		}
-		else{
+		if(self::wasDelivered($responseCode)){
 			return false;
 		}
+
+		if($retryCount < MAX_NOTIFICATION_RETRY_COUNT){
+			return false;
+		}
+
+		$waitTime = null;
+		switch($retryCount){
+			case 0:
+				$waitTime = new DateInterval('PT0S');
+				break;
+			
+			case 1:
+				$waitTime = new DateInterval('PT1M');
+				break;
+
+			case 2:
+				$waitTime = new DateInterval('PT15M');
+				break;
+
+			case 3:
+				$waitTime = new DateInterval('PT1H');
+				break;
+
+			case 4:
+				$waitTime = new DateInterval('P1D');
+				break;
+
+			default:
+				throw Exception("Incorrect retryCount ($retryCount)");
+		}
+		
+		$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
+		$currentTime		= new DateTime();
+		
+		return $lastAttemptTime->add($waitTime) < $currentTime;
 	}
 	
 	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
@@ -112,24 +121,24 @@ class NotificationDispatcher{
 				shows				READ;
 		');
 
-		$this->getNotificationData->execute(
+		$this->getNotificationDataQuery->execute(
 			array(
 				'maxRetryCount' => MAX_NOTIFICATION_RETRY_COUNT
 			)
 		);
 
 		
-		while($notification = $this->getNotificationData->fetch(PDO::FETCH_ASSOC)){
+		while($notification = $this->getNotificationDataQuery->fetch(PDO::FETCH_ASSOC)){
 			$gonnaBeSent = false;
 			try{
-				$gonnaBeSent = $this->shallBeSent(
+				$gonnaBeSent = self::shallBeSent(
 						$notification['responseCode'],
 						$notification['retryCount'],
 						$notification['lastDeliveryAttemptTime']
 				);
 			}
 			catch(Exception $ex){
-				$this->tracer->logException('[ERROR]', $ex);
+				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logEvent('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($notification, true));
 				continue;
 			}
@@ -137,7 +146,7 @@ class NotificationDispatcher{
 			if($gonnaBeSent){
 				try{
 					$url = self::makeURL($notification['showAlias'], intval($notification['seasonNumber']), intval($notification['seriesNumber']));	
-					$result = $this->notifier->newSeriesEvent(
+					$message = $this->notificationGenerator->newSeriesEvent(
 						intval($notification['telegram_id']), 
 						$notification['showTitle'], 
 						intval($notification['seasonNumber']),
@@ -145,20 +154,22 @@ class NotificationDispatcher{
 						$notification['seriesTitle'],
 						$url
 					);
+
+					$deliveryResult = $this->telegramAPI->sendMessage($message);
 				
 					$this->setNotificationDeliveryResult->execute(
 						array(
 							'notificationId'	=> $notification['id'],
-							'HTTPCode' 			=> $result['code']
+							'HTTPCode' 			=> $deliveryResult['code']
 						)
 					);
 				}
 				catch(PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', $ex);
+					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					continue;
 				}
 				catch(Exception $ex){
-					$this->tracer->logException('[ERROR]', $ex);
+					$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 					continue;
 				}
 			}

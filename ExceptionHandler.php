@@ -3,13 +3,22 @@ namespace ExceptionHandler;
 
 require_once(__DIR__.'/Tracer.php');
 
-function exception_handler($errno, $errstr, $errfile, $errline, $errcontext){
+function exception_handler($ex){
 	static $tracer;
 	if(isset($tracer) === false){
 		$tracer = new \Tracer(__NAMESPACE__);
 	}
 
-	$tracer->logError('[PHP]', $errfile, $errline, "($errno)\t$errstr");
+	$tracer->logException('[UNCAUGHT EXCEPTION]', __FILE__, __LINE__, $ex);
+
+	exit;
 }
 
-set_exception_handler('ExceptionHandler\exception_handler');
+$res = set_exception_handler('ExceptionHandler\exception_handler');
+if($res === null){
+	$res = set_exception_handler('ExceptionHandler\exception_handler');
+	if($res === null){// yep, this is one proper way to check for success
+		TracerBase::syslogCritical('[EXCEPTION CATCHER]', __FILE__, __LINE__, 'Unable to set exception handler');
+	}
+}
+

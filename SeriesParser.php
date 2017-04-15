@@ -21,7 +21,7 @@ class SeriesParser extends Parser{
 			$this->rssData = new SimpleXMLElement($this->pageSrc);
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[XML ERROR]', $ex);
+			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
 		}
@@ -78,7 +78,7 @@ class SeriesParser extends Parser{
 				// mmmk, skipping
 			}
 			catch(Exception $ex){
-				$this->tracer->logException('[PARSE ERROR]', $ex);
+				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
 			}
 		}

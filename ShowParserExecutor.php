@@ -110,7 +110,9 @@ class ShowParserExecutor{
 				);
 			}
 			catch(PDOException $ex){
-				$this->tracer->logException('[DATABASE]', $ex);
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $newAlias);
+				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
 				continue;
 			}
 			$this->tracer->logEvent('[NEW SHOW]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
@@ -129,7 +131,9 @@ class ShowParserExecutor{
 				);
 			}
 			catch(PDOException $ex){
-				$this->tracer->logException('[DATABASE]', $ex);
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $sameAlias);
+				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
 				continue;
 			}
 		}

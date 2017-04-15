@@ -15,7 +15,7 @@ for level in "${levels[@]}"; do
 	if [ -n "$(grep -lrP "^$level" "$logs_dir")" ]; then
 		echo "Level: $level"
 		for log in $(grep -lrP "^$level" "$logs_dir"); do
-			echo "$log:"
+			echo "$(basename "$log"):"
 			grep -nP "^$level" "$log"
 		done
 		echo ""

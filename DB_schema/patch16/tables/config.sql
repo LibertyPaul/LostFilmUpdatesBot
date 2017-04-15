@@ -1,0 +1,8 @@
+CREATE TABLE `config`(
+	`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`section` VARCHAR(255) NOT NULL,
+	`item` VARCHAR(255) NOT NULL,
+	`value` VARCHAR(255) NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX (`section`, `item`)
+);

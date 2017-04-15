@@ -1,5 +1,7 @@
 <?php
-require_once(__DIR__."/SubstantiveException.php");
 
-abstract class UserException extends SubstantiveException{
+class UserException extends Exception{
+	public function __construct($text){
+		parent::__construct($text);
+	}
 }

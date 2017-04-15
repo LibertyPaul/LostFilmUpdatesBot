@@ -31,7 +31,7 @@ class ShowListFetcher{
 				$result = $this->requester->sendGETRequest($url);
 			}
 			catch(HTTPException $ex){
-				$this->tracer->logException('[HTTP]', $ex);
+				$this->tracer->logException('[HTTP]', __FILE__, __LINE__, $ex);
 				throw $ex;
 			}
 

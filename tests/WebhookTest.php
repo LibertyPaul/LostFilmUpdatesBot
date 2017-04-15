@@ -1,5 +1,6 @@
 <?php
 
+require_once(__DIR__.'/TestsCommon.php');
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../HTTPRequester.php');
 
@@ -28,21 +29,30 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 
 	public function testPassword(){
 		$resp = $this->send(null, '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send('', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send('asdfgh', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send(WEBHOOK_PASSWORD, '{}');
-		$this->assertEquals($resp['code'], 200);
+		$this->assertEquals(500, $resp['code']);
 	}
 
 	public function testMessageLogging(){
-		
-		
+		$key = TestsCommon\generateRandomString(32);
+		$resp = $this->send(
+			WEBHOOK_PASSWORD,
+			"{
+				\"info\": \"TEST MESSAGE\",
+				\"key\": \"$key\"
+			}"
+		);
+
+		$tracePath = __DIR__.'/../logs/incomingMessages.log';
+		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
 	}
 }
 
