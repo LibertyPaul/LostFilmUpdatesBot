@@ -1,5 +1,6 @@
 <?php
 
+require_once(__DIR__.'/TestsCommon.php');
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../HTTPRequester.php');
 
@@ -37,12 +38,21 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send(WEBHOOK_PASSWORD, '{}');
-		$this->assertEquals(200, $resp['code']);
+		$this->assertEquals(500, $resp['code']);
 	}
 
 	public function testMessageLogging(){
-		
-		
+		$key = TestsCommon\generateRandomString(32);
+		$resp = $this->send(
+			WEBHOOK_PASSWORD,
+			"{
+				\"info\": \"TEST MESSAGE\",
+				\"key\": \"$key\"
+			}"
+		);
+
+		$tracePath = __DIR__.'/../logs/incomingMessages.log';
+		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
 	}
 }
 
