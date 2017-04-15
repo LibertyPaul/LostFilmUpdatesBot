@@ -5,14 +5,16 @@ abstract class TracerLevel{
 	const Error			= 1;
 	const Warning		= 4;
 	const Notice		= 6;
-	const Event			= 9;
+	const Event			= 8;
+	const Debug			= 9;
 
 	private static $levelMap = array(
 		'CRITICAL'	=> self::Critical,
 		'ERROR'		=> self::Error,
 		'WARNING'	=> self::Warning,
 		'NOTICE'	=> self::Notice,
-		'EVENT'		=> self::Event
+		'EVENT'		=> self::Event,
+		'DEBUG'		=> self::Debug
 	);
 
 //	private static $codeMap = array_flip(self::$levelMap);
@@ -21,7 +23,8 @@ abstract class TracerLevel{
 		self::Error		=> 'ERROR',
 		self::Warning	=> 'WARNING',
 		self::Notice	=> 'NOTICE',
-		self::Event		=> 'EVENT'
+		self::Event		=> 'EVENT',
+		self::Debug		=> 'DEBUG'
 	);
 
 	public static function logEverythingLevel(){
@@ -66,12 +69,12 @@ abstract class TracerBase{
 		}
 
 
-		$this->logEvent('[TRACER]', __FILE__, __LINE__, 'Started.');
+		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
 
 	}
 
 	public function __destruct(){
-		$this->logEvent('[TRACER]', __FILE__, __LINE__, 'Ended.');
+		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Ended.');
 	}
 
 	abstract protected function write($text);
@@ -141,6 +144,10 @@ abstract class TracerBase{
 
 	public function logNotice($tag, $file, $line, $message = null){
 		$this->log('NOTICE', $tag, $file, $line, $message);
+	}
+
+	public function logDebug($tag, $file, $line, $message = null){
+		$this->log('DEBUG', $tag, $file, $line, $message);
 	}
 
 	public function logException($tag, Exception $exception){
