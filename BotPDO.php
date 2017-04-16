@@ -2,7 +2,7 @@
 
 require_once(__DIR__.'/config/config.php');
 
-class BotPDO extends PDO{
+class BotPDO{
 	private static $instance = null;
 
 	private static function initialize(){

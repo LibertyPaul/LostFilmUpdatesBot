@@ -2,7 +2,7 @@
 
 require_once(__DIR__.'/config/config.php');
 
-class ParserPDO extends PDO{
+class ParserPDO{
 	private static $instance = null;
 
 	private static function initialize(){
