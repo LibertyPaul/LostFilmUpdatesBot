@@ -89,11 +89,11 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::invalidPassword);
 			return;
 		}
-
+		
 		$update = json_decode($postData);
 		if($update === null){
 			$this->tracer->logError('[JSON]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.$postData);
+			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL."'$postData'");
 			$this->respondFinal(WebhookReasons::formatError);
 			return;
 		}

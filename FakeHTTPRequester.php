@@ -1,6 +1,6 @@
 <?php
-require_once(__DIR__.'/../HTTPRequesterInterface.php');
-require_once(__DIR__.'/../Tracer.php');
+require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/Tracer.php');
 
 class FakeHTTPRequester implements HTTPRequesterInterface{
 	private $destinationFilePath;
