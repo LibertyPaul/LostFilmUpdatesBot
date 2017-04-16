@@ -12,7 +12,8 @@ $password = isset($_GET['password']) ? $_GET['password'] : null;
 $updateJSON = file_get_contents('php://input');
 assert($updateJSON !== false);
 
-$HTTPRequester = HTTPRequesterFactory::getInstance();
+$HTTPRequesterFactory = new HTTPRequesterFactory();
+$HTTPRequester = $HTTPRequesterFactory->getInstance();
 
 $config = new Config(BotPDO::getInstance());
 $botToken = $config->getValue('TelegramAPI', 'token');

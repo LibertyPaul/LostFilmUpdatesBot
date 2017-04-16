@@ -16,7 +16,7 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 
 	}
 
-	private function send($password, $content){ // URL should contain ?password=ASDFGH12345
+	private function send($password, $content){
 		$URL = WEBHOOK_URL;
 		if($password !== null){
 			$URL .= "?password=$password";
@@ -56,12 +56,13 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 			)
 		);
 
-		echo "'$data'";
-
 		$resp = $this->send(WEBHOOK_PASSWORD, $data);
 
 		$tracePath = __DIR__.'/../logs/incomingMessages.log';
 		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
+
+		$key = TestsCommon\generateRandomString(32);
+		$this->assertFalse(TestsCommon\keyExists($tracePath, $key));
 	}
 }
 

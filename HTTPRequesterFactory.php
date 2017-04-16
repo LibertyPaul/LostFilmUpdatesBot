@@ -1,26 +1,54 @@
 <?php
-
-
-require_once(__DIR__.'/config/config.php');
+require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/FakeHTTPRequester.php');
+require_once(__DIR__.'/BotPDO.php');
+require_once(__DIR__.'/Tracer.php');
 
 
 class HTTPRequesterFactory{
+	private $performActualMessageSend;
+	private $undeliveredMessageStorage;
+	private $tracer;
 
-	public static function getInstance(){
-		if(defined('PERFORM_ACTUAL_MESSAGE_SEND') && PERFORM_ACTUAL_MESSAGE_SEND === false){
-			if(defined('UNDELIVERED_MESSAGE_STORAGE')){
-				$undelifiredMessageStorage = UNDELIVERED_MESSAGE_STORAGE;
-			}
-			else{
-				$undelifiredMessageStorage = __DIR__.'/../logs/UndeliviredMessages.log';
-			}
+	public function __construct(){
+		$this->tracer = new Tracer(__CLASS__);
 
-			return new FakeHTTPRequester($undelifiredMessageStorage);
+		$config = new Config(BotPDO::getInstance());
+		
+		$res = $config->getValue('TelegramAPI', 'Perform Actual Send');
+		switch($res){
+			case 'Y':
+				$this->performActualMessageSend = true;
+				break;
+
+			case 'N':
+				$this->performActualMessageSend = false;
+				break;
+
+			case null:
+				$this->tracer->logWarning('[UNDEFINED]', __FILE__, __LINE__, 'TelegramAPI->Perform Actual Send parameter is not defined. Using default [N]');
+				$this->performActualMessageSend = false;
+				break;
+
+			default:
+				$this->tracer->logError('[INVALID PARAMETER]', __FILE__, __LINE__, 'TelegramAPI->Perform Actual Send parameter = [$res]. Using default [N]');
+				$this->performActualMessageSend = false;
+				break;
+		}
+
+		
+		$this->undeliveredMessageStorage = $config->getValue('FakeHTTPRequester', 'Undelivired Messages Storage', './logs/UndeliviredMessages.log');
+	}
+	
+
+	public function getInstance(){
+		if($this->performActualMessageSend){
+			return new HTTPRequester();
 		}
 		else{
-			return new HTTPRequester();
+			$undelifiredMessageStorage = __DIR__.'/../'.$this->undeliveredMessageStorage;
+			return new FakeHTTPRequester($undelifiredMessageStorage);
 		}
 	}
 

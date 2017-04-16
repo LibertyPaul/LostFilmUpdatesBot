@@ -9,7 +9,8 @@ require_once(__DIR__.'/HTTPRequesterFactory.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/config/Config.php');
 
-$HTTPRequester = HTTPRequesterFactory::getInstance();
+$HTTPRequesterFactory = new HTTPRequesterFactory();
+$HTTPRequester = $HTTPRequesterFactory->getInstance();
 
 $config = new Config(BotPDO::getInstance());
 $botToken = $config->getValue('TelegramAPI', 'token');
