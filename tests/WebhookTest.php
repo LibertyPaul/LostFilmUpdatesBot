@@ -28,28 +28,37 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 	}
 
 	public function testPassword(){
-		$resp = $this->send(null, '{}');
+		$dummyMessage = json_encode(
+			array(
+				'some_value' => 42
+			)
+		);
+
+		$resp = $this->send(null, $dummyMessage);
 		$this->assertEquals(401, $resp['code']);
 
-		$resp = $this->send('', '{}');
+		$resp = $this->send('', $dummyMessage);
 		$this->assertEquals(401, $resp['code']);
 
-		$resp = $this->send('asdfgh', '{}');
+		$resp = $this->send('asdfgh', $dummyMessage);
 		$this->assertEquals(401, $resp['code']);
 
-		$resp = $this->send(WEBHOOK_PASSWORD, '{}');
+		$resp = $this->send(WEBHOOK_PASSWORD, $dummyMessage);
 		$this->assertEquals(500, $resp['code']);
 	}
 
 	public function testMessageLogging(){
 		$key = TestsCommon\generateRandomString(32);
-		$resp = $this->send(
-			WEBHOOK_PASSWORD,
-			"{
-				\"info\": \"TEST MESSAGE\",
-				\"key\": \"$key\"
-			}"
+		$data = json_encode(
+			array(
+				'info'	=> 'TEST MESSAGE',
+				'key'	=> $key
+			)
 		);
+
+		echo "'$data'";
+
+		$resp = $this->send(WEBHOOK_PASSWORD, $data);
 
 		$tracePath = __DIR__.'/../logs/incomingMessages.log';
 		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
