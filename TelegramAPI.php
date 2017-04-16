@@ -1,27 +1,33 @@
 <?php
-require_once(__DIR__.'/config/config.php');
+require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/Message.php');
 require_once(__DIR__.'/MessageList.php');
 
 
+
 class TelegramAPI{
 	private $HTTPRequester;
 	private $tracer;
 	private $sentMessagesTracer;
+	private $botToken;
+
+	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
 	
-	public function __construct(HTTPRequesterInterface $HTTPRequester){
+	public function __construct($botToken, HTTPRequesterInterface $HTTPRequester){
+		assert(is_string($botToken));
+		$this->botToken = $botToken;
+
 		assert($HTTPRequester !== null);
-		
 		$this->HTTPRequester = $HTTPRequester;
 	
 		$this->tracer = new Tracer(__CLASS__);
 		$this->sentMessagesTracer = new Tracer('sentMessages');
 	}
 	
-	private static function getSendMessageURL(){
-		return 'https://api.telegram.org/bot'.TELEGRAM_BOT_TOKEN.'/sendMessage';
+	private function getSendMessageURL(){
+		return 'https://api.telegram.org/bot'.$this->botToken.'/sendMessage';
 	}
 	
 	public function sendMessage(Message $message){
@@ -29,7 +35,7 @@ class TelegramAPI{
 		
 		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
 		
-		$URL = self::getSendMessageURL();		
+		$URL = $this->getSendMessageURL();		
 		try{
 			$result = $this->HTTPRequester->sendJSONRequest($URL, $content_json);
 		}
@@ -54,10 +60,10 @@ class TelegramAPI{
 		
 		foreach($lines as $str){
 			$nextMessageLength = strlen($str) + strlen($eol);
-			if($bufferLength > MAX_MESSAGE_JSON_LENGTH){
+			if($bufferLength > self::MAX_MESSAGE_JSON_LENGTH){
 				throw new Exception("One of the rows in too long");
 			}
-			else if($bufferLength + $nextMessageLength > MAX_MESSAGE_JSON_LENGTH){
+			else if($bufferLength + $nextMessageLength > self::MAX_MESSAGE_JSON_LENGTH){
 				$messageData['text'] = $currentMessage;
 				$messages[] = json_encode($messageData);
 				

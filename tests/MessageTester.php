@@ -2,6 +2,7 @@
 require_once(__DIR__.'/FakeHTTPRequester.php');
 require_once(__DIR__.'/../TelegramAPI.php');
 require_once(__DIR__.'/../UpdateHandler.php');
+require_once(__DIR__.'/../BotPDO.php');
 
 class MessageTester{
 
@@ -53,8 +54,13 @@ class MessageTester{
 		
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
 
-		$requester = new FakeHTTPRequester($this->botOutputFile);
-		$telegramAPI = new TelegramAPI($requester);
+		$HTTPRequester = new FakeHTTPRequester($this->botOutputFile);
+		
+		$config = new Config(BotPDO::getInstance());
+		$botToken = $config->getValue('TelegramAPI', 'token');
+		assert($botToken !== null);
+
+		$telegramAPI = new TelegramAPI($botToken, $HTTPRequester);
 		$this->updateHandler = new UpdateHandler($telegramAPI);
 	}
 	
