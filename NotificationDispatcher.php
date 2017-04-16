@@ -2,6 +2,7 @@
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/Config.php');
 require_once(__DIR__.'/Tracer.php');
 
 class NotificationDispatcher{
@@ -11,6 +12,7 @@ class NotificationDispatcher{
 	private $getNotificationDataQuery;
 	private $setNotificationCodeQuery;
 	private $tracer;
+	private $maxNotificationRetries;
 	
 	public function __construct(NotificationGenerator $notificationGenerator, TelegramAPI $telegramAPI){
 		assert($notificationGenerator !== null);
@@ -47,7 +49,9 @@ class NotificationDispatcher{
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
 			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
 		');
-		
+
+		$config = new Config($this->pdo);
+		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
 	private static function wasDelivered($code){
@@ -67,7 +71,7 @@ class NotificationDispatcher{
 			return false;
 		}
 
-		if($retryCount < MAX_NOTIFICATION_RETRY_COUNT){
+		if($retryCount < $this->maxNotificationRetries){
 			return false;
 		}
 
@@ -94,7 +98,9 @@ class NotificationDispatcher{
 				break;
 
 			default:
-				throw Exception("Incorrect retryCount ($retryCount)");
+				$daysExtra = $retryCount - 3;
+				$waitTime = new DateInterval('P'.$daysExtra.'D');
+				break;
 		}
 		
 		$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
