@@ -23,7 +23,7 @@ CREATE FUNCTION getValues(
 )
 RETURNS VARCHAR(255)
 BEGIN
-	DECLARE result VARCHAR(255)
+	DECLARE result VARCHAR(255);
 
 	DECLARE CONTINUE HANDLER
 		FOR NOT FOUND
@@ -32,7 +32,7 @@ BEGIN
 	SELECT `value`
 	INTO result
 	FROM `config`
-	WHERE `section` = get_section  AND `item` = get_item
+	WHERE `section` = get_section AND `item` = get_item;
 
 	RETURN result;
 END;
