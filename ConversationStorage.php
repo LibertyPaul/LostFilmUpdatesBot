@@ -10,12 +10,16 @@ class ConversationStorage{
 	private $memcache;
 	private $tracer;
 	private $conversation;
+	private $keyPrefix;
 
 	const MEMCACHE_STORE_TIME = 86400; // 1 day
 
-	public function __construct($telegram_id){
+	public function __construct($telegram_id, $keyPrefix){
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
+
+		assert(is_string($keyPrefix));
+		$this->keyPrefix = $keyPrefix;
 
 		$this->tracer = new Tracer(__CLASS__);
 
@@ -31,7 +35,7 @@ class ConversationStorage{
 	}
 
 	private function getMemcacheKey(){
-		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
+		return $this->keyPrefix.$this->telegram_id;
 	}
 	
 	private function fetchConversation(){

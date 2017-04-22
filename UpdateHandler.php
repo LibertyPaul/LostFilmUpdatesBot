@@ -3,6 +3,7 @@ require_once(__DIR__.'/UserController.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/TelegramAPI.php');
@@ -10,6 +11,8 @@ require_once(__DIR__.'/TelegramAPI.php');
 class UpdateHandler{
 	private $tracer;
 	private $memcache;
+	private $conversationStorageKeyPrefix;
+	private $lastUpdateIdKey;
 	private $telegramAPI;
 	private $botan;
 	private $logMessageQuery;
@@ -31,24 +34,26 @@ class UpdateHandler{
 			throw $ex;
 		}
 
-		$this->botan = new Botan(BOTAN_API_KEY);
+		$config = new Config($pdo);
+		$botanAPIKey = $config->getValue('Botan', 'API Key');
+		if($botanAPIKey !== null){
+			$this->botan = new Botan($botanAPIKey);
+		}
+		else{
+			$this->botan = null;
+		}
+
+		$this->conversationStorageKeyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
+		if($this->conversationStorageKeyPrefix === null){
+			$this->tracer->logWarning('[CONFIG]', __FILE__, __LINE__, 'Conversation Storage / Key Prefix is not set. This bot may overwrite other bot\'s conversations');
+			$this->conversationStorageKeyPrefix = '';
+		}
 
 		$this->logMessageQuery = $pdo->prepare("
 			INSERT INTO `messagesHistory` (direction, chat_id, text)
 			VALUES ('INCOMING', :chat_id, :text)
 		");
-	}
 
-	private function setLastUpdateId($value){
-		assert(is_int($value));
-
-		$current = $this->getLastUpdateId();
-		if($value <= $current){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "New update_id($value) is less or equal with current($current)");
-			throw new RuntimeException("New update_id($value) is less than current($current)");
-		}
-
-		$this->memcache->set(MEMCACHE_LATEST_UPDATE_ID_KEY, $value);
 	}
 
 	private static function validateFields($update){
@@ -89,12 +94,14 @@ class UpdateHandler{
 	}
 
 	private function verifyData($update){
-
+		return true;
 	}
 
 	private function sendToBotan($message, $event){
 		$message_assoc = json_decode(json_encode($message), true);
-		$this->botan->track($message_assoc, $event);
+		if($this->botan !== null){
+			$this->botan->track($message_assoc, $event);
+		}
 	}
 
 	private static function extractUserInfo($message){
@@ -133,7 +140,10 @@ class UpdateHandler{
 		}
 
 		try{
-			$conversationStorage = new ConversationStorage($message->from->id);
+			$conversationStorage = new ConversationStorage(
+				$message->from->id,
+				$this->conversationStorageKeyPrefix
+			);
 			
 			if($conversationStorage->getConversationSize() === 0){
 				$message->text = $this->extractCommand($message->text);

@@ -1,6 +1,8 @@
 <?php
 require_once(__DIR__.'/../../ErrorHandler.php');
 require_once(__DIR__.'/../../ExceptionHandler.php');
+require_once(__DIR__.'/../config/Config.php');
+require_once(__DIR__.'/../BotPDO.php');
 
 require_once(__DIR__.'/../TelegramBotMockFactory.php');
 require_once(__DIR__.'/../../UpdateHandler.php');
@@ -15,7 +17,9 @@ $botFactory = new TelegramBotMockFactory($dumpFile);
 $updateHandler = new UpdateHandler($botFactory);
 $webhook = new Webhook($updateHandler);
 
-$password = WEBHOOK_PASSWORD;
+$config = new Config(BotPDO::getInstance());
+$password = $config->getValue('Webhook', 'Password');
+
 $updateJSON = $update_json;
 assert(isset($updateJSON) && $updateJSON !== false);
 

@@ -1,5 +1,7 @@
 <?php
 require_once(__DIR__.'/../config/config.php');
+require_once(__DIR__.'/../config/Config.php');
+require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/../config/stuff.php');
 require_once(__DIR__.'/../UpdateHandler.php');
 
@@ -20,6 +22,8 @@ class Webhook{
 	private $tracer;
 	private $updateHandler;
 
+	private $selfWebhookPassword;
+
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
 		$this->updateHandler = $updateHandler;
@@ -31,15 +35,18 @@ class Webhook{
 		catch(Exception $ex){
 			TracerBase::syslogCritical('[TRACER]', __FILE__, __LINE__, 'Unable to create Tracer instance');
 		}
+
+		$config = new Config(BotPDO::getInstance());
+		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
 	}
 
 	private function verifyPassword($password){
-		if(defined('WEBHOOK_PASSWORD') === false){
+		if($this->selfWebhookPassword === null){
 			$this->tracer->logNotice('[SECURITY]', __FILE__, __LINE__, 'Webhook password is not set. Check was skipped.');
 			return true;
 		}
 
-		return $password === WEBHOOK_PASSWORD;
+		return $password === $this->selfWebhookPassword;
 	}
 
 	private function respondFinal($reason){
