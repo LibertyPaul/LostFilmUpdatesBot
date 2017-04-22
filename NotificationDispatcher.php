@@ -2,7 +2,7 @@
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/TelegramAPI.php');
-require_once(__DIR__.'/Config.php');
+require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/Tracer.php');
 
 class NotificationDispatcher{
@@ -54,10 +54,6 @@ class NotificationDispatcher{
 		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
-	private static function wasDelivered($code){
-		return $code < 400;
-	}
-
 	private static function shallBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
 		if($responseCode === null){
 			return true;
@@ -65,14 +61,6 @@ class NotificationDispatcher{
 		
 		if($lastDeliveryAttemptTime === null){
 			throw new Exception('lastDeliveryAttemptTime is null but responseCode is not');
-		}
-
-		if(self::wasDelivered($responseCode)){
-			return false;
-		}
-
-		if($retryCount < $this->maxNotificationRetries){
-			return false;
 		}
 
 		$waitTime = null;
@@ -129,7 +117,7 @@ class NotificationDispatcher{
 
 		$this->getNotificationDataQuery->execute(
 			array(
-				'maxRetryCount' => MAX_NOTIFICATION_RETRY_COUNT
+				'maxRetryCount' => $this->maxNotificationRetries
 			)
 		);
 
