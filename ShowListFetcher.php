@@ -50,8 +50,13 @@ class ShowListFetcher{
 				throw new RuntimeException('Incorrect show info: data element is not found');
 			}
 
-			$showInfoList = array_merge($showInfoList, $result['data']);
-			$pos += self::showInfoStep;
+			foreach($result as $show){
+				if(empty($show['alias']) === false){
+					$showInfoList[] = $show;
+				}
+			}
+
+			$pos += count($result);
 		}while(count($result['data']) > 0);
 
 		return $showInfoList;
