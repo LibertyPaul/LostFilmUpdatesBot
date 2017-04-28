@@ -26,7 +26,7 @@ class UpdateHandler{
 		$pdo = null;
 
 		try{
-			$this->memcache = createMemcache();
+			$this->memcache = Stuff\createMemcache();
 			$pdo = BotPDO::getInstance();
 		}
 		catch(Exception $ex){

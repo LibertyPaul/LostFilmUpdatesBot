@@ -21,7 +21,7 @@ class UserController{
 
 	public function __construct($telegram_id){
 		$this->pdo = BotPDO::getInstance();
-		$this->memcache = createMemcache();
+		$this->memcache = Stuff\createMemcache();
 
 		$user_id = null;
 		

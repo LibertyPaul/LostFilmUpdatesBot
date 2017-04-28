@@ -2,7 +2,6 @@
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../config/Config.php');
 require_once(__DIR__.'/../BotPDO.php');
-require_once(__DIR__.'/../config/stuff.php');
 require_once(__DIR__.'/../UpdateHandler.php');
 
 require_once(__DIR__.'/../Tracer.php');
@@ -63,7 +62,7 @@ class Webhook{
 
 			case WebhookReasons::formatError:
 				http_response_code(400);
-				echo 'Format error.';
+				echo 'Format error.'.PHP_EOL;
 				break;
 
 			case WebhookReasons::failed:

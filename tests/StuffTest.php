@@ -13,7 +13,7 @@ class StuffTest extends PHPUnit_Framework_TestCase{
 
 	public function testMemcache(){
 		$this->assertThat(
-			createMemcache(),
+			Stuff\createMemcache(),
 			$this->logicalNot(
 				$this->equalTo(null)
 			)

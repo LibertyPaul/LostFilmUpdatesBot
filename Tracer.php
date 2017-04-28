@@ -1,6 +1,5 @@
 <?php
 require_once(__DIR__.'/TracerBase.php');
-require_once(__DIR__.'/config/stuff.php');
 
 class Tracer extends TracerBase{
 	private $hFile = null;

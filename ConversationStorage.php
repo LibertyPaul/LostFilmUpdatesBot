@@ -24,10 +24,10 @@ class ConversationStorage{
 		$this->tracer = new Tracer(__CLASS__);
 
 		try{
-			$this->memcache = createMemcache();
+			$this->memcache = Stuff\createMemcache();
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[FATAL]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
