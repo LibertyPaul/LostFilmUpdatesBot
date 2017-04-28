@@ -1,7 +1,6 @@
 <?php
 
 require_once(__DIR__.'/../ConversationStorage.php');
-require_once(__DIR__.'/../config/stuff.php');
 
 class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 
