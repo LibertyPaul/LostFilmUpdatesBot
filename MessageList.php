@@ -1,11 +1,13 @@
 <?php
 require_once(__DIR__.'/Message.php');
 
-class MessageList{
+class MessageList implements Iterator{
 	private $messages;
+	private $currentPos;
 
 	public function __construct(Message $message = null){
 		$this->messages = array();
+		$this->currentPos = 0;
 
 		if($message !== null){
 			$this->addMessage($message);
@@ -44,5 +46,29 @@ class MessageList{
 
 	public function getMessages(){
 		return $this->messages;
+	}
+
+	public function rewind(){
+		$this->currentPos = 0;
+	}
+
+	public function current(){
+		if($this->valid() === false){
+			throw new OutOfRangeException('Array size=['.count($this->messages).'], requested element index=['.$this->currentPos.']');
+		}
+
+		return $this->messages[$this->currentPos];
+	}
+
+	public function key(){
+		return $this->currentPos;
+	}
+
+	public function next(){
+		++$this->currentPos;
+	}
+
+	public function valid(){
+		return $this->currentPos < count($this->messages);
 	}
 }
