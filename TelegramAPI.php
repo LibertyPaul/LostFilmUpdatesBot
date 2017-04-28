@@ -1,17 +1,16 @@
 <?php
-require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/Message.php');
 require_once(__DIR__.'/MessageList.php');
-
-
+require_once(__DIR__.'/VelocityController.php');
 
 class TelegramAPI{
 	private $HTTPRequester;
 	private $tracer;
 	private $sentMessagesTracer;
 	private $botToken;
+	private $velocityController;
 
 	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
 	
@@ -24,13 +23,27 @@ class TelegramAPI{
 	
 		$this->tracer = new Tracer(__CLASS__);
 		$this->sentMessagesTracer = new Tracer('sentMessages');
+
+		$this->velocityController = new VelocityController(__CLASS__);
 	}
 	
 	private function getSendMessageURL(){
 		return 'https://api.telegram.org/bot'.$this->botToken.'/sendMessage';
 	}
+
+	private function waitForVelocity($user_id){
+		while($this->velocityController->isSendingAllowed($user_id) === false){
+			$res = time_nanosleep(0, 500000000); // 0.5s
+			if($res !== true){
+				$this->tracer->logError('[PHP]', __FILE__, __LINE__, 'time_nanosleep has failed');
+				$this->tracer->logError('[PHP]', __FILE__, __LINE__, PHP_EOL.print_r($res));
+			}
+		}
+	}
 	
 	public function sendMessage(Message $message){
+		$this->waitForVelocity($message->get()['chat_id']);
+
 		$content_json = $message->toPrettyJSON();
 		
 		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
