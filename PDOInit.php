@@ -9,11 +9,11 @@ class PDOInit{
 
 		$result = array();
 
-		if(array_key_exists('DBName', $values)){
-			$result['DBName'] = $values['DBName'];
+		if(array_key_exists('database', $values)){
+			$result['database'] = $values['database'];
 		}
 		else{
-			throw new RuntimeException("DBName is not specified in '$credentialsFile'");
+			throw new RuntimeException("Database is not specified in '$credentialsFile'");
 		}
 
 		if(array_key_exists('user', $values)){
@@ -37,7 +37,7 @@ class PDOInit{
 		$credentials = self::getCredentials($credentialsFile);
 
 		$instance = new PDO(
-			'mysql:dbname='.$credentials['DBName'].';host=localhost;charset=utf8mb4',
+			'mysql:dbname='.$credentials['database'].';host=localhost;charset=utf8mb4',
 			$credentials['user'],
 			$credentials['password'],
 			array(
