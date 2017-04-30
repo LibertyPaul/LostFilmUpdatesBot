@@ -14,4 +14,5 @@ for test in $(find "$dir" -name "*Test.php" -type f); do
 	echo "###### Testing $test... ######"
 	phpunit "$test"
 	echo "###### Finished $test.  ######"
+	echo ""
 done

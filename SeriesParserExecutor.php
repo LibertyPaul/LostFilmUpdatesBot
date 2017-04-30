@@ -64,7 +64,7 @@ class SeriesParserExecutor{
 			$this->seriesParser->loadSrc(self::rssURL);
 		}
 		catch(HTTPException $ex){
-			$this->tracer->logException('[HTTP ERROR]', $ex);
+			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
 			return;
 		}
 		
@@ -94,7 +94,7 @@ class SeriesParserExecutor{
 				);
 			}
 			catch(PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', $ex);
+				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					
 				switch($ex->getCode()){
 					case '02000':
@@ -113,7 +113,7 @@ class SeriesParserExecutor{
 				continue;
 			}
 			catch(Exception $ex){
-				$this->tracer->logException('[UNKNOWN ERROR]', $ex);
+				$this->tracer->logException('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex);
 			}
 		}
 

@@ -1,5 +1,6 @@
 <?php
 
+require_once(__DIR__.'/TestsCommon.php');
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../HTTPRequester.php');
 
@@ -27,22 +28,40 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 	}
 
 	public function testPassword(){
-		$resp = $this->send(null, '{}');
-		$this->assertEquals($resp['code'], 401);
+		$dummyMessage = json_encode(
+			array(
+				'some_value' => 42
+			)
+		);
 
-		$resp = $this->send('', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$resp = $this->send(null, $dummyMessage);
+		$this->assertEquals(401, $resp['code']);
 
-		$resp = $this->send('asdfgh', '{}');
-		$this->assertEquals($resp['code'], 401);
+		$resp = $this->send('', $dummyMessage);
+		$this->assertEquals(401, $resp['code']);
 
-		$resp = $this->send(WEBHOOK_PASSWORD, '{}');
-		$this->assertEquals($resp['code'], 200);
+		$resp = $this->send('asdfgh', $dummyMessage);
+		$this->assertEquals(401, $resp['code']);
+
+		$resp = $this->send(WEBHOOK_PASSWORD, $dummyMessage);
+		$this->assertEquals(500, $resp['code']);
 	}
 
 	public function testMessageLogging(){
-		
-		
+		$key = TestsCommon\generateRandomString(32);
+		$data = json_encode(
+			array(
+				'info'	=> 'TEST MESSAGE',
+				'key'	=> $key
+			)
+		);
+
+		echo "'$data'";
+
+		$resp = $this->send(WEBHOOK_PASSWORD, $data);
+
+		$tracePath = __DIR__.'/../logs/incomingMessages.log';
+		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
 	}
 }
 

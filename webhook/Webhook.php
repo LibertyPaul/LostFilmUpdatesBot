@@ -1,7 +1,6 @@
 <?php
 require_once(__DIR__.'/../config/config.php');
 require_once(__DIR__.'/../config/stuff.php');
-require_once(__DIR__.'/../TelegramBotFactoryInterface.php');
 require_once(__DIR__.'/../UpdateHandler.php');
 
 require_once(__DIR__.'/../Tracer.php');
@@ -90,11 +89,11 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::invalidPassword);
 			return;
 		}
-
+		
 		$update = json_decode($postData);
 		if($update === null){
 			$this->tracer->logError('[JSON]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.$postData);
+			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL."'$postData'");
 			$this->respondFinal(WebhookReasons::formatError);
 			return;
 		}
@@ -106,7 +105,7 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::OK);
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('', $ex);
+			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
 				
@@ -115,7 +114,7 @@ class Webhook{
 				$this->resendUpdate($postData, MESSAGE_STREAM_URL);
 			}
 			catch(Exception $ex){
-				#$this->tracer->logException('', $ex);
+				$this->tracer->logException('[MESSAGE STREAM]', __FILE__, __LINE__, $ex);
 			}
 		}
 	}

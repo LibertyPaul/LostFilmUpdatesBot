@@ -1,22 +1,22 @@
 <?php
-
-require_once(__DIR__.'/TelegramBot.php');
+require_once(__DIR__.'/UserController.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/BotPDO.php');
+require_once(__DIR__.'/TelegramAPI.php');
 
 class UpdateHandler{
 	private $tracer;
 	private $memcache;
-	private $botFactory;
+	private $telegramAPI;
 	private $botan;
 	private $logMessageQuery;
 
-	public function __construct(TelegramBotFactoryInterface $botFactory){
-		assert($botFactory !== null);
-		$this->botFactory = $botFactory;
+	public function __construct(TelegramAPI $telegramAPI){
+		assert($telegramAPI !== null);
+		$this->telegramAPI = $telegramAPI;
 		
 		$this->tracer = new Tracer(__CLASS__);
 		
@@ -27,7 +27,7 @@ class UpdateHandler{
 			$pdo = BotPDO::getInstance();
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[ERROR]', $ex);
+			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
@@ -37,10 +37,6 @@ class UpdateHandler{
 			INSERT INTO `messagesHistory` (direction, chat_id, text)
 			VALUES ('INCOMING', :chat_id, :text)
 		");
-	}
-
-	private function getLastUpdateId(){ // TODO: move to the DB in order to be able to lock it
-		return intval($this->memcache->get(MEMCACHE_LATEST_UPDATE_ID_KEY));
 	}
 
 	private function setLastUpdateId($value){
@@ -53,11 +49,6 @@ class UpdateHandler{
 		}
 
 		$this->memcache->set(MEMCACHE_LATEST_UPDATE_ID_KEY, $value);
-	}
-
-	private function verifyUpdateId($update_id){
-		assert(is_int($update_id));
-		return IGNORE_UPDATE_ID || $update_id > $this->getLastUpdateId();
 	}
 
 	private static function validateFields($update){
@@ -98,7 +89,7 @@ class UpdateHandler{
 	}
 
 	private function verifyData($update){
-		return $this->verifyUpdateId($update->update_id) || true;
+		return true;
 	}
 
 	private function sendToBotan($message, $event){
@@ -116,6 +107,16 @@ class UpdateHandler{
 		);
 	}
 
+	private function respond(MessageList $response){
+		foreach($response->getMessages() as $message){
+			try{
+				$this->telegramAPI->sendMessage($message);
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[TELEGRAM API]', __FILE__, __LINE__, $ex);
+			}
+		}
+	}
 
 	private function handleMessage($message){
 		try{
@@ -127,11 +128,10 @@ class UpdateHandler{
 			);
 		}
 		catch(PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', $ex);
+			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
 		}
 
-		$firstMessage = null;
 		try{
 			$conversationStorage = new ConversationStorage($message->from->id);
 			
@@ -140,24 +140,28 @@ class UpdateHandler{
 			}
 			
 			$conversationStorage->insertMessage($message->text);
-			$firstMessage = $conversationStorage->getFirstMessage();
+			
+			$userController = new UserController($message->chat->id);
+			$response = $userController->incomingUpdate(
+				$conversationStorage,
+				self::extractUserInfo($message)
+			);
 
-			$bot = $this->botFactory->createBot($message->chat->id);
-			$bot->incomingUpdate($conversationStorage, self::extractUserInfo($message));
-		}
-		catch(TelegramException $ex){
-			$this->tracer->logException('[TELEGRAM EXCEPTION]', $ex);
-			$ex->release();
+			$messageList = new MessageList();
+			$messageList->add($response);
+			$this->respond($messageList);
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[ERROR]', $ex);
+			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 		}
 		
-		try{
-			$this->sendToBotan($message, $firstMessage);
-		}
-		catch(Exception $ex){
-			$this->tracer->logException('[BOTAN ERROR]', $ex);
+		if($conversationStorage->getConversationSize() === 1){
+			try{
+				$this->sendToBotan($message, $conversationStorage->getLastMessage());
+			}
+			catch(Exception $ex){
+				$this->tracer->logException('[BOTAN ERROR]', __FILE__, __LINE__, $ex);
+			}
 		}
 	}
 

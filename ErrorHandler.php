@@ -9,11 +9,17 @@ function error_handler($errno, $errstr, $errfile = null, $errline = null, $errco
 		$tracer = new \Tracer(__NAMESPACE__);
 	}
 
-	$tracer->logError('[PHP]', $errfile, $errline, "($errno)\t$errstr");
+	$tracer->logError('[PHP ERROR]', $errfile, $errline, "($errno)\t$errstr");
 
 	return true;
 }
 
-set_error_handler('ErrorHandler\error_handler');
+$res = set_error_handler('ErrorHandler\error_handler');
+if($res === null){
+	$res = set_error_handler('ErrorHandler\error_handler');
+	if($res === null){
+		TracerBase::syslogCritical('[ERROR CATCHER]', __FILE__, __LINE__, 'Unable to set error handler');
+	}
+}
 
 

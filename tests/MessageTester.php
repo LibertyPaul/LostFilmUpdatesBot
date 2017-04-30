@@ -1,7 +1,6 @@
 <?php
-
-require_once(__DIR__.'/TelegramBotMockFactory.php');
-require_once(__DIR__.'/../Exceptions/TelegramException.php');
+require_once(__DIR__.'/../FakeHTTPRequester.php');
+require_once(__DIR__.'/../TelegramAPI.php');
 require_once(__DIR__.'/../UpdateHandler.php');
 
 class MessageTester{
@@ -54,10 +53,9 @@ class MessageTester{
 		
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
 
-		$botFactory = new TelegramBotMockFactory($this->botOutputFile);
-
-		$this->updateHandler = new UpdateHandler($botFactory);
-
+		$requester = new FakeHTTPRequester($this->botOutputFile);
+		$telegramAPI = new TelegramAPI($requester);
+		$this->updateHandler = new UpdateHandler($telegramAPI);
 	}
 	
 	private function fillTemplate(array $fields){
@@ -108,18 +106,14 @@ class MessageTester{
 
 		$this->truncateBotOutputFile();
 
-		try{
-			$update = json_decode($json_update);
-			assert(json_last_error() === JSON_ERROR_NONE);
-			
-			$this->updateHandler->handleUpdate($update);
-		}
-		catch(TelegramException $tex){
-			$tex->release();
-		}
+		$update = json_decode($json_update);
+		assert(json_last_error() === JSON_ERROR_NONE);
+		
+		$this->updateHandler->handleUpdate($update);
 
 		$response_json = file_get_contents($this->botOutputFile);
 		assert($response_json !== false);
+		assert(strlen($response_json) > 0);
 
 		$response_json = trim($response_json);
 		$sentMessages_json = explode("\n\n", $response_json);

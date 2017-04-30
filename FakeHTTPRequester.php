@@ -1,12 +1,14 @@
 <?php
-
 require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/Tracer.php');
 
 class FakeHTTPRequester implements HTTPRequesterInterface{
-	protected $destinationFilePath;
+	private $destinationFilePath;
+	private $tracer;
 	
 	public function __construct($destinationFilePath){
 		$this->destinationFilePath = $destinationFilePath;
+		$this->tracer = new Tracer(__CLASS__);
 	}
 	
 	private function successResponse(){
@@ -70,11 +72,14 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	}
 	
 	public function sendJSONRequest($destination, $content_json){
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
+		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
 		$this->writeOut($content_json);	
 		return $this->randomResponse();
 	}
 
 	public function sendGETRequest($destination){
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $destination);
 		$this->writeOut($destination);	
 		return $this->randomResponse();
 	}
