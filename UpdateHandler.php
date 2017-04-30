@@ -8,6 +8,8 @@ require_once(__DIR__.'/Botan/Botan.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/TelegramAPI.php');
 
+class DuplicateUpdateException extends RuntimeException{}
+
 class UpdateHandler{
 	private $tracer;
 	private $memcache;
@@ -15,7 +17,10 @@ class UpdateHandler{
 	private $lastUpdateIdKey;
 	private $telegramAPI;
 	private $botan;
-	private $logMessageQuery;
+	private $pdo;
+	private $logRequestQuery;
+	private $requestDBId;
+	private $logResponseQuery;
 
 	public function __construct(TelegramAPI $telegramAPI){
 		assert($telegramAPI !== null);
@@ -23,18 +28,18 @@ class UpdateHandler{
 		
 		$this->tracer = new Tracer(__CLASS__);
 		
-		$pdo = null;
+		$this->pdo = null;
 
 		try{
 			$this->memcache = Stuff\createMemcache();
-			$pdo = BotPDO::getInstance();
+			$this->pdo = BotPDO::getInstance();
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
-		$config = new Config($pdo);
+		$config = new Config($this->pdo);
 		$botanAPIKey = $config->getValue('Botan', 'API Key');
 		if($botanAPIKey !== null){
 			$this->botan = new Botan($botanAPIKey);
@@ -49,16 +54,22 @@ class UpdateHandler{
 			$this->conversationStorageKeyPrefix = '';
 		}
 
-		$this->logMessageQuery = $pdo->prepare("
-			INSERT INTO `messagesHistory` (direction, chat_id, text)
-			VALUES ('INCOMING', :chat_id, :text)
+		$this->logRequestQuery = $this->pdo->prepare("
+			INSERT INTO `messagesHistory` (source, chat_id, update_id, text)
+			VALUES ('User', :chat_id, :update_id, :text)
 		");
+
+		$this->logResponseQuery = $this->pdo->prepare("
+			INSERT INTO `messagesHistory` (source, chat_id, text, inResponseTo, statusCode)
+			VALUES ('UpdateHandler', :chat_id, :text, :inResponseTo, :statusCode)
+		");
+
+		$this->requestDBId = null;
 
 	}
 
 	private static function validateFields($update){
 		return
-			isset($update->update_id)			&&
 			isset($update->message)				&&
 			isset($update->message->from)		&&
 			isset($update->message->from->id)	&&
@@ -69,8 +80,10 @@ class UpdateHandler{
 
 	private static function normalizeFields($update){
 		$result = clone $update;
-		
-		$result->update_id = intval($result->update_id);
+	
+		if(isset($result->update_id)){
+			$result->update_id = intval($result->update_id);
+		}
 		$result->message->from->id = intval($result->message->from->id);
 		$result->message->chat->id = intval($result->message->chat->id);
 
@@ -127,19 +140,6 @@ class UpdateHandler{
 
 	private function handleMessage($message){
 		try{
-			$this->logMessageQuery->execute(
-				array(
-					':chat_id'	=> $message->chat->id,
-					':text'		=> $message->text
-				)
-			);
-		}
-		catch(PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
-		}
-
-		try{
 			$conversationStorage = new ConversationStorage(
 				$message->from->id,
 				$this->conversationStorageKeyPrefix
@@ -157,9 +157,36 @@ class UpdateHandler{
 				self::extractUserInfo($message)
 			);
 
-			$messageList = new MessageList();
-			$messageList->add($response);
-			$this->respond($messageList);
+			$messageList = new MessageList($response);
+
+			foreach($messageList as $message){
+				try{
+					$res = $this->telegramAPI->sendMessage($message);
+				}
+				catch(HTTPException $ex){
+					$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
+					$res = array(
+						'code'	=> null,
+						'value'	=> null
+					);
+				}
+
+				$fields = $message->get();
+
+				try{
+					$this->logResponseQuery->execute(
+						array(
+							':chat_id'		=> $fields['chat_id'],
+							':text'			=> $fields['text'],
+							':inResponseTo'	=> $this->requestDBId,
+							':statusCode'	=> $res['code']
+						)
+					);
+				}
+				catch(PDOException $ex){
+					$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
+				}
+			}
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
@@ -186,6 +213,29 @@ class UpdateHandler{
 		if($this->verifyData($update) === false){
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
 			throw new RuntimeException('Invalid update data'); // TODO: check if we should gently skip in such case
+		}
+
+		try{
+			$this->logRequestQuery->execute(
+				array(
+					':chat_id'		=> $update->message->chat->id,
+					':update_id'	=> $update->update_id,
+					':text'			=> $update->message->text
+				)
+			);
+
+			$this->requestDBId = $this->pdo->lastInsertId();
+			$this->requestDBId = intval($this->requestDBId);
+
+			if($this->pdo->errorCode() === 'IM001'){
+				$this->tracer->logError('[PDO]', __FILE__, __LINE__, 'PDO was unable to get lastInsertId');
+				$this->requestDBId = null;
+			}
+		}
+		catch(PDOException $ex){
+			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
+			throw new DuplicateUpdateException();
 		}
 
 		$this->handleMessage($update->message);
