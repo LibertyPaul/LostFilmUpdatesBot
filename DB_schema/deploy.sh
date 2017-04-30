@@ -20,8 +20,8 @@ fi
 
 if [ -f "./.my.cnf" ]; then
 	readonly myCnfPath="./.my.cnf"
-elif [ -f "$selfPath/.my.cnf" ]; then
-	readonly myCnfPath="$selfPath/.my.cnf"
+elif [ -f "$selfPath/Owner.ini" ]; then
+	readonly myCnfPath="$selfPath/Owner.ini"
 else
 	echo ".my.cnf wasn't found in patch directory ($path) or near this script ($selfPath)."
 	exit 1

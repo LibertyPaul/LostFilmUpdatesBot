@@ -7,4 +7,5 @@ config/bot_specific_info.php
 
 *.swp
 .my.cnf
+DB_schema/Owner.ini
 *.sql_t.sql
