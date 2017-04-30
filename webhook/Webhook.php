@@ -72,7 +72,7 @@ class Webhook{
 				break;
 
 			case WebhookReasons::duplicateUpdate:
-				http_response_code(409);
+				http_response_code(208);
 				echo 'It is a duplicate. Piss off.'.PHP_EOL;
 				break;
 

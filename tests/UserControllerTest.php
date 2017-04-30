@@ -216,16 +216,6 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		
 		$this->stop();
 	}
-
-	public function testSameUpdateId(){
-		$resp = $this->messageTester->send('/help', 42);
-		print_r($resp);
-		$this->assertEquals(200, $resp['code']);
-
-		$resp = $this->messageTester->send('/help', 42);
-		print_r($resp);
-		$this->assertEquals(409, $resp['code']);
-	}
 }
 
 
