@@ -1,9 +1,9 @@
 <?php
 
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/VelocityCounter.php');
 require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/config/Config.php');
+require_once(__DIR__.'/../lib/Config.php');
 
 class VelocityController{
 	private $tracer;

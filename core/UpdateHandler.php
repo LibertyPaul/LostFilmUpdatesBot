@@ -1,10 +1,10 @@
 <?php
 require_once(__DIR__.'/UserController.php');
 require_once(__DIR__.'/ConversationStorage.php');
-require_once(__DIR__.'/Tracer.php');
-require_once(__DIR__.'/config/stuff.php');
-require_once(__DIR__.'/config/Config.php');
-require_once(__DIR__.'/Botan/Botan.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/stuff.php');
+require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../Botan/Botan.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/TelegramAPI.php');
 

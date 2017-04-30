@@ -1,7 +1,7 @@
 <?php
 namespace ExceptionHandler;
 
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/Tracer/Tracer.php');
 
 function exception_handler($ex){
 	static $tracer;

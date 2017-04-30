@@ -1,6 +1,6 @@
 <?php
 
-require_once(__DIR__.'/../PDOInit.php');
+require_once(__DIR__.'/../lib/PDOInit.php');
 
 class OwnerPDO{
 	private static $instance = null;

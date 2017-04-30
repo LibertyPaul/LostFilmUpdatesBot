@@ -1,12 +1,12 @@
 <?php
-require_once(__DIR__.'/ErrorHandler.php');
-require_once(__DIR__.'/ExceptionHandler.php');
+require_once(__DIR__.'/../lib/ErrorHandler.php');
+require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
 require_once(__DIR__.'/ShowListFetcher.php');
-require_once(__DIR__.'/HTTPRequester.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 require_once(__DIR__.'/ParserPDO.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 
 class ShowParserExecutor{

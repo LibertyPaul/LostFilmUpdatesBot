@@ -1,15 +1,15 @@
 <?php
-require_once(__DIR__.'/ErrorHandler.php');
-require_once(__DIR__.'/ExceptionHandler.php');
+require_once(__DIR__.'/../lib/ErrorHandler.php');
+require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/SeriesParser.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/SeriesAboutParser.php');
-require_once(__DIR__.'/HTTPRequester.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 class SeriesParserExecutor{
-	const rssURL = 'https://www.lostfilm.tv/rss.xml';
+	const rssURL = 'https://www.lostfilm.tv/rss.xml'; // TODO: move URL to `config`
 	private $pdo;
 	private $seriesParser;
 	private $seriesAboutsParser;

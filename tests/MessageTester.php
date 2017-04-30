@@ -1,8 +1,8 @@
 <?php
-require_once(__DIR__.'/../FakeHTTPRequester.php');
-require_once(__DIR__.'/../TelegramAPI.php');
-require_once(__DIR__.'/../UpdateHandler.php');
-require_once(__DIR__.'/../BotPDO.php');
+require_once(__DIR__.'/../lib/HTTPRequester/FakeHTTPRequester.php');
+require_once(__DIR__.'/../core/TelegramAPI.php');
+require_once(__DIR__.'/../core/UpdateHandler.php');
+require_once(__DIR__.'/../core/BotPDO.php');
 
 class MessageTester{
 

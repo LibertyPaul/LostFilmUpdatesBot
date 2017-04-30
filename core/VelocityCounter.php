@@ -1,6 +1,5 @@
 <?php
-
-require_once(__DIR__.'/config/stuff.php');
+require_once(__DIR__.'/../lib/stuff.php');
 
 class VelocityCounter{
 	const SECTION = __CLASS__;

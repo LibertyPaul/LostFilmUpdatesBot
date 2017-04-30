@@ -1,10 +1,10 @@
 <?php
 
-require_once(__DIR__.'/../config/Config.php');
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/TestsCommon.php');
 require_once(__DIR__.'/OwnerPDO.php');
-require_once(__DIR__.'/../BotPDO.php');
-require_once(__DIR__.'/../ParserPDO.php');
+require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/../parser/ParserPDO.php');
 
 class ConfigTest extends PHPUnit_Framework_TestCase{
 	private $addParameterQuery;

@@ -1,12 +1,10 @@
 <?php
-require_once(__DIR__.'/../config/config.php');
-require_once(__DIR__.'/../config/Config.php');
-require_once(__DIR__.'/../BotPDO.php');
-require_once(__DIR__.'/../UpdateHandler.php');
+require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/../core/UpdateHandler.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-require_once(__DIR__.'/../Tracer.php');
-
-require_once(__DIR__.'/../HTTPRequester.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 
 abstract class WebhookReasons{

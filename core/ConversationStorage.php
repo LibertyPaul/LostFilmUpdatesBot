@@ -1,8 +1,6 @@
 <?php
-
-require_once(__DIR__.'/config/config.php');
-require_once(__DIR__.'/config/stuff.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/stuff.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 
 class ConversationStorage{

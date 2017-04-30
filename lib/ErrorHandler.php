@@ -1,7 +1,7 @@
 <?php
 namespace ErrorHandler;
 
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/Tracer/Tracer.php');
 
 function error_handler($errno, $errstr, $errfile = null, $errline = null, $errcontext = null){
 	static $tracer;

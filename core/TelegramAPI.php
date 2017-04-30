@@ -1,6 +1,6 @@
 <?php
-require_once(__DIR__.'/HTTPRequesterInterface.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/Message.php');
 require_once(__DIR__.'/MessageList.php');
 require_once(__DIR__.'/VelocityController.php');

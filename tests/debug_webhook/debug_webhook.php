@@ -4,7 +4,7 @@ require_once(__DIR__.'/../../ExceptionHandler.php');
 
 require_once(__DIR__.'/../../TelegramAPI.php');
 require_once(__DIR__.'/../../UpdateHandler.php');
-require_once(__DIR__.'/../../webhook/Webhook.php');
+require_once(__DIR__.'/../../TelegramWebhook/Webhook.php');
 require_once(__DIR__.'/../../BotPDO.php');
 require_once(__DIR__.'/../../HTTPRequesterFactory.php');
 
@@ -13,13 +13,15 @@ require_once(__DIR__.'/input_debug_webhook.php');
 
 $tracer = new Tracer('DebugWebhook');
 
-$config = new Config(BotPDO::getInstance());
+$pdo = BotPDO::getInstance();
+
+$config = new Config($pdo);
 $password = $config->getValue('Webhook', 'Password');
 
 $updateJSON = $update_json;
 assert($updateJSON !== false);
 
-$HTTPRequesterFactory = new HTTPRequesterFactory();
+$HTTPRequesterFactory = new HTTPRequesterFactory($pdo);
 $HTTPRequester = $HTTPRequesterFactory->getInstance();
 
 $config = new Config(BotPDO::getInstance());

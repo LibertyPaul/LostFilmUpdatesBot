@@ -1,7 +1,7 @@
 <?php
-require_once(__DIR__.'/../NotificationGenerator.php');
-require_once(__DIR__.'/../Message.php');
-require_once(__DIR__.'/../BotPDO.php');
+require_once(__DIR__.'/../core/NotificationGenerator.php');
+require_once(__DIR__.'/../core/Message.php');
+require_once(__DIR__.'/../core/BotPDO.php');
 
 class NotificationGeneratorTest extends PHPUnit_Framework_TestCase{
 	private $notifier;

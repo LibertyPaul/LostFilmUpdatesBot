@@ -3,7 +3,7 @@ require_once(__DIR__.'/TracerBase.php');
 
 class Tracer extends TracerBase{
 	private $hFile = null;
-	const logsDir = __DIR__.'/logs';
+	const logsDir = __DIR__.'/../../logs';
 	const standaloneLogsDir = self::logsDir.'/standalone';
 
 	public function __construct($traceName){

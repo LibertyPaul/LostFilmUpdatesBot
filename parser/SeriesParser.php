@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 class FullSeasonWasFoundException extends Exception{}
 

@@ -1,9 +1,8 @@
 <?php
-require_once(__DIR__.'/config/Config.php');
+require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/FakeHTTPRequester.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../Tracer/Tracer.php');
 
 
 class HTTPRequesterFactory{
@@ -11,10 +10,10 @@ class HTTPRequesterFactory{
 	private $undeliveredMessageStorage;
 	private $tracer;
 
-	public function __construct(){
+	public function __construct(PDO $pdo){
 		$this->tracer = new Tracer(__CLASS__);
 
-		$config = new Config(BotPDO::getInstance());
+		$config = new Config($pdo);
 		
 		$res = $config->getValue('TelegramAPI', 'Perform Actual Send');
 		switch($res){

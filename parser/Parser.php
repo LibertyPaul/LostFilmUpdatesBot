@@ -1,6 +1,5 @@
 <?php
-
-require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
 abstract class Parser{
 	protected $pageSrc;

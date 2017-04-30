@@ -1,8 +1,7 @@
 <?php
-
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
 class SeriesIsNotPublishedYet extends RuntimeException{}
 

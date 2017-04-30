@@ -1,5 +1,7 @@
 <?php
 
+require_once(__DIR__.'/TracerConfig.php');
+
 abstract class TracerLevel{
 	const Critical		= 0;
 	const Error			= 1;

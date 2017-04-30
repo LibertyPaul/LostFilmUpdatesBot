@@ -1,6 +1,6 @@
 <?php
 
-require_once(__DIR__.'/../Tracer.php');
+require_once(__DIR__.'/Tracer/Tracer.php');
 
 class Config{
 	private $cachedValues; // array('section' => array('item' => 'value'))

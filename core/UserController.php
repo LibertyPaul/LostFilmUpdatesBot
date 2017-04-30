@@ -1,27 +1,21 @@
 <?php
-require_once(__DIR__.'/config/config.php');
-require_once(__DIR__.'/config/stuff.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/Message.php');
 require_once(__DIR__.'/MessageList.php');
-require_once(__DIR__.'/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 class UserIsNotRegistredException extends OutOfBoundsException{}
 
 class UserController{
 	private $user_id;
 	private $telegram_id;
-
 	private $pdo;
-	private $memcache;
-
 	private $tracer;
 
 	public function __construct($telegram_id){
 		$this->pdo = BotPDO::getInstance();
-		$this->memcache = Stuff\createMemcache();
 
 		$user_id = null;
 		
