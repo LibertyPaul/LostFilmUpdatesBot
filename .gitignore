@@ -3,7 +3,9 @@ logsBackup/*
 locks/*
 tests/debug_webhook/input_debug_webhook.php
 DBCredentials/*.ini
+DBCredentials/*
 
 *.swp
 .my.cnf
+DB_schema/Owner.ini
 *.sql_t.sql

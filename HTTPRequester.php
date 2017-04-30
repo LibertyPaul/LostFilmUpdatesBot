@@ -60,6 +60,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$response = curl_exec($this->curl);
 		if($response === false){
 			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
+			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 
