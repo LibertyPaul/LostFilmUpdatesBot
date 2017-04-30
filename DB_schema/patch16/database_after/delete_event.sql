@@ -1,5 +1,5 @@
 CREATE EVENT delete_record
-ON SCHELDULE EVERY 1 DAY
+ON SCHEDULE EVERY 1 DAY
 DO
 DELETE
 FROM `notificationsQueue`
