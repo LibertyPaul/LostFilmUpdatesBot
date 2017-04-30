@@ -17,9 +17,9 @@ ALTER TABLE `messagesHistory`
 	ADD `statusCode` SMALLINT UNSIGNED NULL
 		DEFAULT NULL
 		COMMENT 'Valid for case of outgoing messages',
-	ADD INDEX (`statusCode`)
+	ADD INDEX (`statusCode`),
 	ADD `update_id` INT(12) UNSIGNED NULL
 		DEFAULT NULL
 		COMMENT 'update_id from Telegram API Update. Valid when source = ''User''.'
-		AFTER `chat_id` ,
+		AFTER `chat_id`,
 	ADD UNIQUE (`update_id`);
