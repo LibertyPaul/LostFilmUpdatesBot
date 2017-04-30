@@ -1,21 +1,48 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-	echo "Usage:"
-	echo "	$0 <bot_token> <link_path> <URL> [webhook_password]"
+if [ -z "$1" ]; then
+	echo "Usage: $0 <link_path>"
 	exit 1
 fi
 
-readonly token="$1"
-readonly webhookPath="../webhook/webhook.php"
-readonly linkPath="$2"
-webhookURL="$3"
-readonly webhookPassword="$4"
+readonly selfDir="$(dirname "$0")"
+readonly getConfigValueScriptPath="$selfDir/getConfigValue.sh"
 
-readonly linkDir=$(dirname "$linkPath")
+readonly token="$("$getConfigValueScriptPath" 'TelegramAPI' 'token')"
+if [ -z "$token" ]; then
+	echo '[TelegramAPI][token] is not found'
+	exit 1
+fi
+
+echo "[DB] token=[$token]"
+
+webhookURL="$("$getConfigValueScriptPath" 'Webhook' 'URL')"
+if [ -z "$webhookURL" ]; then
+	echo '[Webhook][URL] is not found'
+	exit 1
+fi
+
+echo "[DB] webhookURL=[$webhookURL]"
+
+readonly webhookPassword="$("$getConfigValueScriptPath" 'Webhook' 'Password')"
+if [ -z "$webhookPassword" ]; then
+	echo '[Webhook][Password] is not found'
+	exit 1
+fi
+
+echo "[DB] webhookPassword=[$webhookPassword]"
+
+readonly webhookPath="$selfDir/../webhook/webhook.php"
+readonly linkPath="$1"
+
+readonly linkDir="$(dirname "$linkPath")"
 if [ ! -d "$linkDir" ]; then
 	echo "[INFO] Creating directory for symlink: '$linkDir'"
 	mkdir -p "$linkDir"
+	if [ "$?" != "0" ]; then
+		echo "mkdir -p "$linkDir" has failed ($?)"
+		exit 1
+	fi
 fi
 
 absWebhookPath=$(readlink -f "$webhookPath")
@@ -43,7 +70,7 @@ fi
 
 echo "[INFO] Setting url=$webhookURL and allowed_updates=message"
 echo "[INFO] Telegram API URL: 'https://api.telegram.org/bot$token/setWebhook'"
-read -p "please confirm[y/n]: " yn
+read -p "Please confirm[y/n]: " yn
 if [ "$yn" != "y" ] && [ "$yn" != "Y" ]; then
 	exit
 fi
@@ -59,6 +86,7 @@ http_code=$(\
 )
 
 cat /tmp/setWebhook.json
+rm /tmp/setWebhook.json
 echo ""
 
 if [ "$http_code" != "200" ]; then
