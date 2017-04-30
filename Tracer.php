@@ -3,7 +3,8 @@ require_once(__DIR__.'/TracerBase.php');
 
 class Tracer extends TracerBase{
 	private $hFile = null;
-	const logsDir = __DIR__.'/logs/';
+	const logsDir = __DIR__.'/logs';
+	const standaloneLogsDir = self::logsDir.'/standalone';
 
 	public function __construct($traceName){
 		parent::__construct($traceName);
@@ -18,6 +19,7 @@ class Tracer extends TracerBase{
 	}
 
 	private static function createDirIfNotExists($dir){
+		$prev_umask = umask(0);
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
 				TracerBase::syslogCritical('[SETUP]', __FILE__, __LINE__, "logs dir is not a directory ($dir)");
@@ -27,10 +29,12 @@ class Tracer extends TracerBase{
 		else{
 			assert(mkdir($dir, 0777, true));
 		}
+		umask($prev_umask);
 	}
 		
 
 	private static function prepareTraceFile($path){
+		$prev_umask = umask(0);
 		self::createDirIfNotExists(dirname($path));
 	
 		if(file_exists($path) === false){
@@ -44,6 +48,7 @@ class Tracer extends TracerBase{
 			throw new Exception("Unable to open $path file.".PHP_EOL.print_r(error_get_last(), true));
 		}
 
+		umask($prev_umask);
 		return $hFile;
 	}
 
@@ -51,7 +56,7 @@ class Tracer extends TracerBase{
 		assert(is_string($text));
 
 		$fName = $this->traceName.'.'.uniqid(rand(), true).'.txt';
-		$fPath = self::logsDir."standalone/$fName";
+		$fPath = self::standaloneLogsDir."/$fName";
 		
 		$hFile = self::prepareTraceFile($fPath);
 
@@ -65,7 +70,7 @@ class Tracer extends TracerBase{
 		assert(is_string($text));
 
 		if($this->hFile === null){
-			$this->hFile = self::prepareTraceFile(self::logsDir.$this->traceName.'.log');
+			$this->hFile = self::prepareTraceFile(self::logsDir.'/'.$this->traceName.'.log');
 		}
 		
 		$text .= PHP_EOL;
