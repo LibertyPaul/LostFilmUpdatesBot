@@ -5,12 +5,12 @@ class MessageList implements Iterator{
 	private $messages;
 	private $currentPos;
 
-	public function __construct(Message $message = null){
+	public function __construct($initial = null){
 		$this->messages = array();
 		$this->currentPos = 0;
 
-		if($message !== null){
-			$this->addMessage($message);
+		if($initial !== null){
+			$this->add($initial);
 		}
 	}
 
