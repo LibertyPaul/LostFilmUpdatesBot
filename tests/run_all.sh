@@ -10,7 +10,7 @@ for php_file in $(find "$dir/.." -name "*.php" -type f); do
 	fi
 done
 
-failedTests=()
+declare -a failedTests=()
 
 for test in $(find "$dir" -name "*Test.php" -type f); do
 	echo "###### Testing $test... ######"
@@ -34,7 +34,7 @@ fi
 printf "Failed tests: "
 
 for failedTest in "${failedTests[@]}"; do
-	printf "%s " "$failedTest"
+	printf "%s, " "$failedTest"
 done
 
 printf "\n"

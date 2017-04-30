@@ -7,7 +7,7 @@ require_once(__DIR__.'/../BotPDO.php');
 class MessageTester{
 
 	const messageTemplate = '{
-		"update_id": 0,
+		"update_id": #UPDATE_ID,
 		"message": {
 			"message_id": 0,
 			"from": {
@@ -27,6 +27,7 @@ class MessageTester{
 	}';
 
 	const filedsToInsert = array(
+		array('key' => '#UPDATE_ID',	'defaultValue' => 'null'),
 		array('key' => '#TEXT', 		'defaultValue' => null),
 		array('key' => '#FIRST_NAME', 	'defaultValue' => 'test first name'),
 		array('key' => '#USERNAME', 	'defaultValue' => 'test username')
@@ -101,9 +102,10 @@ class MessageTester{
 		assert(fclose($hFile));
 	}
 
-	public function send($text){
+	public function send($text, $update_id = null){
 		$json_update = $this->fillTemplate(
 			array(
+				'#UPDATE_ID'	=> $update_id === null ? $update_id : 'null',
 				'#TEXT'			=> $text,
 				'#USERNAME'		=> $this->username,
 				'#FIRST_NAME'	=> $this->lastName
@@ -131,8 +133,13 @@ class MessageTester{
 
 			$sentMessages[] = $currentMessage;
 		}
+
+		$result = array(
+			'code'		=> http_response_code(),
+			'sentMessages'	=> $sentMessages
+		);
 		
-		return $sentMessages;
+		return $result;
 	}
 
 

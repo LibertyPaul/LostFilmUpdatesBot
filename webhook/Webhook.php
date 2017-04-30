@@ -14,6 +14,7 @@ abstract class WebhookReasons{
 	const invalidPassword	= 1;
 	const formatError		= 2;
 	const failed			= 3;
+	const duplicateUpdate	= 4;
 }
 
 class Webhook{
@@ -70,6 +71,11 @@ class Webhook{
 				echo 'Failed for some reason.'.PHP_EOL;
 				break;
 
+			case WebhookReasons::duplicateUpdate:
+				http_response_code(409);
+				echo 'It is a duplicate. Piss off.'.PHP_EOL;
+				break;
+
 			default:
 				$this->tracer->logError('[UNKNOWN REASON]', __FILE__, __LINE__, $reason);
 				echo 'hmm...'.PHP_EOL;
@@ -109,6 +115,9 @@ class Webhook{
 		try{
 			$this->updateHandler->handleUpdate($update);
 			$this->respondFinal(WebhookReasons::OK);
+		}
+		catch(DuplicateUpdateException $ex){
+			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);

@@ -1,5 +1,6 @@
 <?php
 require_once(__DIR__.'/../BotPDO.php');
+require_once(__DIR__.'/OwnerPDO.php');
 require_once(__DIR__.'/MessageTester.php');
 
 class UserControllerTest extends PHPUnit_Framework_TestCase{
@@ -14,6 +15,13 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 			'🇩 🇮 🇲  🇦  🇳 '
 		);
 
+		$pdo = OwnerPDO::getInstance();
+		$pdo->query('DELETE FROM `messagesHistory` WHERE `chat_id` = '.self::TEST_TELEGRAM_ID);
+	}
+
+	public function __destruct(){
+		$pdo = OwnerPDO::getInstance();
+		$pdo->query('DELETE FROM `messagesHistory` WHERE `chat_id` = '.self::TEST_TELEGRAM_ID);
 	}
 
 	private function userExists($telegram_id){
@@ -40,7 +48,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 			$helloSent = false;
 			$adminNotificationSent = false;
 
-			foreach($response as $message){
+			foreach($response['sentMessages'] as $message){
 				if(strpos($message->text, 'Привет') !== false){
 					$helloSent = true;
 				}
@@ -54,7 +62,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 			$this->assertTrue($adminNotificationSent);
 		}
 		else{
-			assert(count($response) === 1);
+			assert(count($response['sentMessages']) === 1);
 			$resp = $response[0];
 			$this->assertContains('знакомы', $resp->text);
 		}
@@ -63,7 +71,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 	}
 
 	private function cancel(){
-		$resp = $this->messageTester->send('/cancel');
+		$resp = $this->messageTester->send('/cancel')['sentMessages'];
 
 		assert(count($resp) === 1);
 		$resp = $resp[0];
@@ -73,7 +81,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 	private function stop(){
 		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
 
-		$resp = $this->messageTester->send('/stop');
+		$resp = $this->messageTester->send('/stop')['sentMessages'];
 		assert(count($resp) === 1);
 		$resp = $resp[0];
 
@@ -83,9 +91,9 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		else{
 			$this->assertContains('Ты уверен?', $resp->text);
 
-			$sentMessages = $this->messageTester->send('Да');
+			$sentMessages = $this->messageTester->send('Да')['sentMessages'];
 			
-			$bueSent = false;
+			$byeSent = false;
 			$adminNotificationSent = false;
 			foreach($sentMessages as $message){
 				if(strpos($message->text, 'Прощай') !== false){
@@ -108,13 +116,13 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();	
 		$this->start();
 
-		$resp = $this->messageTester->send('/start')[0];
+		$resp = $this->messageTester->send('/start')['sentMessages'][0];
 		$this->assertContains('знакомы', $resp->text);
 
-		$resp = $this->messageTester->send('/stop')[0];
+		$resp = $this->messageTester->send('/stop')['sentMessages'][0];
 		$this->assertContains('Ты уверен?', $resp->text);
 		
-		$resp = $this->messageTester->send('Нет')[0];
+		$resp = $this->messageTester->send('Нет')['sentMessages'][0];
 		$this->assertContains('Фух', $resp->text);
 
 		$this->stop();
@@ -143,7 +151,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();
 		$this->start();
 
-		$resp = $this->messageTester->send('/add_show')[0];
+		$resp = $this->messageTester->send('/add_show')['sentMessages'][0];
 		$this->assertContains('Как называется сериал?', $resp->text);
 
 		$keyboard = $resp->reply_markup->keyboard;
@@ -154,7 +162,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 
 
 		$randomShow = self::randomShowFromKeyboard($keyboard);
-		$resp = $this->messageTester->send($randomShow)[0];
+		$resp = $this->messageTester->send($randomShow)['sentMessages'][0];
 		$this->assertEquals($randomShow.' добавлен', $resp->text);
 
 		$this->stop();
@@ -164,10 +172,10 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();
 		$this->start();
 
-		$resp = $this->messageTester->send('/add_show')[0];
+		$resp = $this->messageTester->send('/add_show')['sentMessages'][0];
 		$this->assertContains('Как называется сериал?', $resp->text);
 
-		$resp = $this->messageTester->send('Американская')[0];
+		$resp = $this->messageTester->send('Американская')['sentMessages'][0];
 		$keyboard = $resp->reply_markup->keyboard;
 		$this->assertTrue(isset($keyboard));
 		$this->assertNotEmpty($keyboard);
@@ -176,7 +184,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 
 
 		$randomShow = self::randomShowFromKeyboard($keyboard);
-		$resp = $this->messageTester->send($randomShow)[0];
+		$resp = $this->messageTester->send($randomShow)['sentMessages'][0];
 		$this->assertContains('добавлен', $resp->text);
 		
 		$this->stop();
@@ -192,14 +200,14 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		$res = $getMute->fetch();
 		$this->assertEquals('N', $res[0]);
 		
-		$resp = $this->messageTester->send('/mute')[0];
+		$resp = $this->messageTester->send('/mute')['sentMessages'][0];
 		$this->assertContains('Выключил все уведомления', $resp->text);
 		
 		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
 		$res = $getMute->fetch();
 		$this->assertEquals('Y', $res[0]);
 		
-		$resp = $this->messageTester->send('/mute')[0];
+		$resp = $this->messageTester->send('/mute')['sentMessages'][0];
 		$this->assertContains('Включил все уведомления', $resp->text);
 		
 		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
@@ -208,7 +216,20 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		
 		$this->stop();
 	}
+
+	public function testSameUpdateId(){
+		$resp = $this->messageTester->send('/help', 42);
+		print_r($resp);
+		$this->assertEquals(200, $resp['code']);
+
+		$resp = $this->messageTester->send('/help', 42);
+		print_r($resp);
+		$this->assertEquals(409, $resp['code']);
+	}
 }
+
+
+
 
 
 

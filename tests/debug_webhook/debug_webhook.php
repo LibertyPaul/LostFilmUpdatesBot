@@ -8,7 +8,10 @@ require_once(__DIR__.'/../../webhook/Webhook.php');
 require_once(__DIR__.'/../../BotPDO.php');
 require_once(__DIR__.'/../../HTTPRequesterFactory.php');
 
+require_once(__DIR__.'/../../Tracer.php');
 require_once(__DIR__.'/input_debug_webhook.php');
+
+$tracer = new Tracer('DebugWebhook');
 
 $config = new Config(BotPDO::getInstance());
 $password = $config->getValue('Webhook', 'Password');
@@ -29,3 +32,5 @@ $updateHandler = new UpdateHandler($telegramAPI);
 
 $webhook = new Webhook($updateHandler);
 $webhook->processUpdate($password, $updateJSON);
+
+$tracer->logEvent('[MESSAGE SENT]', __FILE__, __LINE__, PHP_EOL.$updateJSON);
