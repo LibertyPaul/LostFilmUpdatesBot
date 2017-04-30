@@ -246,7 +246,7 @@ class TelegramBot extends TelegramBot_base{
 				break;
 			
 			default:
-				$this->repeatQuestion();
+				$this->repeatQuestion($conversationStorage);
 				$this->sendMessage(
 					array(
 						'text' => 'Что?'

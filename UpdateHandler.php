@@ -98,7 +98,7 @@ class UpdateHandler{
 	}
 
 	private function verifyData($update){
-		return $this->verifyUpdateId($update->update_id);
+		return $this->verifyUpdateId($update->update_id) || true;
 	}
 
 	private function sendToBotan($message, $event){
