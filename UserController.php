@@ -57,7 +57,6 @@ class UserController{
 		if($this->user_id === null){
 			$this->user_id = $this->getUserIdByTelegramId($this->telegram_id);
 			if($this->user_id === null){// TODO: move error handling to another place
-				$conversationStorage->deleteConversation();
 				$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Unknown Telegram Id: '.$this->telegram_id);
 				throw new UserIsNotRegistredException();
 			}
