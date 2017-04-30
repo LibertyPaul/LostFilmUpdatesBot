@@ -2,7 +2,7 @@ logs/*
 logsBackup/*
 locks/*
 tests/debug_webhook/input_debug_webhook.php
-DBCredentials/*
+DBCredentials/*.ini
 
 *.swp
 .my.cnf
