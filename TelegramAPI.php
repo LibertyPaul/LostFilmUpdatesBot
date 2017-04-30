@@ -1,35 +1,54 @@
 <?php
-require_once(__DIR__.'/config/config.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/Tracer.php');
 require_once(__DIR__.'/Message.php');
 require_once(__DIR__.'/MessageList.php');
-
+require_once(__DIR__.'/VelocityController.php');
 
 class TelegramAPI{
 	private $HTTPRequester;
 	private $tracer;
 	private $sentMessagesTracer;
+	private $botToken;
+	private $velocityController;
+
+	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
 	
-	public function __construct(HTTPRequesterInterface $HTTPRequester){
+	public function __construct($botToken, HTTPRequesterInterface $HTTPRequester){
+		assert(is_string($botToken));
+		$this->botToken = $botToken;
+
 		assert($HTTPRequester !== null);
-		
 		$this->HTTPRequester = $HTTPRequester;
 	
 		$this->tracer = new Tracer(__CLASS__);
 		$this->sentMessagesTracer = new Tracer('sentMessages');
+
+		$this->velocityController = new VelocityController(__CLASS__);
 	}
 	
-	private static function getSendMessageURL(){
-		return 'https://api.telegram.org/bot'.TELEGRAM_BOT_TOKEN.'/sendMessage';
+	private function getSendMessageURL(){
+		return 'https://api.telegram.org/bot'.$this->botToken.'/sendMessage';
+	}
+
+	private function waitForVelocity($user_id){
+		while($this->velocityController->isSendingAllowed($user_id) === false){
+			$res = time_nanosleep(0, 500000000); // 0.5s
+			if($res !== true){
+				$this->tracer->logError('[PHP]', __FILE__, __LINE__, 'time_nanosleep has failed');
+				$this->tracer->logError('[PHP]', __FILE__, __LINE__, PHP_EOL.print_r($res));
+			}
+		}
 	}
 	
 	public function sendMessage(Message $message){
+		$this->waitForVelocity($message->get()['chat_id']);
+
 		$content_json = $message->toPrettyJSON();
 		
 		$this->sentMessagesTracer->logEvent('[OUTGOING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$content_json);
 		
-		$URL = self::getSendMessageURL();		
+		$URL = $this->getSendMessageURL();		
 		try{
 			$result = $this->HTTPRequester->sendJSONRequest($URL, $content_json);
 		}
@@ -54,10 +73,10 @@ class TelegramAPI{
 		
 		foreach($lines as $str){
 			$nextMessageLength = strlen($str) + strlen($eol);
-			if($bufferLength > MAX_MESSAGE_JSON_LENGTH){
+			if($bufferLength > self::MAX_MESSAGE_JSON_LENGTH){
 				throw new Exception("One of the rows in too long");
 			}
-			else if($bufferLength + $nextMessageLength > MAX_MESSAGE_JSON_LENGTH){
+			else if($bufferLength + $nextMessageLength > self::MAX_MESSAGE_JSON_LENGTH){
 				$messageData['text'] = $currentMessage;
 				$messages[] = json_encode($messageData);
 				

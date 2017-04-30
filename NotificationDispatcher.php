@@ -2,6 +2,7 @@
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/config/Config.php');
 require_once(__DIR__.'/Tracer.php');
 
 class NotificationDispatcher{
@@ -11,6 +12,7 @@ class NotificationDispatcher{
 	private $getNotificationDataQuery;
 	private $setNotificationCodeQuery;
 	private $tracer;
+	private $maxNotificationRetries;
 	
 	public function __construct(NotificationGenerator $notificationGenerator, TelegramAPI $telegramAPI){
 		assert($notificationGenerator !== null);
@@ -47,11 +49,9 @@ class NotificationDispatcher{
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
 			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
 		');
-		
-	}
 
-	private static function wasDelivered($code){
-		return $code < 400;
+		$config = new Config($this->pdo);
+		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
 	private static function shallBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
@@ -61,14 +61,6 @@ class NotificationDispatcher{
 		
 		if($lastDeliveryAttemptTime === null){
 			throw new Exception('lastDeliveryAttemptTime is null but responseCode is not');
-		}
-
-		if(self::wasDelivered($responseCode)){
-			return false;
-		}
-
-		if($retryCount < MAX_NOTIFICATION_RETRY_COUNT){
-			return false;
 		}
 
 		$waitTime = null;
@@ -94,7 +86,9 @@ class NotificationDispatcher{
 				break;
 
 			default:
-				throw Exception("Incorrect retryCount ($retryCount)");
+				$daysExtra = $retryCount - 3;
+				$waitTime = new DateInterval('P'.$daysExtra.'D');
+				break;
 		}
 		
 		$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
@@ -123,7 +117,7 @@ class NotificationDispatcher{
 
 		$this->getNotificationDataQuery->execute(
 			array(
-				'maxRetryCount' => MAX_NOTIFICATION_RETRY_COUNT
+				'maxRetryCount' => $this->maxNotificationRetries
 			)
 		);
 

@@ -32,7 +32,7 @@ BEGIN
 	SELECT `value`
 	INTO result
 	FROM `config`
-	WHERE `section` = get_section  AND `item` = get_item;
+	WHERE `section` = get_section AND `item` = get_item;
 
 	RETURN result;
 END;

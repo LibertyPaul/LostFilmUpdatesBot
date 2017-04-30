@@ -10,18 +10,24 @@ class ConversationStorage{
 	private $memcache;
 	private $tracer;
 	private $conversation;
+	private $keyPrefix;
 
-	public function __construct($telegram_id){
+	const MEMCACHE_STORE_TIME = 86400; // 1 day
+
+	public function __construct($telegram_id, $keyPrefix){
 		assert(is_int($telegram_id));
 		$this->telegram_id = $telegram_id;
+
+		assert(is_string($keyPrefix));
+		$this->keyPrefix = $keyPrefix;
 
 		$this->tracer = new Tracer(__CLASS__);
 
 		try{
-			$this->memcache = createMemcache();
+			$this->memcache = Stuff\createMemcache();
 		}
 		catch(Exception $ex){
-			$this->tracer->logException('[FATAL]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
@@ -29,7 +35,7 @@ class ConversationStorage{
 	}
 
 	private function getMemcacheKey(){
-		return MEMCACHE_MESSAGE_CHAIN_PREFIX.$this->telegram_id;
+		return $this->keyPrefix.$this->telegram_id;
 	}
 	
 	private function fetchConversation(){
@@ -46,7 +52,7 @@ class ConversationStorage{
 	private function commitConversation(){
 		$conversation_serialized = serialize($this->conversation);
 
-		$res = $this->memcache->set($this->getMemcacheKey(), $conversation_serialized);
+		$res = $this->memcache->set($this->getMemcacheKey(), $conversation_serialized, 0, self::MEMCACHE_STORE_TIME);
 		if($res === false){
 			$this->tracer->logError('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
 			throw new RuntimeException('memcache->set has failed');

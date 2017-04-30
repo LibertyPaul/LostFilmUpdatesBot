@@ -1,8 +1,9 @@
 logs/*
 logsBackup/*
 locks/*
-config/bot_specific_info.php
 tests/debug_webhook/input_debug_webhook.php
+DBCredentials/*
+config/bot_specific_info.php
 
 *.swp
 .my.cnf

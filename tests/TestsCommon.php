@@ -20,5 +20,6 @@ function keyExists($filePath, $key){
 function generateRandomString($size){
 	$bytes = openssl_random_pseudo_bytes($size);
 	$key = bin2hex($bytes);
+	$key = substr($key, 0, $size);
 	return $key;
 }

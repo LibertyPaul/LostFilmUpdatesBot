@@ -112,7 +112,7 @@ abstract class TracerBase{
 					$this->storeStandalone($record);
 				}
 				catch(RuntimeException $ex){
-					$this->logException('[TRACER]', __FILE__, __LINE__, $ex);
+					$this->logException('[TRACER]', $ex);
 					$this->write($record);
 				}	
 			}

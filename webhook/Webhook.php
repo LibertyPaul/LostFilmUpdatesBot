@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__.'/../config/config.php');
-require_once(__DIR__.'/../config/stuff.php');
+require_once(__DIR__.'/../config/Config.php');
+require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/../UpdateHandler.php');
 
 require_once(__DIR__.'/../Tracer.php');
@@ -13,12 +14,15 @@ abstract class WebhookReasons{
 	const invalidPassword	= 1;
 	const formatError		= 2;
 	const failed			= 3;
+	const duplicateUpdate	= 4;
 }
 
 class Webhook{
 	private $incomingLog;
 	private $tracer;
 	private $updateHandler;
+
+	private $selfWebhookPassword;
 
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
@@ -31,15 +35,18 @@ class Webhook{
 		catch(Exception $ex){
 			TracerBase::syslogCritical('[TRACER]', __FILE__, __LINE__, 'Unable to create Tracer instance');
 		}
+
+		$config = new Config(BotPDO::getInstance());
+		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
 	}
 
 	private function verifyPassword($password){
-		if(defined('WEBHOOK_PASSWORD') === false){
+		if($this->selfWebhookPassword === null){
 			$this->tracer->logNotice('[SECURITY]', __FILE__, __LINE__, 'Webhook password is not set. Check was skipped.');
 			return true;
 		}
 
-		return $password === WEBHOOK_PASSWORD;
+		return $password === $this->selfWebhookPassword;
 	}
 
 	private function respondFinal($reason){
@@ -56,12 +63,17 @@ class Webhook{
 
 			case WebhookReasons::formatError:
 				http_response_code(400);
-				echo 'Format error.';
+				echo 'Format error.'.PHP_EOL;
 				break;
 
 			case WebhookReasons::failed:
 				http_response_code(500);
 				echo 'Failed for some reason.'.PHP_EOL;
+				break;
+
+			case WebhookReasons::duplicateUpdate:
+				http_response_code(409);
+				echo 'It is a duplicate. Piss off.'.PHP_EOL;
 				break;
 
 			default:
@@ -103,6 +115,9 @@ class Webhook{
 		try{
 			$this->updateHandler->handleUpdate($update);
 			$this->respondFinal(WebhookReasons::OK);
+		}
+		catch(DuplicateUpdateException $ex){
+			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
 		catch(Exception $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
