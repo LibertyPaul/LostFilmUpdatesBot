@@ -1,9 +1,9 @@
 <?php
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
-require_once(__DIR__.'/Message.php');
-require_once(__DIR__.'/MessageList.php');
-require_once(__DIR__.'/VelocityController.php');
+require_once(__DIR__.'/../core/Message.php');
+require_once(__DIR__.'/../core/MessageList.php');
+require_once(__DIR__.'/../core/VelocityController.php');
 
 class TelegramAPI{
 	private $HTTPRequester;

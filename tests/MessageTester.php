@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__.'/../lib/HTTPRequester/FakeHTTPRequester.php');
-require_once(__DIR__.'/../core/TelegramAPI.php');
+require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 

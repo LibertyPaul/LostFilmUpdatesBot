@@ -1,14 +1,14 @@
 <?php
-require_once(__DIR__.'/../../ErrorHandler.php');
-require_once(__DIR__.'/../../ExceptionHandler.php');
+require_once(__DIR__.'/../../lib/ErrorHandler.php');
+require_once(__DIR__.'/../../lib/ExceptionHandler.php');
 
-require_once(__DIR__.'/../../TelegramAPI.php');
-require_once(__DIR__.'/../../UpdateHandler.php');
-require_once(__DIR__.'/../../TelegramWebhook/Webhook.php');
-require_once(__DIR__.'/../../BotPDO.php');
-require_once(__DIR__.'/../../HTTPRequesterFactory.php');
+require_once(__DIR__.'/../../TelegramAPI/TelegramAPI.php');
+require_once(__DIR__.'/../../core/UpdateHandler.php');
+require_once(__DIR__.'/../../TelegramAPI/Webhook.php');
+require_once(__DIR__.'/../../core/BotPDO.php');
+require_once(__DIR__.'/../../lib/HTTPRequester/HTTPRequesterFactory.php');
 
-require_once(__DIR__.'/../../Tracer.php');
+require_once(__DIR__.'/../../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/input_debug_webhook.php');
 
 $tracer = new Tracer('DebugWebhook');

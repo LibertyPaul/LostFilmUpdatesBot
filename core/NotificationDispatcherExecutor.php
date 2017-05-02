@@ -2,7 +2,7 @@
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
-require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/NotificationDispatcher.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
