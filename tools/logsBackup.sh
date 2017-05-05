@@ -35,7 +35,8 @@ if [ ! -d "$logsBackupDir" ]; then
 	fi
 fi
 
-tar -c -vf "$logsBackupDir/$archiveName" --remove-files "$logsDir"
+export GZIP=-9
+tar cvzf "$logsBackupDir/$archiveName" --remove-files "$logsDir"
 if [ "$?" != 0 ]; then
 	exit 1
 fi
