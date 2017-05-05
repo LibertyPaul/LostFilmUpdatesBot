@@ -46,7 +46,7 @@ class HTTPRequesterFactory{
 			return new HTTPRequester();
 		}
 		else{
-			$undelifiredMessageStorage = __DIR__.'/../'.$this->undeliveredMessageStorage;
+			$undelifiredMessageStorage = __DIR__.'/../../'.$this->undeliveredMessageStorage;
 			return new FakeHTTPRequester($undelifiredMessageStorage);
 		}
 	}
