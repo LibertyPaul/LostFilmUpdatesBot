@@ -1,49 +1,51 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-	echo "Usage: $0 <API Name> [-f]"
+if [ -z "$1" ]; then
+	echo "Usage: $0 <Link Path> [-f]"
 	exit 1
 fi
 
 readonly selfDir="$(dirname "$0")"
-readonly APIName="$1"
-readonly linkPath="$2"
-readonly force="$3"
+readonly webhookPath="$selfDir/../TelegramAPI/webhook.php"
+readonly linkPath="$1"
+readonly force="$2"
 
-readonly getConfigValueScriptPath="$selfDir/getConfigValue.sh"
 
-readonly token="$("$getConfigValueScriptPath" "$APIName" 'token')"
-if [ -z "$token" ]; then
-	echo "[$APIName][token] is not found"
-	exit 1
-fi
+function getValueOrDie {
+	readonly getConfigValueScriptPath="$selfDir/getConfigValue.sh"
+	readonly section="$1"
+	readonly item="$2"
 
+	readonly value="$("$getConfigValueScriptPath" "$section" "$item")"
+	if [ $? != 0 ]; then
+		echo "$getConfigValueScriptPath has triggered an error. Aborting."
+		exit 1
+	fi
+
+	if [ -z "$value" ]; then
+		echo "Value [$section][$item] doesn't exist. Aborting."
+		exit 1
+	fi
+
+	echo "$value"
+}
+
+# Fetching parameters from DB
+
+readonly token=$(getValueOrDie 'TelegramAPI' 'token')
 echo "[DB] token=[$token]"
 
-webhookURL="$("$getConfigValueScriptPath" 'Webhook' 'URL')"
-if [ -z "$webhookURL" ]; then
-	echo '[Webhook][URL] is not found'
-	exit 1
-fi
-
+webhookURL="$(getValueOrDie 'Webhook' 'URL')"
 echo "[DB] webhookURL=[$webhookURL]"
 
-readonly webhookPassword="$("$getConfigValueScriptPath" 'Webhook' 'Password')"
-if [ -z "$webhookPassword" ]; then
-	echo '[Webhook][Password] is not found'
-	exit 1
-fi
-
+readonly webhookPassword="$(getValueOrDie 'Webhook' 'Password')"
 echo "[DB] webhookPassword=[$webhookPassword]"
 
-readonly APIDir="$selfDir/../$APIName"
-
-if ! [ -d "$APIDir" ]; then
-	echo "API '$APIName' does not exist under '$APIDir'"
-	exit 1
+if [ -n "$webhookPassword" ]; then
+	webhookURL="$webhookURL?password=$webhookPassword"
 fi
 
-readonly webhookPath="$APIDir/webhook.php"
+# Checking link directory under www root. Creating if doesn't exist
 
 readonly linkDir="$(dirname "$linkPath")"
 if [ ! -d "$linkDir" ]; then
@@ -55,11 +57,15 @@ if [ ! -d "$linkDir" ]; then
 	fi
 fi
 
-absWebhookPath=$(readlink -f "$webhookPath")
+# Checking if script webhook exists
+
+readonly absWebhookPath=$(readlink -f "$webhookPath")
 if [ -z "$absWebhookPath" ]; then
 	echo "Bot webhook doesn't exist ($webhookPath)($absWebhookPath)"
 	exit 1
 fi
+
+# Checking case when symlink already exists. Continue in case of -f flag.
 
 if [ -e "$linkPath" ]; then
 	if [ "$force" == "-f" ]; then
@@ -75,16 +81,14 @@ if [ -e "$linkPath" ]; then
 	fi
 fi
 
-absLinkPath=$(readlink -m "$linkPath")
+readonly absLinkPath=$(readlink -m "$linkPath")
+
+# Showing values
 
 echo "[INFO] Setting symlink '$absLinkPath' -> '$absWebhookPath'"
 ln -s "$absWebhookPath" "$absLinkPath"
 if [ $? != 0 ]; then
 	exit 1
-fi
-
-if [ -n "$webhookPassword" ]; then
-	webhookURL="$webhookURL?password=$webhookPassword"
 fi
 
 echo "[INFO] Setting url=$webhookURL and allowed_updates=message"
@@ -93,6 +97,8 @@ read -p "Please confirm[y/n]: " yn
 if [ "$yn" != "y" ] && [ "$yn" != "Y" ]; then
 	exit
 fi
+
+# Sending request
 
 http_code=$(\
 	curl											\
@@ -103,6 +109,8 @@ http_code=$(\
 	--data-urlencode "allowed_updates=message"		\
 	"https://api.telegram.org/bot$token/setWebhook"	\
 )
+
+# Showing result & Cleaning up
 
 cat /tmp/setWebhook.json
 rm /tmp/setWebhook.json
