@@ -47,6 +47,8 @@ abstract class DestinationTypes{
 			default:
 				return false;
 		}
+
+		return true;
 	}
 }
 
