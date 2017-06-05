@@ -13,6 +13,7 @@ abstract class WebhookReasons{
 	const formatError		= 2;
 	const failed			= 3;
 	const duplicateUpdate	= 4;
+	const correctButIgnored	= 5;
 }
 
 class Webhook{
@@ -74,6 +75,11 @@ class Webhook{
 				echo 'It is a duplicate. Piss off.'.PHP_EOL;
 				break;
 
+			case WebhookReasons::correctButIgnored:
+				http_response_code(200);
+				echo 'Correct but ignored.'.PHP_EOL;
+				break;
+
 			default:
 				$this->tracer->logError('[UNKNOWN REASON]', __FILE__, __LINE__, $reason);
 				echo 'hmm...'.PHP_EOL;
@@ -109,6 +115,13 @@ class Webhook{
 		}
 
 		$this->logUpdate($update);
+
+		if(isset($update->message->text) === false){
+			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, 'Ignored message:'.PHP_EOL);
+			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
+			$this->respondFinal(WebhookReasons::correctButIgnored);
+			return;
+		}
 
 		try{
 			$this->updateHandler->handleUpdate($update);
