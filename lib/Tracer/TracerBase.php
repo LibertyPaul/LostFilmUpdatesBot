@@ -153,13 +153,20 @@ abstract class TracerBase{
 	}
 
 	public function logException($tag, $file, $line, Exception $exception){
-		$exceptionInfo = str_replace(
-			array('#FILE', '#LINE', '#REASON'),
-			array(basename($exception->getFile()), $exception->getLine(), $exception->getMessage()),
-			'Raised from #FILE:#LINE #REASON'
-		);
+		if($exception !== null){
+			$description = sprintf(
+				'%s, raised from %s:%s, reason: "%s"',
+				get_class($exception),
+				basename($exception->getFile()),
+				$exception->getLine(),
+				$exception->getMessage()
+			);
+		}
+		else{
+			$description = 'NULL EXCEPTION WAS PASSED TO logException';
+		}
 
-		$this->logError($tag, $file, $line, $exceptionInfo);
+		$this->logError($tag, $file, $line, $description);
 	}
 
 	public static function syslogCritical($tag, $file, $line, $message = null){
