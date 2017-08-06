@@ -13,7 +13,7 @@ class ShowListFetcher{
 		assert($requester !== null);
 		$this->requester = $requester;
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 	
 	private static function getShowsInfoURL($from){

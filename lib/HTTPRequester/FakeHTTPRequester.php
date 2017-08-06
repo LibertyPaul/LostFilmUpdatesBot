@@ -8,7 +8,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	
 	public function __construct($destinationFilePath){
 		$this->destinationFilePath = $destinationFilePath;
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 	
 	private function successResponse(){

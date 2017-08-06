@@ -12,7 +12,7 @@ class SeriesParser extends Parser{
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 
 	public function loadSrc($path){

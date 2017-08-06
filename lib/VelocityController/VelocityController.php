@@ -1,9 +1,10 @@
 <?php
 
 require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Config.php');
+require_once(__DIR__.'/../../core/BotPDO.php');
+
 require_once(__DIR__.'/VelocityCounter.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/../lib/Config.php');
 
 class VelocityController{
 	private $tracer;
@@ -14,11 +15,11 @@ class VelocityController{
 	public function __construct($keyPrefix){
 		assert(is_string($keyPrefix));
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->velocityCounter = new VelocityCounter($keyPrefix);
 
-		$config = new Config(BotPDO::getInstance());
+		$config = new \Config(BotPDO::getInstance());
 
 		$this->maxMessagesFromBotPerSecond = $config->getValue(
 			'Velocity Controller',

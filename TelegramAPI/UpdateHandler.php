@@ -1,71 +1,33 @@
 <?php
-require_once(__DIR__.'/UserController.php');
-require_once(__DIR__.'/ConversationStorage.php');
+
+namespace TelegramAPI;
+
+require_once(__DIR__.'/../core/IncomingMessage.php');
+require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../Botan/Botan.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
-
-class DuplicateUpdateException extends RuntimeException{}
+require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/TelegramAPI.php');
 
 class UpdateHandler{
 	private $tracer;
-	private $memcache;
-	private $conversationStorageKeyPrefix;
-	private $lastUpdateIdKey;
 	private $telegramAPI;
-	private $botan;
 	private $pdo;
-	private $logRequestQuery;
-	private $requestDBId;
-	private $logResponseQuery;
-
+	
 	public function __construct(TelegramAPI $telegramAPI){
 		assert($telegramAPI !== null);
 		$this->telegramAPI = $telegramAPI;
 		
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 		
-		$this->pdo = null;
-
 		try{
-			$this->memcache = Stuff\createMemcache();
-			$this->pdo = BotPDO::getInstance();
+			$this->pdo = \BotPDO::getInstance();
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
-
-		$config = new Config($this->pdo);
-		$botanAPIKey = $config->getValue('Botan', 'API Key');
-		if($botanAPIKey !== null){
-			$this->botan = new Botan($botanAPIKey);
-		}
-		else{
-			$this->botan = null;
-		}
-
-		$this->conversationStorageKeyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
-		if($this->conversationStorageKeyPrefix === null){
-			$this->tracer->logWarning('[CONFIG]', __FILE__, __LINE__, 'Conversation Storage / Key Prefix is not set. This bot may overwrite other bot\'s conversations');
-			$this->conversationStorageKeyPrefix = '';
-		}
-
-		$this->logRequestQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (source, chat_id, update_id, text)
-			VALUES ('User', :chat_id, :update_id, :text)
-		");
-
-		$this->logResponseQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (source, chat_id, text, inResponseTo, statusCode)
-			VALUES ('UpdateHandler', :chat_id, :text, :inResponseTo, :statusCode)
-		");
-
-		$this->requestDBId = null;
-
 	}
 
 	private static function validateFields($update){
@@ -78,7 +40,7 @@ class UpdateHandler{
 			isset($update->message->text);
 	}
 
-	private static function normalizeFields($update){
+	private static function normalizeUpdateFields($update){
 		$result = clone $update;
 	
 		if(isset($result->update_id)){
@@ -95,7 +57,12 @@ class UpdateHandler{
 		$matches = array();
 		$res = preg_match($regex, $text, $matches);
 		if($res === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match error: '.preg_last_error());
+			$this->tracer->logError(
+				'[ERROR]',
+				__FILE__,
+				__LINE__,
+				'preg_match error: '.preg_last_error()
+			);
 			throw new LogicException('preg_match error: '.preg_last_error());
 		}
 		if($res === 0){
@@ -104,17 +71,6 @@ class UpdateHandler{
 		}
 
 		return $matches[1];
-	}
-
-	private function verifyData($update){
-		return true;
-	}
-
-	private function sendToBotan($message, $event){
-		$message_assoc = json_decode(json_encode($message), true);
-		if($this->botan !== null){
-			$this->botan->track($message_assoc, $event);
-		}
 	}
 
 	private static function extractUserInfo($message){
@@ -132,113 +88,165 @@ class UpdateHandler{
 			try{
 				$this->telegramAPI->sendMessage($message);
 			}
-			catch(Exception $ex){
+			catch(\Exception $ex){
 				$this->tracer->logException('[TELEGRAM API]', __FILE__, __LINE__, $ex);
 			}
 		}
 	}
 
-	private function handleMessage($message){
-		try{
-			$conversationStorage = new ConversationStorage(
-				$message->from->id,
-				$this->conversationStorageKeyPrefix
-			);
-			
-			if($conversationStorage->getConversationSize() === 0){
-				$message->text = $this->extractCommand($message->text);
-			}
-			
-			$conversationStorage->insertMessage($message->text);
-			
-			$userController = new UserController($message->chat->id);
-			$response = $userController->incomingUpdate(
-				$conversationStorage,
-				self::extractUserInfo($message)
-			);
+	private function getUserId($telegram_id){
+		$isAlreadyRegistredQuery = $this->pdo->prepare("
+			SELECT id
+			FROM `users`
+			WHERE `API` = 'TelegramAPI'
+			AND	`APIIdentifier` = :telegram_id
+		");
 
-			$messageList = new MessageList($response);
+		$isAlreadyRegistredQuery->execute(
+			array(
+				':telegram_id' => $telegram_id
+			)
+		);
 
-			foreach($messageList as $message){
-				try{
-					$res = $this->telegramAPI->sendMessage($message);
-				}
-				catch(HTTPException $ex){
-					$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
-					$res = array(
-						'code'	=> null,
-						'value'	=> null
-					);
-				}
+		$result = $isAlreadyRegistredQuery->fetch();
 
-				$fields = $message->get();
-
-				try{
-					$this->logResponseQuery->execute(
-						array(
-							':chat_id'		=> $fields['chat_id'],
-							':text'			=> $fields['text'],
-							':inResponseTo'	=> $this->requestDBId,
-							':statusCode'	=> $res['code']
-						)
-					);
-				}
-				catch(PDOException $ex){
-					$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
-				}
-			}
+		if($result === false){
+			return null; # not registred yet
 		}
-		catch(Exception $ex){
-			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+		else{
+			return intval($result[0]);
+		}
+	}
+
+	private function createUser($telegram_id, $username, $first_name, $last_name){
+		$createUserQuery = $this->pdo->prepare("
+			INSERT INTO `users` (`API`, `APIIdentifier`)
+			VALUES ('TelegramAPI', :telegram_id)
+		");
+		
+		$createUserDataQuery = $this->pdo->prepare('
+			INSERT INTO `telegramUserData` (`telegram_id`, `username`, `first_name`, `last_name`)
+			VALUES (:telegram_id, :username, :first_name, :last_name)
+		');
+
+		$res = $this->pdo->beginTransaction();
+		if($res === false){
+			$this->tracer->logError(
+				'[PDO-MySQL]',
+				__FILE__,
+				__LINE__,
+				'PDO beginTransaction has faied'
+			);
+		}
+
+		try{
+			$createUserQuery->execute(
+				array(
+					':telegram_id' => $telegram_id
+				)
+			);
+
+			$user_id = intval($this->pdo->lastInsertId());
+
+			$createUserDataQuery->execute(
+				array(
+					':username'		=> $username,
+					':first_name'	=> $first_name,
+					':last_name'	=> $last_name,
+					':telegram_id'	=> $telegram_id
+				)
+			);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
+
+			$res = $this->pdo->rollBack();
+			if($res === false){
+				$this->tracer->logError(
+					'[PDO-MySQL]',
+					__FILE__,
+					__LINE__,
+					'PDO rollback has faied'
+				);
+			}
+
+			throw $ex;
 		}
 		
-		if($conversationStorage->getConversationSize() === 1){
-			try{
-				$this->sendToBotan($message, $conversationStorage->getLastMessage());
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[BOTAN ERROR]', __FILE__, __LINE__, $ex);
-			}
+		$res = $this->pdo->commit();
+		if($res === false){
+			$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO commit has faied');
 		}
+
+		return $user_id;
+	}
+
+	private function updateUser($telegram_id, $username, $first_name, $last_name){
+		$updateUserDataQuery = $this->pdo->prepare('
+			UPDATE `telegramUserData`
+			SET	`username`		= :username,
+				`first_name`	= :first_name,
+				`last_name`		= :last_name
+			WHERE `telegram_id`	= :telegram_id
+		');
+
+		try{
+			$updateUserDataQuery->execute(
+				array(
+					':username'		=> $username,
+					':first_name'	=> $first_name,
+					':last_name'	=> $last_name,
+					':telegram_id'	=> $telegram_id
+				)
+			);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
+			throw $ex;
+		}
+	}
+				
+
+	private function createOrUpdateUser($from){
+		$telegram_id = $from->id;
+		$username = isset($from->username) ? $from->username : null;
+		$first_name = isset($from->first_name) ? $from->first_name : null;
+		$last_name = isset($from->last_name) ? $from->first_name : null;
+
+		$user_id = $this->getUserId($telegram_id);
+		
+		if($user_id === null){
+			$user_id = $this->createUser($telegram_id, $username, $first_name, $last_name);
+		}
+		else{
+			$this->updateUser($telegram_id, $username, $first_name, $last_name);
+		}
+
+		return $user_id;
 	}
 
 	public function handleUpdate($update){
 		if(self::validateFields($update) === false){
-			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Update is invalid:'.PHP_EOL.print_r($update, true));
-			throw new RuntimeException('Invalid update');
-		}
-
-		$update = self::normalizeFields($update);
-
-		if($this->verifyData($update) === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
-			throw new RuntimeException('Invalid update data'); // TODO: check if we should gently skip in such case
-		}
-
-		try{
-			$this->logRequestQuery->execute(
-				array(
-					':chat_id'		=> $update->message->chat->id,
-					':update_id'	=> $update->update_id,
-					':text'			=> $update->message->text
-				)
+			$this->tracer->logError(
+				'[DATA ERROR]', __FILE__, __LINE__,
+				'Update is invalid:'.PHP_EOL.print_r($update, true)
 			);
-
-			$this->requestDBId = $this->pdo->lastInsertId();
-			$this->requestDBId = intval($this->requestDBId);
-
-			if($this->pdo->errorCode() === 'IM001'){
-				$this->tracer->logError('[PDO]', __FILE__, __LINE__, 'PDO was unable to get lastInsertId');
-				$this->requestDBId = null;
-			}
-		}
-		catch(PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
-			throw new DuplicateUpdateException();
+			throw new \RuntimeException('Invalid update');
 		}
 
-		$this->handleMessage($update->message);
+		$update = self::normalizeUpdateFields($update);
+
+		$user_id = $this->createOrUpdateUser($update->message->from);
+
+		$coreHandler = new \core\UpdateHandler();
+		$incomingMessage = new \core\IncomingMessage(
+			$user_id,
+			$update->message->text,
+			$update->message,
+			$update->update_id
+		);
+
+		$coreHandler->processIncomingMessage($incomingMessage);
 	}
 
 }

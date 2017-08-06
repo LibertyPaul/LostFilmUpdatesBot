@@ -12,7 +12,7 @@ class HTTPRequesterFactory{
 	private $tracer;
 
 	public function __construct(PDO $pdo){
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$config = new Config($pdo);
 		

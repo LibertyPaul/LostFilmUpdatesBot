@@ -59,7 +59,7 @@ abstract class TracerBase{
 
 	protected function __construct($traceName, TracerBase $secondTracer = null){
 		assert(is_string($traceName));
-		$this->traceName = $traceName;
+		$this->traceName = str_replace('\\', '.', $traceName);
 		$this->secondTracer = $secondTracer;
 			
 		if(defined('TRACER_LEVEL')){
@@ -67,16 +67,18 @@ abstract class TracerBase{
 		}
 		else{
 			$this->maxLevel = TracerLevel::logEverythingLevel();
-			$this->log('WARNING', '[TRACER]', __FILE__, __LINE__, 'TRACER_LEVEL is not set. Logging everything.');
+			$this->logWarning(
+				'[TRACER]', __FILE__, __LINE__,
+				'TRACER_LEVEL is not set. Logging everything.'
+			);
 		}
-
 
 		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
 
 	}
 
 	public function __destruct(){
-		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Ended.');
+		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
 	}
 
 	abstract protected function write($text);

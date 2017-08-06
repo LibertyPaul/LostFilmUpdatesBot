@@ -18,7 +18,7 @@ class SeriesAboutParser extends Parser{
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester);
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 
 	private function singleRegexSearch($regex){

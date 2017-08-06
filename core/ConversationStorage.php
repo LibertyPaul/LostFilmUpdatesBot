@@ -74,7 +74,7 @@ class ConversationStorage{
 
 		if($res === false){
 			$this->tracer->logError('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
-			throw new RuntimeException('memcache->set has failed');
+			throw new \RuntimeException('memcache->set has failed');
 		}
 	}
 
@@ -84,14 +84,14 @@ class ConversationStorage{
 
 	public function getFirstMessage(){
 		if($this->getConversationSize() < 1){
-			throw new RuntimeException('ConversationStorage is empty');
+			throw new \RuntimeException('ConversationStorage is empty');
 		}
 		return $this->conversation[0];
 	}
 
 	public function getLastMessage(){
 		if($this->getConversationSize() < 1){
-			throw new RuntimeException('ConversationStorage is empty');
+			throw new \RuntimeException('ConversationStorage is empty');
 		}
 		return $this->conversation[count($this->conversation) - 1];
 	}

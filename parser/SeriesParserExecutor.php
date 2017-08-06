@@ -23,7 +23,7 @@ class SeriesParserExecutor{
 		assert($seriesAboutParser !== null);
 		$this->seriesAboutParser = $seriesAboutParser;
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = ParserPDO::getInstance();
 		

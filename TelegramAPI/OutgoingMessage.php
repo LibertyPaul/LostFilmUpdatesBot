@@ -1,7 +1,10 @@
 <?php
 
-class Message{
+namespace TelegramAPI;
+
+class OutgoingMessage{
 	private $fields;
+	private $nextMessage = null;
 
 	public function __construct(
 		$chat_id,
@@ -64,6 +67,19 @@ class Message{
 			throw new IncorrectArgumentException('Incorrect type of $reply_markup');
 		}
 
+	}
+
+	public function append(OutgoingMessage $message){
+		if($this->nextMessage !== null){
+			$this->nextMessage->append($message);
+		}
+		else{
+			$this->nextMessage = $message;
+		}
+	}
+
+	public function getNextMessage(){
+		return $this->nextMessage;
 	}
 
 	public function get(){

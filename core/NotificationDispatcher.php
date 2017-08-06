@@ -1,27 +1,30 @@
 <?php
+
+namespace core;
+
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/NotificationGenerator.php');
-require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
+require_once(__DIR__.'/MessageRouter.php');
+require_once(__DIR__.'/MessageRouterFactory.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 class NotificationDispatcher{
 	private $notificationGenerator;
-	private $telegramAPI;
+	private $messageRouter;
 	private $pdo;
 	private $getNotificationDataQuery;
 	private $setNotificationCodeQuery;
 	private $tracer;
 	private $maxNotificationRetries;
 	
-	public function __construct(NotificationGenerator $notificationGenerator, TelegramAPI $telegramAPI){
+	public function __construct(NotificationGenerator $notificationGenerator){
 		assert($notificationGenerator !== null);
 		$this->notificationGenerator = $notificationGenerator;
 
-		assert($telegramAPI !== null);
-		$this->telegramAPI = $telegramAPI;
+		$this->messageRouter = MessageRouterFactory::getInstance();
 		
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = BotPDO::getInstance();
 		$this->getNotificationDataQuery = $this->pdo->prepare("
@@ -29,7 +32,7 @@ class NotificationDispatcher{
 					`notificationsQueue`.`responseCode`,
 					`notificationsQueue`.`retryCount`,
 					`notificationsQueue`.`lastDeliveryAttemptTime`,
-					`users`.`telegram_id`,
+					`users`.`id` AS user_id,
 					`shows`.`title_ru` AS showTitle,
 					`shows`.`alias` AS showAlias,
 					`series`.`title_ru` AS seriesTitle,
@@ -126,22 +129,28 @@ class NotificationDispatcher{
 			$gonnaBeSent = false;
 			try{
 				$gonnaBeSent = self::shallBeSent(
-						$notification['responseCode'],
-						$notification['retryCount'],
-						$notification['lastDeliveryAttemptTime']
+					$notification['responseCode'],
+					$notification['retryCount'],
+					$notification['lastDeliveryAttemptTime']
 				);
 			}
 			catch(Exception $ex){
-				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logEvent('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($notification, true));
+				$this->tracer->logException(
+					'[ERROR]', __FILE__, __LINE__,
+					$ex.PHP_EOL.print_r($notification, true)
+				);
 				continue;
 			}
 			
 			if($gonnaBeSent){
 				try{
-					$url = self::makeURL($notification['showAlias'], intval($notification['seasonNumber']), intval($notification['seriesNumber']));	
-					$message = $this->notificationGenerator->newSeriesEvent(
-						intval($notification['telegram_id']), 
+					$url = self::makeURL(
+						$notification['showAlias'],
+						intval($notification['seasonNumber']),
+						intval($notification['seriesNumber'])
+					);
+
+					$outgoingMessage = $this->notificationGenerator->newSeriesEvent(
 						$notification['showTitle'], 
 						intval($notification['seasonNumber']),
 						intval($notification['seriesNumber']), 
@@ -149,13 +158,24 @@ class NotificationDispatcher{
 						$url
 					);
 
-					$deliveryResult = $this->telegramAPI->sendMessage($message);
+					$directredOutgoingMessage = new DirectedOutgoingMessage(
+						intval($notification['user_id']),
+						$outgoingMessage
+					);
+
+					$route = $this->messageRouter->route($directredOutgoingMessage->getUserId());
+					$route->send($directredOutgoingMessage);
+
+
+					$sendResult = $this->telegramAPI->sendMessage($message);
 				
 					$this->setNotificationDeliveryResult->execute(
 						array(
 							'notificationId'	=> $notification['id'],
-							'HTTPCode' 			=> $deliveryResult['code']
-						)
+							'HTTPCode' 			=> $sendResult === SendResult::Success ? 
+								200 :
+								400
+						)# TODO: alter HTTPCode column to internal format
 					);
 				}
 				catch(PDOException $ex){

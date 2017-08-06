@@ -21,7 +21,7 @@ class ShowParserExecutor{
 		assert($showListFetcher !== null);
 		$this->showListFetcher = $showListFetcher;
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->pdo = ParserPDO::getInstance();
 
