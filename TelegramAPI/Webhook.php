@@ -33,7 +33,7 @@ class Webhook{
 			$this->tracer = new \Tracer(__CLASS__);
 			$this->incomingLog = new \Tracer('incomingMessages');
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			TracerBase::syslogCritical(
 				'[TRACER]', __FILE__, __LINE__,
 				'Unable to create Tracer instance'
@@ -143,7 +143,7 @@ class Webhook{
 		catch(\core\DuplicateUpdateException $ex){
 			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
@@ -152,7 +152,7 @@ class Webhook{
 			try{
 				$this->resendUpdate($postData, MESSAGE_STREAM_URL);
 			}
-			catch(Exception $ex){
+			catch(\Exception $ex){
 				$this->tracer->logException('[MESSAGE STREAM]', __FILE__, __LINE__, $ex);
 			}
 		}

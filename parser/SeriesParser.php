@@ -2,7 +2,7 @@
 require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-class FullSeasonWasFoundException extends Exception{}
+class FullSeasonWasFoundException extends \Exception{}
 
 
 class SeriesParser extends Parser{
@@ -20,7 +20,7 @@ class SeriesParser extends Parser{
 		try{
 			$this->rssData = new SimpleXMLElement($this->pageSrc);
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
@@ -42,12 +42,12 @@ class SeriesParser extends Parser{
 		if($matchesRes === false){
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Link: '$link'");
-			throw new Exception('preg_match has failed');
+			throw new \Exception('preg_match has failed');
 		}
 
 		if($matchesRes === 0){
 			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, "Link '$link' doesn't match pattern");
-			throw new Exception("Link doesn't match pattern");
+			throw new \Exception("Link doesn't match pattern");
 		}
 
 		assert($matchesRes === 1);
@@ -77,7 +77,7 @@ class SeriesParser extends Parser{
 			catch(FullSeasonWasFoundException $ex){
 				// mmmk, skipping
 			}
-			catch(Exception $ex){
+			catch(\Exception $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
 			}

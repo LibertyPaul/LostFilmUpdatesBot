@@ -63,7 +63,7 @@ class SeriesParserExecutor{
 		try{
 			$this->seriesParser->loadSrc(self::rssURL);
 		}
-		catch(HTTPException $ex){
+		catch(\HTTPException $ex){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
 			return;
 		}
@@ -93,7 +93,7 @@ class SeriesParserExecutor{
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					
 				switch($ex->getCode()){
@@ -112,7 +112,7 @@ class SeriesParserExecutor{
 			catch(SeriesIsNotPublishedYet $ex){
 				continue;
 			}
-			catch(Exception $ex){
+			catch(\Exception $ex){
 				$this->tracer->logException('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex);
 			}
 		}

@@ -38,7 +38,7 @@ abstract class TracerLevel{
 			return self::$levelMap[$name];
 		}
 		else{
-			throw new OutOfBoundsException("Invalid trace level name: '$name'");
+			throw new \OutOfBoundsException("Invalid trace level name: '$name'");
 		}
 	}
 
@@ -47,7 +47,7 @@ abstract class TracerLevel{
 			return self::$codeMap[$level];
 		}
 		else{
-			throw new OutOfBoundsException("Invalid trace level: '$level'");
+			throw new \OutOfBoundsException("Invalid trace level: '$level'");
 		}
 	}
 }
@@ -115,7 +115,7 @@ abstract class TracerBase{
 				try{
 					$this->storeStandalone($record);
 				}
-				catch(RuntimeException $ex){
+				catch(\RuntimeException $ex){
 					$this->logException('[TRACER]', $ex);
 					$this->write($record);
 				}	
@@ -154,7 +154,7 @@ abstract class TracerBase{
 		$this->log('DEBUG', $tag, $file, $line, $message);
 	}
 
-	public function logException($tag, $file, $line, Exception $exception){
+	public function logException($tag, $file, $line, \Exception $exception){
 		if($exception !== null){
 			$description = sprintf(
 				'%s, raised from %s:%s, reason: "%s"',

@@ -22,13 +22,9 @@ class MessageRouterTest extends PHPUnit_Framework_TestCase{
 		$router = new \core\MessageRouter($messageSenders);
 		
 		$pdo = BotPDO::getInstance();
-		$users = $pdo->query('
-			SELECT `id` FROM `users`
-		');
-
-		$user = $users->fetch();
-
+		$user = $pdo->query('SELECT `id` FROM `users`')->fetch();
 		$this->assertFalse($user === false);
+
 		$result = $router->route($user['id']);
 
 		$this->assertInstanceOf(\core\MessageSenderInterface::class, $result);

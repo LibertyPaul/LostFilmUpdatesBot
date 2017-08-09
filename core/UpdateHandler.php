@@ -105,7 +105,7 @@ class UpdateHandler{
 				$loggedMessageId = null;
 			}
 		}
-		catch(PDOException $ex){
+		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError(
 				'[DB ERROR]', __FILE__, __LINE__,
@@ -136,7 +136,7 @@ class UpdateHandler{
 
 				$message = $message->nextMessage();
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError(
 					'[DB ERROR]', __FILE__, __LINE__,
@@ -167,7 +167,7 @@ class UpdateHandler{
 			$conversationStorage->insertMessage($message->getText());
 			$initialCommand = $conversationStorage->getFirstMessage();
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logError(
 				'[o]', __FILE__, __LINE__,
 				'Conversation Storage Error'
@@ -184,7 +184,7 @@ class UpdateHandler{
 				$conversationStorage
 			);
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logError(
 				'[o]', __FILE__, __LINE__,
 				'UserController creation error'

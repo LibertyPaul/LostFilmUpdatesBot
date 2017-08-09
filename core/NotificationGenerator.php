@@ -96,7 +96,7 @@ class NotificationGenerator{
 		
 		$res = $this->getUserFirstNameQuery->fetch();
 		if($res === false){
-			throw new Exception("User with id($user_id) wasn't found");
+			throw new \Exception("User with id($user_id) wasn't found");
 		}
 		
 		return $res['first_name'];

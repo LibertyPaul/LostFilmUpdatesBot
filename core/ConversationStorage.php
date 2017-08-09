@@ -35,7 +35,7 @@ class ConversationStorage{
 		try{
 			$this->memcache = \Stuff\createMemcache();
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
