@@ -21,7 +21,7 @@ class ConversationStorage{
 		$this->tracer = new \Tracer(__CLASS__);
 
 		assert(is_int($user_id));
-		$this->APIIdentifier = $user_id;
+		$this->user_id = $user_id;
 
 		$config = new \Config(\BotPDO::getInstance());
 		$this->keyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');

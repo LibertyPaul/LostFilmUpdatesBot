@@ -10,5 +10,5 @@ abstract class SendResult{
 }
 
 interface MessageSenderInterface{
-	public function send($APIIdentifier, OutgoingMessage $message);
+	public function send($user_id, OutgoingMessage $message);
 }

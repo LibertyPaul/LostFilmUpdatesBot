@@ -5,20 +5,20 @@ namespace core;
 require_once(__DIR__.'/MessageSenderInterface.php');
 
 class MessageRoute{
+	private $user_id;
 	private $messageSender;
-	private $APIIdentifier;
 
-	public function __construct(MessageSenderInterface $messageSender, $APIIdentifier){
+	public function __construct(MessageSenderInterface $messageSender, $user_id){
 		if($messageSender === null){
 			throw \InvalidArgumentException('messageSender is null');
 		}
 
 		$this->messageSender = $messageSender;
-		$this->APIIdentifier = $APIIdentifier;
+		$this->user_id = $user_id;
 	}
 
 	public function send(OutgoingMessage $message){
-		return $this->messageSender->send($this->APIIdentifier, $message);
+		return $this->messageSender->send($this->user_id, $message);
 	}
 }
 	

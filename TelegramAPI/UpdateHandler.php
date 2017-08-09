@@ -52,27 +52,6 @@ class UpdateHandler{
 		return $result;
 	}
 
-	private function extractCommand($text){
-		$regex = '/(\/\w+)/';
-		$matches = array();
-		$res = preg_match($regex, $text, $matches);
-		if($res === false){
-			$this->tracer->logError(
-				'[ERROR]',
-				__FILE__,
-				__LINE__,
-				'preg_match error: '.preg_last_error()
-			);
-			throw new LogicException('preg_match error: '.preg_last_error());
-		}
-		if($res === 0){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Invalid command '$text'");
-			return $text;
-		}
-
-		return $matches[1];
-	}
-
 	private static function extractUserInfo($message){
 		$chat = $message->chat;
 
@@ -83,32 +62,22 @@ class UpdateHandler{
 		);
 	}
 
-	private function respond(MessageList $response){
-		foreach($response->getMessages() as $message){
-			try{
-				$this->telegramAPI->sendMessage($message);
-			}
-			catch(\Exception $ex){
-				$this->tracer->logException('[TELEGRAM API]', __FILE__, __LINE__, $ex);
-			}
-		}
-	}
-
 	private function getUserId($telegram_id){
-		$isAlreadyRegistredQuery = $this->pdo->prepare("
-			SELECT id
-			FROM `users`
-			WHERE `API` = 'TelegramAPI'
-			AND	`APIIdentifier` = :telegram_id
+		$getUserIdQuery = $this->pdo->prepare("
+			SELECT `telegramUserData`.`user_id`
+			FROM `telegramUserData`
+			JOIN `users` ON `users`.`id` = `telegramUserData`.`user_id`
+			WHERE `users`.`deleted` = 'N'
+			AND `telegramUserData`.`telegram_id` = :telegram_id
 		");
 
-		$isAlreadyRegistredQuery->execute(
+		$getUserIdQuery->execute(
 			array(
 				':telegram_id' => $telegram_id
 			)
 		);
 
-		$result = $isAlreadyRegistredQuery->fetch();
+		$result = $getUserIdQuery->fetch();
 
 		if($result === false){
 			return null; # not registred yet
@@ -120,36 +89,37 @@ class UpdateHandler{
 
 	private function createUser($telegram_id, $username, $first_name, $last_name){
 		$createUserQuery = $this->pdo->prepare("
-			INSERT INTO `users` (`API`, `APIIdentifier`)
-			VALUES ('TelegramAPI', :telegram_id)
+			INSERT INTO `users` (`API`)
+			VALUES ('TelegramAPI')
 		");
 		
 		$createUserDataQuery = $this->pdo->prepare('
-			INSERT INTO `telegramUserData` (`telegram_id`, `username`, `first_name`, `last_name`)
-			VALUES (:telegram_id, :username, :first_name, :last_name)
+			INSERT INTO `telegramUserData` (
+				`user_id`,
+				`telegram_id`,
+				`username`,
+				`first_name`,
+				`last_name`
+			)
+			VALUES (:user_id, :telegram_id, :username, :first_name, :last_name)
 		');
 
 		$res = $this->pdo->beginTransaction();
 		if($res === false){
 			$this->tracer->logError(
-				'[PDO-MySQL]',
-				__FILE__,
-				__LINE__,
+				'[PDO-MySQL]', __FILE__, __LINE__,
 				'PDO beginTransaction has faied'
 			);
 		}
 
 		try{
-			$createUserQuery->execute(
-				array(
-					':telegram_id' => $telegram_id
-				)
-			);
+			$createUserQuery->execute();
 
 			$user_id = intval($this->pdo->lastInsertId());
 
 			$createUserDataQuery->execute(
 				array(
+					':user_id'		=> $user_id,
 					':username'		=> $username,
 					':first_name'	=> $first_name,
 					':last_name'	=> $last_name,
@@ -163,9 +133,7 @@ class UpdateHandler{
 			$res = $this->pdo->rollBack();
 			if($res === false){
 				$this->tracer->logError(
-					'[PDO-MySQL]',
-					__FILE__,
-					__LINE__,
+					'[PDO-MySQL]', __FILE__, __LINE__,
 					'PDO rollback has faied'
 				);
 			}

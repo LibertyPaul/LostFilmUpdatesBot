@@ -6,11 +6,13 @@ require_once(__DIR__.'/../core/MessageSenderInterface.php');
 require_once(__DIR__.'/../core/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/../core/BotPDO.php');
 
 class MessageSender implements \core\MessageSenderInterface{
 	private $tracer;
 	private $outgoingMessagesTracer;
 	private $telegramAPI;
+	private $getTelegramIdQuery;
 
 	public function __construct(TelegramAPI $telegramAPI){
 		assert($telegramAPI !== null);
@@ -18,13 +20,41 @@ class MessageSender implements \core\MessageSenderInterface{
 
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->outgoingMessagesTracer = new \Tracer('OutgoingMessages');
+
+		$pdo = \BotPDO::getInstance();
+
+		$this->getTelegramIdQuery = $pdo->prepare('
+			SELECT `telegram_id`
+			FROM `telegramUserData`
+			WHERE `user_id` = :user_id
+		');
 	}
 
-	public function send($telegram_id, \core\OutgoingMessage $message){
+	private function getTelegramId($user_id){
+		assert(is_int($user_id));
+
+		$this->getTelegramIdQuery->execute(
+			array(
+				':user_id' => $user_id
+			)
+		);
+
+		$res = $this->getTelegramIdQuery->fetch();
+		
+		if($res === false){
+			throw new \RuntimeException("Telegram Id was not found for user_id=[$used_id]");
+		}
+
+		return intval($res[0]);
+	}
+
+	public function send($user_id, \core\OutgoingMessage $message){
 		if($message === null){
 			$this->tracer->logError('[o]', __FILE__, __LINE__, 'OutgoingMessage is null');
 			throw new \InvalidArgumentException('OutgoingMessage is null');
 		}
+
+		$telegram_id = $this->getTelegramId($user_id);
 
 		$sendResult = \core\SendResult::Success;
 

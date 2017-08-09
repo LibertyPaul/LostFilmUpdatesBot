@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS `telegramUserData` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 ALTER TABLE `telegramUserData`
-	ADD FOREIGN KEY (`telegram_id`)
+	ADD CONSTRAINT `telegramUserData_ibfk_1`
+		FOREIGN KEY (`telegram_id`)
 		REFERENCES `LostFilmUpdatesBot_dev`.`users` (`APIIdentifier`)
 		ON DELETE CASCADE
 		ON UPDATE CASCADE;

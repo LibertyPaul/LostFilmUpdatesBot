@@ -16,7 +16,7 @@ $update_json = '
             "type": "private"
         },
         "date": 1446162729,
-        "text": "/help"
+        "text": "Да"
     }
 }
 ';

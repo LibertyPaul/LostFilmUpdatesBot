@@ -18,12 +18,11 @@ class NotificationGenerator{
 		$this->config = new \Config($pdo);
 		
 		$this->getUserFirstNameQuery = $pdo->prepare("
-			SELECT tud.`first_name`
-			FROM `users` u
-			JOIN `telegramUserData` tud
-			ON u.`API` = 'TelegramAPI' AND u.`APIIdentifier` = tud.`telegram_id`
-			WHERE u.`id` = :user_id
+			SELECT `first_name`
+			FROM `telegramUserData`
+			WHERE `user_id` = :user_id
 		");
+		#TODO: do common way for different APIs
 		
 		$this->getUserCountQuery = $pdo->prepare('
 			SELECT COUNT(*) AS count

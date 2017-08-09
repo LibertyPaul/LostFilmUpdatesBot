@@ -50,20 +50,10 @@ class UserController{
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
-		$getUserInfoQuery = $this->pdo->prepare("
-			SELECT `username` FROM `users` u
-			LEFT JOIN `telegramUserData` tud
-				ON	u.`APIIdentifier` = tud.`telegram_id`
-				AND	u.`API` = 'TelegramAPI'
-			WHERE u.id = :user_id
-		");
-
 		$getMessagesHistorySize = $this->pdo->prepare('
 			SELECT  COUNT(*) FROM `messagesHistory`
 			WHERE `user_id` = :user_id
 		');
-
-		# TODO: check if this is not initial /start message
 
 		try{
 			$getMessagesHistorySize->execute(
@@ -83,16 +73,6 @@ class UserController{
 					)
 				);
 			}
-
-
-			$getUserInfoQuery->execute(
-				array(
-					':user_id' => $this->user_id
-				)
-			);
-
-			$res = $getUserInfoQuery->fetch();
-			$username = $res[0];
 		}
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
@@ -100,7 +80,7 @@ class UserController{
 		}
 
 		$welcomingText =
-			'Привет, '.$username.PHP_EOL.
+			'Привет, %username%'.PHP_EOL.	#TODO: pass real username
 			'Я - бот LostFilm updates.'.PHP_EOL.
 			'Моя задача - оповестить тебя о выходе новых серий '.
 			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
@@ -164,10 +144,11 @@ class UserController{
 					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
 				}
 				
-				$deleteUserQuery = $this->pdo->prepare('
-					DELETE FROM `users`
+				$deleteUserQuery = $this->pdo->prepare("
+					UPDATE `users`
+					SET `deleted` = 'Y'
 					WHERE `id` = :user_id
-				');
+				");
 				
 				try{
 					$deleteUserQuery->execute(

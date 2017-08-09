@@ -13,7 +13,7 @@ class MessageRouter{
 	private $tracer;
 
 	# Queries
-	private $getUserQuery;
+	private $getUserAPIQuery;
 	
 	public function __construct($messageSenders){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -36,31 +36,22 @@ class MessageRouter{
 
 
 		$pdo = \BotPDO::getInstance();
-		$this->getUserQuery = $pdo->prepare('
-			SELECT `API`, `APIIdentifier`
+		$this->getUserAPIQuery = $pdo->prepare('
+			SELECT `API`
 			FROM `users`
 			WHERE `id` = :user_id
 		');
 	}
 
-	public function route($user_id){
-		try{
-			$this->getUserQuery->execute(
-				array(
-					':user_id' => $user_id
-				)
-			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[PDO]', __FILE__, __LINE__, $ex);
-			$this->tracer->logException(
-				'[PDO]', __FILE__, __LINE__,
-				PHP_EOL.print_r($message, true)
-			);
-			throw $ex;
-		}
+	private function getUserAPI($user_id){
+		$this->getUserAPIQuery->execute(
+			array(
+				':user_id' => $user_id
+			)
+		);
 
-		$user = $this->getUserQuery->fetch();
+		$user = $this->getUserAPIQuery->fetch();
+
 		if($user === false){
 			$this->tracer->logError(
 				'[NOT FOUND]', __FILE__, __LINE__,
@@ -69,21 +60,37 @@ class MessageRouter{
 			throw new \RuntimeException("User ($user_id) wasn't found");
 		}
 
-		if(array_key_exists($user['API'], $this->messageSenders) === false){
+		return $user['API'];
+	}
+
+	private function getMessageSender($API){
+		if(array_key_exists($API, $this->messageSenders) === false){
 			$this->tracer->logError(
 				'[DATA]', __FILE__, __LINE__,
-				"Unknown API '$user[API]'".PHP_EOL.
+				"Unknown API '$API'".PHP_EOL.
 				'Available APIs:'.PHP_EOL.
 				print_r($this->messageSenders, true)
 			);
 			
-			throw new \RuntimeException("Unknown API '$user[API]'");
+			throw new \RuntimeException("Unknown API '$API'");
 		}
 
-		return new MessageRoute(
-			$this->messageSenders[$user['API']],
-			intval($user['APIIdentifier'])
+		return $this->messageSenders[$API];
+	}
+		
+
+	public function route($user_id){
+		$userAPI = $this->getUserAPI($user_id);
+		$messageSender = $this->getMessageSender($userAPI);
+
+		$route = new MessageRoute($messageSender, $user_id);
+
+		$this->tracer->logEvent(
+			'[o]', __FILE__, __LINE__,
+			"Successfully routed message to user=[$user_id]: API=[$userAPI]"
 		);
+
+		return $route;
 	}
 }
 		

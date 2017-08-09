@@ -197,36 +197,40 @@ class UpdateHandler{
 		$directedOutgoingMessage = $userController->processLastUpdate();
 
 		while($directedOutgoingMessage !== null){
-			$route = $this->messageRouter->route(
-				$directedOutgoingMessage->getUserId()
-			);
+			try{
+				$route = $this->messageRouter->route(
+					$directedOutgoingMessage->getUserId()
+				);
+			
+				$result = $route->send($directedOutgoingMessage->getOutgoingMessage());
 
-			$result = $route->send($directedOutgoingMessage->getOutgoingMessage());
-
-			switch($result){
-				case SendResult::Success:
-					$statusCode = 0;
-					break;
-
-				case SendResult::Fail:
-				default:
-					$statusCode = 1;
-					break;
+				switch($result){
+					case SendResult::Success:
+						$statusCode = 0;
+						break;
+	
+					case SendResult::Fail:
+					default:
+						$statusCode = 1;
+						break;
+				}
+	
+					
+				$this->logOutgoingMessage(
+					$directedOutgoingMessage,
+					$loggedRequestId,
+					$statusCode
+				);
 			}
-
-				
-			$this->logOutgoingMessage(
-				$directedOutgoingMessage,
-				$loggedRequestId,
-				$statusCode
-			);
-
+			catch(\Exception $ex){
+				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			}
+			
 			$directedOutgoingMessage = $directedOutgoingMessage->nextMessage();
 		}
 			
 		$this->sendToBotan($message, $initialCommand);
 	}
-
 }
 
 
