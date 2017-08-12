@@ -11,7 +11,7 @@ ALTER TABLE `users`
 		COLLATE ascii_bin
 		NOT NULL,
 	CHANGE `telegram_id`
-		`APIIdentifier` INT(15)
+		`APIIdentifier` INT(10) UNSIGNED
 		NOT NULL,
 	DROP INDEX `telegram_id`,
 	ADD UNIQUE (`API`, `APIIdentifier`),

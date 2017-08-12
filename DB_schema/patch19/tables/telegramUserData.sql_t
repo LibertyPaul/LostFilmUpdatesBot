@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `telegramUserData` (
 ALTER TABLE `telegramUserData`
 	ADD CONSTRAINT `telegramUserData_ibfk_1`
 		FOREIGN KEY (`telegram_id`)
-		REFERENCES `users` (`APIIdentifier`)
+		REFERENCES `&&db_name`.`users`(`APIIdentifier`)
 		ON DELETE CASCADE
 		ON UPDATE CASCADE;
 
