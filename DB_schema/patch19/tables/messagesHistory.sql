@@ -7,6 +7,6 @@ ALTER TABLE `messagesHistory`
 ALTER TABLE `messagesHistory`
 	ADD INDEX(`user_id`),
 	ADD FOREIGN KEY (`user_id`)
-		REFERENCES `LostFilmUpdatesBot_dev`.`users`(`id`)
+		REFERENCES `users`(`id`)
 		ON DELETE CASCADE
 		ON UPDATE CASCADE;
