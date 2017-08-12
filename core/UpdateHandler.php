@@ -36,12 +36,19 @@ class UpdateHandler{
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
 
-		$botanAPIKey = $this->config->getValue('Botan', 'API Key');
-		if($botanAPIKey !== null){
-			$this->botan = new \Botan($botanAPIKey);
-		}
-		else{
-			$this->botan = null;
+		$this->botan = null;
+		$botanEnabled = $this->config->getValue('Botan', 'Enabled');
+
+		if($botanEnabled === 'Y'){
+			$botanAPIKey = $this->config->getValue('Botan', 'API Key');
+			$this->tracer->logWarning(
+				'[o]', __FILE__, __LINE__, 
+				'Botan is enabled but no API key was found.'
+			);
+			
+			if($botanAPIKey !== null){
+				$this->botan = new \Botan($botanAPIKey);
+			}
 		}
 
 		$this->logRequestQuery = $this->pdo->prepare("
@@ -111,10 +118,15 @@ class UpdateHandler{
 				'[DB ERROR]', __FILE__, __LINE__,
 				PHP_EOL.print_r($message, true)
 			);
-
-			throw new DuplicateUpdateException(); # TODO: check for DB error code
+			
+			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
+				throw new DuplicateUpdateException();
+			}
+			else{
+				throw new \RuntimeException('logRequestQuery call has failed');
+			}
 		}
-
+		
 		return $loggedMessageId;
 	}
 
@@ -124,17 +136,16 @@ class UpdateHandler{
 		$statusCode
 	){
 		while($message !== null){
+			$text = substr($message->getOutgoingMessage()->getText(), 0, 5000);
 			try{
-				$this->logResponseQuery->execute( # TODO: check message length
+				$this->logResponseQuery->execute(
 					array(
 						':user_id'		=> $message->getUserId(),
-						':text'			=> $message->getOutgoingMessage()->getText(),
+						':text'			=> $text,
 						':inResponseTo'	=> $loggedRequestId,
 						':statusCode'	=> $statusCode
 					)
 				);
-
-				$message = $message->nextMessage();
 			}
 			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
@@ -142,6 +153,16 @@ class UpdateHandler{
 					'[DB ERROR]', __FILE__, __LINE__,
 					PHP_EOL.print_r($message, true)
 				);
+				
+				if($ex->errorInfo[1] === 1062){# Duplicate entry error code
+					throw new DuplicateUpdateException();
+				}
+				else{
+					throw new \RuntimeException('logRequestQuery call has failed');
+				}
+			}
+			finally{
+				$message = $message->nextMessage();
 			}
 		}
 	}
