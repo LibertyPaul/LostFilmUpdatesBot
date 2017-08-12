@@ -423,6 +423,7 @@ class UserController{
 					XOR :in_out_flag
 				)
 				AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				ORDER BY `title_ru`, `title_en`
 			");
 
 			try{
@@ -501,6 +502,7 @@ class UserController{
 					XOR :in_out_flag
 				)
 				HAVING `title_all` = :title
+				ORDER BY `title_ru`, `title_en`
 			");
 			
 			try{
