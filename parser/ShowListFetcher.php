@@ -39,14 +39,26 @@ class ShowListFetcher{
 
 			$result = json_decode($result_json, true);
 			if($result === false){
-				$this->tracer->logError('[JSON ERROR]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
-				$this->tracer->logError('[JSON ERROR]', __FILE__, __LINE__, PHP_EOL.$result_json);
-				throw new \Exception('json_decode error: '.json_last_error_msg());
+				$this->tracer->logError(
+					'[JSON ERROR]', __FILE__, __LINE__,
+					'json_decode error: '.json_last_error_msg()
+				);
+				$this->tracer->logError(
+					'[JSON ERROR]', __FILE__, __LINE__,
+					PHP_EOL.$result_json
+				);
+				throw new \RuntimeException('json_decode error: '.json_last_error_msg());
 			}
 
 			if(isset($result['data']) === false || is_array($result['data']) === false){
-				$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Incorrect show info');
-				$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($result, true));
+				$this->tracer->logError(
+					'[DATA ERROR]', __FILE__, __LINE__,
+					'Incorrect show info'
+				);
+				$this->tracer->logError(
+					'[DATA ERROR]', __FILE__, __LINE__,
+					PHP_EOL.print_r($result, true)
+				);
 				throw new \RuntimeException('Incorrect show info: data element is not found');
 			}
 
