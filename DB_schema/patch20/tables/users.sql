@@ -5,5 +5,5 @@ ALTER TABLE `users`
 		COLLATE ascii_general_ci
 		NOT NULL
 		DEFAULT 'N'
-		AFTER `APIIdentifier`,
+		AFTER `API`,
 	ADD INDEX (`deleted`);

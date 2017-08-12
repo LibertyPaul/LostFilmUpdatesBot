@@ -26,7 +26,7 @@ ALTER TABLE `telegramUserData`
 
 ALTER TABLE `telegramUserData`
 	ADD FOREIGN KEY (`user_id`)
-		REFERENCES `LostFilmUpdatesBot_dev`.`users`(`id`)
+		REFERENCES `&&db_name`.`users`(`id`)
 		ON DELETE CASCADE
 		ON UPDATE CASCADE;
 
