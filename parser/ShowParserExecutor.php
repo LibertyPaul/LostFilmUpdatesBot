@@ -21,7 +21,7 @@ class ShowParserExecutor{
 		assert($showListFetcher !== null);
 		$this->showListFetcher = $showListFetcher;
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->pdo = ParserPDO::getInstance();
 
@@ -109,7 +109,7 @@ class ShowParserExecutor{
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $newAlias);
 				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
@@ -130,7 +130,7 @@ class ShowParserExecutor{
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $sameAlias);
 				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));

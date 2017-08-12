@@ -1,19 +1,28 @@
 <?php
+
+namespace core;
+
 require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/Message.php');
+require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/OutgoingMessage.php');
+require_once(__DIR__.'/DirectedOutgoingMessage.php');
 
 class NotificationGenerator{
-	private $getUserInfoQuery;
+	private $config;
+	private $getUserFirstNameQuery;
 	private $getUserCountQuery;
 	
 	public function __construct(){
-		$pdo = BotPDO::getInstance();
+		$pdo = \BotPDO::getInstance();
+
+		$this->config = new \Config($pdo);
 		
-		$this->getUserInfoQuery = $pdo->prepare('
-			SELECT *
-			FROM `users`
-			WHERE `id` = :user_id
-		');
+		$this->getUserFirstNameQuery = $pdo->prepare("
+			SELECT `first_name`
+			FROM `telegramUserData`
+			WHERE `user_id` = :user_id
+		");
+		#TODO: do common way for different APIs
 		
 		$this->getUserCountQuery = $pdo->prepare('
 			SELECT COUNT(*) AS count
@@ -21,7 +30,13 @@ class NotificationGenerator{
 		');
 	}
 	
-	private static function generateNewSeriesNotificationText($showTitleRu, $season, $seriesNumber, $seriesTitle, $url){
+	private static function generateNewSeriesNotificationText(
+		$showTitleRu	,
+		$season			,
+		$seriesNumber	,
+		$seriesTitle	,
+		$url
+	){
 		$template = 
 			'Вышла новая серия <b>#showName</b>'				.PHP_EOL.
 			'Сезон #season, серия #seriesNumber, "#seriesTitle"'.PHP_EOL.
@@ -45,8 +60,13 @@ class NotificationGenerator{
 		return $text;
 	}
 
-	public function newSeriesEvent($telegram_id, $title_ru, $season, $seriesNumber, $seriesTitle, $URL){
-		assert(is_int($telegram_id));
+	public function newSeriesEvent(
+		$title_ru		,
+		$season			,
+		$seriesNumber	,
+		$seriesTitle	,
+		$URL
+	){
 		assert(is_string($title_ru));
 		assert(is_int($season));
 		assert(is_int($seriesNumber));
@@ -61,54 +81,71 @@ class NotificationGenerator{
 			$URL
 		);
 
-		$message = new Message(
-			$telegram_id,
+		return new OutgoingMessage(
 			$notificationText,
-			'HTML',
 			true
 		);
-
-		return $message;
 	}
 
-	protected function getUserInfo($user_id){
-		$this->getUserInfoQuery->execute(
+	protected function getUserFirstName($user_id){
+		$this->getUserFirstNameQuery->execute(
 			array(
 				':user_id' => $user_id
 			)
 		);
 		
-		$res = $this->getUserInfoQuery->fetch();
+		$res = $this->getUserFirstNameQuery->fetch();
 		if($res === false){
-			throw new Exception("User with id($user_id) wasn't found");
+			throw new \Exception("User with id($user_id) wasn't found");
 		}
 		
-		return $res;
+		return $res['first_name'];
 	}
 
-	private static function messageToAdmin($text){
+	private function messageToAdmin($text){
 		assert(is_string($text));
 
-		$message = new Message(
-			2768837,
-			$text
+		$admin_id = $this->config->getValue('Admin Notifications', 'Admin Id');
+		if($admin_id === null){
+			return null;
+		}
+
+		return new DirectedOutgoingMessage(
+			intval($admin_id),
+			new OutgoingMessage($text)
+		);
+	}
+	
+	public function newUserEvent($user_id){
+		$newUserEventEnabled = $this->config->getValue(
+			'Admin Notifications',
+			'Send New User Event'
 		);
 
-		return $message;
-	}
+		if($newUserEventEnabled !== 'Y'){
+			return null;
+		}
 
-	public function newUserEvent($user_id){
-		$userInfo = $this->getUserInfo($user_id);
+		$userFirstName = $this->getUserFirstName($user_id);
 		
 		$this->getUserCountQuery->execute();
 		$userCount = $this->getUserCountQuery->fetch()['count'];
 
-		return self::messageToAdmin("Новый юзер $userInfo[telegram_firstName] [#$userCount]");
+		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
 	}
 
 	public function userLeftEvent($user_id){
-		$userInfo = $this->getUserInfo($user_id);
-		return self::messageToAdmin("Юзер $userInfo[telegram_firstName] удалился");
+		$userLeftEventEnabled = $this->config->getValue(
+			'Admin Notifications',
+			'Send User Left Event'
+		);
+
+		if($userLeftEventEnabled !== 'Y'){
+			return null;
+		}
+
+		$userFirstName = $this->getUserFirstName($user_id);
+		return $this->messageToAdmin("Юзер $userFirstName удалился");
 	}
 
 }

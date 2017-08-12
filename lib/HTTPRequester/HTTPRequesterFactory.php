@@ -1,4 +1,5 @@
 <?php
+
 require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/FakeHTTPRequester.php');
@@ -11,7 +12,7 @@ class HTTPRequesterFactory{
 	private $tracer;
 
 	public function __construct(PDO $pdo){
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$config = new Config($pdo);
 		
@@ -26,18 +27,30 @@ class HTTPRequesterFactory{
 				break;
 
 			case null:
-				$this->tracer->logWarning('[UNDEFINED]', __FILE__, __LINE__, 'TelegramAPI->Perform Actual Send parameter is not defined. Using default [N]');
+				$this->tracer->logWarning(
+					'[UNDEFINED]', __FILE__, __LINE__,
+					'TelegramAPI->Perform Actual Send parameter is not defined.'.
+					'Using default [N]'
+				);
 				$this->performActualMessageSend = false;
 				break;
 
 			default:
-				$this->tracer->logError('[INVALID PARAMETER]', __FILE__, __LINE__, 'TelegramAPI->Perform Actual Send parameter = [$res]. Using default [N]');
+				$this->tracer->logError(
+					'[INVALID PARAMETER]', __FILE__, __LINE__,
+					'TelegramAPI->Perform Actual Send parameter = [$res].'.
+					'Using default [N]'
+				);
 				$this->performActualMessageSend = false;
 				break;
 		}
 
 		
-		$this->undeliveredMessageStorage = $config->getValue('FakeHTTPRequester', 'Undelivired Messages Storage', './logs/UndeliviredMessages.log');
+		$this->undeliveredMessageStorage = $config->getValue(
+			'FakeHTTPRequester',
+			'Undelivired Messages Storage',
+			'./logs/UndeliviredMessages.log'
+		);
 	}
 	
 

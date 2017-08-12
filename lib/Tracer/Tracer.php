@@ -7,6 +7,10 @@ class Tracer extends TracerBase{
 	const standaloneLogsDir = self::logsDir.'/standalone';
 
 	public function __construct($traceName){
+		if($traceName[0] === '-'){
+			$traceName = substr($traceName, 1);
+		}
+
 		parent::__construct($traceName);
 	}
 
@@ -22,8 +26,12 @@ class Tracer extends TracerBase{
 		$prev_umask = umask(0);
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
-				TracerBase::syslogCritical('[SETUP]', __FILE__, __LINE__, "logs dir is not a directory ($dir)");
-				throw new Exception("Unable to open $dir directory");
+				TracerBase::syslogCritical(
+					'[SETUP]', __FILE__, __LINE__,
+					"logs dir is not a directory ($dir)"
+				);
+
+				throw new \Exception("Unable to open $dir directory");
 			}
 		}
 		else{
@@ -44,8 +52,12 @@ class Tracer extends TracerBase{
 		
 		$hFile = fopen($path, 'a');
 		if($hFile === false){
-			TracerBase::syslogCritical('[SETUP]', __FILE__, __LINE__, "Unable to open file '$path'");
-			throw new Exception("Unable to open $path file.".PHP_EOL.print_r(error_get_last(), true));
+			TracerBase::syslogCritical(
+				'[SETUP]', __FILE__, __LINE__,
+				"Unable to open file '$path'"
+			);
+
+			throw new \Exception("Unable to open $path file.".PHP_EOL.print_r(error_get_last(), true));
 		}
 
 		umask($prev_umask);

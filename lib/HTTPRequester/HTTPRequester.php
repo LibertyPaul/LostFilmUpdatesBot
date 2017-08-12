@@ -8,7 +8,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 	private $tracer;
 
 	public function __construct(){
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	
 		$this->curl = curl_init();
 		assert($this->curl !== false);
@@ -21,27 +21,52 @@ class HTTPRequester implements HTTPRequesterInterface{
 		curl_close($this->curl);
 	}
 
+	private static function prettifyIfPossible($JSON){
+		$obj = json_decode($JSON);
+		if($obj === false){
+			return $JSON;
+		}
+
+		return json_encode($obj, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+	}
+
 	public function sendJSONRequest($destination, $content_json){
 		assert(curl_setopt($this->curl, CURLOPT_URL, $destination));
 		assert(curl_setopt($this->curl, CURLOPT_POST, true));
 		assert(curl_setopt($this->curl, CURLOPT_POSTFIELDS, $content_json));
-		assert(curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Content-type: application/json')));
+		assert(
+			curl_setopt(
+				$this->curl,
+				CURLOPT_HTTPHEADER,
+				array('Content-type: application/json')
+			)
+		);
 		
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
+		$this->tracer->logEvent(
+			'[JSON REQUEST]', __FILE__, __LINE__,
+			'Destination: '.$destination.PHP_EOL.
+			'Request: '.PHP_EOL.$content_json
+		);
 
 		$response = curl_exec($this->curl);
 		if($response === false){
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, PHP_EOL.$content_json);
+			$this->tracer->logError(
+				'[HTTP ERROR]', __FILE__, __LINE__, 
+				'curl_exec error: '.curl_error($this->curl).PHP_EOL.
+				"url: '$destination'".PHP_EOL.
+				$content_json
+			);
+			
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 
 		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
 		
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response.PHP_EOL);
+		$this->tracer->logEvent(
+			'[JSON REQUEST]', __FILE__, __LINE__,
+			'HTTP code: '.$code.PHP_EOL.
+			'Response: '.PHP_EOL.self::prettifyIfPossible($response)
+		);
 
 		return array(
 			'value' => $response,

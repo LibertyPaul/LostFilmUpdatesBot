@@ -79,7 +79,7 @@ class MessageTester{
 			}
 			else{
 				if($fieldToInsert['defaultValue'] === null){
-					throw new Exception($fieldToInsert['key'].' is required');
+					throw new \Exception($fieldToInsert['key'].' is required');
 				}
 				
 				$value = $fieldToInsert['defaultValue'];

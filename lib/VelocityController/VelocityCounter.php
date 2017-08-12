@@ -1,5 +1,5 @@
 <?php
-require_once(__DIR__.'/../lib/stuff.php');
+require_once(__DIR__.'/../stuff.php');
 
 class VelocityCounter{
 	const SECTION = __CLASS__;
@@ -12,7 +12,7 @@ class VelocityCounter{
 		assert(is_string($keyPrefix));
 		$this->keyPrefix = $keyPrefix;
 
-		$this->memcache = Stuff\createMemcache();
+		$this->memcache = \Stuff\createMemcache();
 	}
 
 	private function getUserVelocityKey($user_id){

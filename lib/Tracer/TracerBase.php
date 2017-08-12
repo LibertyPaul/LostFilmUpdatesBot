@@ -38,7 +38,7 @@ abstract class TracerLevel{
 			return self::$levelMap[$name];
 		}
 		else{
-			throw new OutOfBoundsException("Invalid trace level name: '$name'");
+			throw new \OutOfBoundsException("Invalid trace level name: '$name'");
 		}
 	}
 
@@ -47,7 +47,7 @@ abstract class TracerLevel{
 			return self::$codeMap[$level];
 		}
 		else{
-			throw new OutOfBoundsException("Invalid trace level: '$level'");
+			throw new \OutOfBoundsException("Invalid trace level: '$level'");
 		}
 	}
 }
@@ -59,7 +59,7 @@ abstract class TracerBase{
 
 	protected function __construct($traceName, TracerBase $secondTracer = null){
 		assert(is_string($traceName));
-		$this->traceName = $traceName;
+		$this->traceName = str_replace('\\', '.', $traceName);
 		$this->secondTracer = $secondTracer;
 			
 		if(defined('TRACER_LEVEL')){
@@ -67,16 +67,18 @@ abstract class TracerBase{
 		}
 		else{
 			$this->maxLevel = TracerLevel::logEverythingLevel();
-			$this->log('WARNING', '[TRACER]', __FILE__, __LINE__, 'TRACER_LEVEL is not set. Logging everything.');
+			$this->logWarning(
+				'[TRACER]', __FILE__, __LINE__,
+				'TRACER_LEVEL is not set. Logging everything.'
+			);
 		}
-
 
 		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
 
 	}
 
 	public function __destruct(){
-		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Ended.');
+		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
 	}
 
 	abstract protected function write($text);
@@ -113,7 +115,7 @@ abstract class TracerBase{
 				try{
 					$this->storeStandalone($record);
 				}
-				catch(RuntimeException $ex){
+				catch(\RuntimeException $ex){
 					$this->logException('[TRACER]', $ex);
 					$this->write($record);
 				}	
@@ -152,14 +154,21 @@ abstract class TracerBase{
 		$this->log('DEBUG', $tag, $file, $line, $message);
 	}
 
-	public function logException($tag, $file, $line, Exception $exception){
-		$exceptionInfo = str_replace(
-			array('#FILE', '#LINE', '#REASON'),
-			array(basename($exception->getFile()), $exception->getLine(), $exception->getMessage()),
-			'Raised from #FILE:#LINE #REASON'
-		);
+	public function logException($tag, $file, $line, \Exception $exception){
+		if($exception !== null){
+			$description = sprintf(
+				'%s, raised from %s:%s, reason: "%s"',
+				get_class($exception),
+				basename($exception->getFile()),
+				$exception->getLine(),
+				$exception->getMessage()
+			);
+		}
+		else{
+			$description = 'NULL EXCEPTION WAS PASSED TO logException';
+		}
 
-		$this->logError($tag, $file, $line, $exceptionInfo);
+		$this->logError($tag, $file, $line, $description);
 	}
 
 	public static function syslogCritical($tag, $file, $line, $message = null){

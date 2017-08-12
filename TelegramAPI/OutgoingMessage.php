@@ -1,7 +1,10 @@
 <?php
 
-class Message{
+namespace TelegramAPI;
+
+class OutgoingMessage{
 	private $fields;
+	private $nextMessage = null;
 
 	public function __construct(
 		$chat_id,
@@ -19,51 +22,64 @@ class Message{
 			$this->fields['chat_id'] = $chat_id;
 		}
 		else{
-			throw new IncorrectArgumentException('Incorrect type of $chat_id');
+			throw new \InvalidArgumentException('Incorrect type of $chat_id');
 		}
 
 		if(is_string($text)){
 			$this->fields['text'] = $text;
 		}
 		else{
-			throw new IncorrectArgumentException('Incorrect type of $text');
+			throw new \InvalidArgumentException('Incorrect type of $text');
 		}
 
 		if(is_string($parse_mode)){
 			$this->fields['parse_mode'] = $parse_mode;
 		}
 		elseif($parse_mode !== null){
-			throw new IncorrectArgumentException('Incorrect type of $parse_mode');
+			throw new \InvalidArgumentException('Incorrect type of $parse_mode');
 		}
 
 		if(is_bool($disable_web_page_preview)){
 			$this->fields['disable_web_page_preview'] = $disable_web_page_preview;
 		}
 		elseif($disable_web_page_preview !== null){
-			throw new IncorrectArgumentException('Incorrect type of $disable_web_page_preview');
+			throw new \InvalidArgumentException('Incorrect type of $disable_web_page_preview');
 		}
 
 		if(is_bool($disable_notification)){
 			$this->fields['disable_notification'] = $disable_notification;
 		}
 		elseif($disable_notification !== null){
-			throw new IncorrectArgumentException('Incorrect type of $disable_notification');
+			throw new \InvalidArgumentException('Incorrect type of $disable_notification');
 		}
 
 		if(is_int($reply_to_message_id)){
 			$this->fields['reply_to_message_id'] = $reply_to_message_id;
 		}
 		elseif($reply_to_message_id !== null){
-			throw new IncorrectArgumentException('Incorrect type of $reply_to_message_id');
+			throw new \InvalidArgumentException('Incorrect type of $reply_to_message_id');
 		}
 
 		if(is_array($reply_markup)){
 			$this->fields['reply_markup'] = $reply_markup;
 		}
 		elseif($reply_markup !== null){
-			throw new IncorrectArgumentException('Incorrect type of $reply_markup');
+			throw new \InvalidArgumentException('Incorrect type of $reply_markup');
 		}
 
+	}
+
+	public function append(OutgoingMessage $message){
+		if($this->nextMessage !== null){
+			$this->nextMessage->append($message);
+		}
+		else{
+			$this->nextMessage = $message;
+		}
+	}
+
+	public function getNextMessage(){
+		return $this->nextMessage;
 	}
 
 	public function get(){

@@ -8,7 +8,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	
 	public function __construct($destinationFilePath){
 		$this->destinationFilePath = $destinationFilePath;
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 	
 	private function successResponse(){
@@ -51,7 +51,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
 				syslog(LOG_CRIT, "[FAKE HTTP Rq] logs dir is not a directory ($dir)");
-				throw new Exception("Unable to open $dir directory");
+				throw new \Exception("Unable to open $dir directory");
 			}
 			$exists = file_exists($this->destinationFilePath);
 		}
@@ -67,13 +67,17 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			
 		$res = file_put_contents($this->destinationFilePath, PHP_EOL.PHP_EOL.$text, FILE_APPEND);
 		if($res === false){
-			throw new Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
+			throw new \Exception('FakeHTTPRequester::sendJSONRequest file_put_contents error');
 		}
 	}
 	
 	public function sendJSONRequest($destination, $content_json){
 		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, PHP_EOL.print_r($content_json, true));
+		$this->tracer->logEvent(
+			'[JSON REQUEST]', __FILE__, __LINE__,
+			PHP_EOL.print_r($content_json, true)
+		);
+
 		$this->writeOut($content_json);	
 		return $this->randomResponse();
 	}

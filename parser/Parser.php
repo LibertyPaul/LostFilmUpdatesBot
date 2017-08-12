@@ -18,7 +18,7 @@ abstract class Parser{
 		$result = $this->requester->sendGETRequest($url);
 		
 		if($result['code'] !== 200){
-			throw new HTTPException("sendGETRequest($url) has failed with code $result[code]");
+			throw new \HTTPException("sendGETRequest($url) has failed with code $result[code]");
 		}
 				
 		if($this->srcEncoding === null){

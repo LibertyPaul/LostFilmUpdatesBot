@@ -1,247 +1,265 @@
 <?php
-require_once(__DIR__.'/UserController.php');
-require_once(__DIR__.'/ConversationStorage.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
-require_once(__DIR__.'/../lib/stuff.php');
-require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../Botan/Botan.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 
-class DuplicateUpdateException extends RuntimeException{}
+namespace core;
+
+require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../lib/Botan.php');
+require_once(__DIR__.'/ConversationStorage.php');
+require_once(__DIR__.'/BotPDO.php');
+require_once(__DIR__.'/OutgoingMessage.php');
+require_once(__DIR__.'/IncomingMessage.php');
+require_once(__DIR__.'/MessageRouterFactory.php');
+require_once(__DIR__.'/UserController.php');
+
+require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
+
+class DuplicateUpdateException extends \RuntimeException{}
 
 class UpdateHandler{
 	private $tracer;
-	private $memcache;
-	private $conversationStorageKeyPrefix;
-	private $lastUpdateIdKey;
-	private $telegramAPI;
 	private $botan;
 	private $pdo;
+	private $config;
+	private $messageRouter;
+
+	# Queries
 	private $logRequestQuery;
-	private $requestDBId;
 	private $logResponseQuery;
 
-	public function __construct(TelegramAPI $telegramAPI){
-		assert($telegramAPI !== null);
-		$this->telegramAPI = $telegramAPI;
-		
-		$this->tracer = new Tracer(__CLASS__);
-		
-		$this->pdo = null;
+	public function __construct(){
+		$this->pdo = \BotPDO::getInstance();
+		$this->config = new \Config($this->pdo);
 
-		try{
-			$this->memcache = Stuff\createMemcache();
-			$this->pdo = BotPDO::getInstance();
-		}
-		catch(Exception $ex){
-			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
+		$this->tracer = new \Tracer(__CLASS__);
 
-		$config = new Config($this->pdo);
-		$botanAPIKey = $config->getValue('Botan', 'API Key');
-		if($botanAPIKey !== null){
-			$this->botan = new Botan($botanAPIKey);
-		}
-		else{
-			$this->botan = null;
-		}
+		$this->messageRouter = MessageRouterFactory::getInstance();
 
-		$this->conversationStorageKeyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
-		if($this->conversationStorageKeyPrefix === null){
-			$this->tracer->logWarning('[CONFIG]', __FILE__, __LINE__, 'Conversation Storage / Key Prefix is not set. This bot may overwrite other bot\'s conversations');
-			$this->conversationStorageKeyPrefix = '';
+		$this->botan = null;
+		$botanEnabled = $this->config->getValue('Botan', 'Enabled');
+
+		if($botanEnabled === 'Y'){
+			$botanAPIKey = $this->config->getValue('Botan', 'API Key');
+			$this->tracer->logWarning(
+				'[o]', __FILE__, __LINE__, 
+				'Botan is enabled but no API key was found.'
+			);
+			
+			if($botanAPIKey !== null){
+				$this->botan = new \Botan($botanAPIKey);
+			}
 		}
 
 		$this->logRequestQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (source, chat_id, update_id, text)
-			VALUES ('User', :chat_id, :update_id, :text)
+			INSERT INTO `messagesHistory` (
+				source,
+				user_id,
+				update_id,
+				text
+			)
+			VALUES (
+				'User',
+				:user_id,
+				:update_id,
+				:text
+			)
 		");
 
 		$this->logResponseQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (source, chat_id, text, inResponseTo, statusCode)
-			VALUES ('UpdateHandler', :chat_id, :text, :inResponseTo, :statusCode)
+			INSERT INTO `messagesHistory` (
+				source,
+				user_id,
+				text,
+				inResponseTo,
+				statusCode
+			)
+			VALUES (
+				'UpdateHandler',
+				:user_id,
+				:text,
+				:inResponseTo,
+				:statusCode
+			)
 		");
-
-		$this->requestDBId = null;
-
 	}
 
-	private static function validateFields($update){
-		return
-			isset($update->message)				&&
-			isset($update->message->from)		&&
-			isset($update->message->from->id)	&&
-			isset($update->message->chat)		&&
-			isset($update->message->chat->id)	&&
-			isset($update->message->text);
-	}
-
-	private static function normalizeFields($update){
-		$result = clone $update;
+	private function sendToBotan(IncomingMessage $message, $event){
+		if($this->botan === null){
+			return;
+		}
 	
-		if(isset($result->update_id)){
-			$result->update_id = intval($result->update_id);
-		}
-		$result->message->from->id = intval($result->message->from->id);
-		$result->message->chat->id = intval($result->message->chat->id);
-
-		return $result;
+		$message_assoc = json_decode($message->getRawMessage());
+		$this->botan->track($message_assoc, $event);
 	}
 
-	private function extractCommand($text){
-		$regex = '/(\/\w+)/';
-		$matches = array();
-		$res = preg_match($regex, $text, $matches);
-		if($res === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match error: '.preg_last_error());
-			throw new LogicException('preg_match error: '.preg_last_error());
-		}
-		if($res === 0){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Invalid command '$text'");
-			return $text;
-		}
-
-		return $matches[1];
-	}
-
-	private function verifyData($update){
-		return true;
-	}
-
-	private function sendToBotan($message, $event){
-		$message_assoc = json_decode(json_encode($message), true);
-		if($this->botan !== null){
-			$this->botan->track($message_assoc, $event);
-		}
-	}
-
-	private static function extractUserInfo($message){
-		$chat = $message->chat;
-
-		return array(
-			'username'		=> isset($chat->username)	? $chat->username	: null,
-			'first_name' 	=> isset($chat->first_name)	? $chat->first_name	: null,
-			'last_name' 	=> isset($chat->last_name)	? $chat->last_name	: null
-		);
-	}
-
-	private function respond(MessageList $response){
-		foreach($response->getMessages() as $message){
-			try{
-				$this->telegramAPI->sendMessage($message);
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[TELEGRAM API]', __FILE__, __LINE__, $ex);
-			}
-		}
-	}
-
-	private function handleMessage($message){
-		try{
-			$conversationStorage = new ConversationStorage(
-				$message->from->id,
-				$this->conversationStorageKeyPrefix
-			);
-			
-			if($conversationStorage->getConversationSize() === 0){
-				$message->text = $this->extractCommand($message->text);
-			}
-			
-			$conversationStorage->insertMessage($message->text);
-			
-			$userController = new UserController($message->chat->id);
-			$response = $userController->incomingUpdate(
-				$conversationStorage,
-				self::extractUserInfo($message)
-			);
-
-			$messageList = new MessageList($response);
-
-			foreach($messageList as $message){
-				try{
-					$res = $this->telegramAPI->sendMessage($message);
-				}
-				catch(HTTPException $ex){
-					$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
-					$res = array(
-						'code'	=> null,
-						'value'	=> null
-					);
-				}
-
-				$fields = $message->get();
-
-				try{
-					$this->logResponseQuery->execute(
-						array(
-							':chat_id'		=> $fields['chat_id'],
-							':text'			=> $fields['text'],
-							':inResponseTo'	=> $this->requestDBId,
-							':statusCode'	=> $res['code']
-						)
-					);
-				}
-				catch(PDOException $ex){
-					$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
-				}
-			}
-		}
-		catch(Exception $ex){
-			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-		}
-		
-		if($conversationStorage->getConversationSize() === 1){
-			try{
-				$this->sendToBotan($message, $conversationStorage->getLastMessage());
-			}
-			catch(Exception $ex){
-				$this->tracer->logException('[BOTAN ERROR]', __FILE__, __LINE__, $ex);
-			}
-		}
-	}
-
-	public function handleUpdate($update){
-		if(self::validateFields($update) === false){
-			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, 'Update is invalid:'.PHP_EOL.print_r($update, true));
-			throw new RuntimeException('Invalid update');
-		}
-
-		$update = self::normalizeFields($update);
-
-		if($this->verifyData($update) === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Invalid update data: Last id: '.$this->getLastUpdateId().PHP_EOL.print_r($update, true));
-			throw new RuntimeException('Invalid update data'); // TODO: check if we should gently skip in such case
-		}
-
+	private function logIncomingMessage(IncomingMessage $message){
 		try{
 			$this->logRequestQuery->execute(
 				array(
-					':chat_id'		=> $update->message->chat->id,
-					':update_id'	=> $update->update_id,
-					':text'			=> $update->message->text
+					':user_id'		=> $message->getUserId(),
+					':update_id'	=> $message->getUpdateId(),
+					':text'			=> $message->getText()
 				)
 			);
 
-			$this->requestDBId = $this->pdo->lastInsertId();
-			$this->requestDBId = intval($this->requestDBId);
-
+			$loggedMessageId = intval($this->pdo->lastInsertId());
 			if($this->pdo->errorCode() === 'IM001'){
-				$this->tracer->logError('[PDO]', __FILE__, __LINE__, 'PDO was unable to get lastInsertId');
-				$this->requestDBId = null;
+				$this->tracer->logError(
+					'[PDO]', __FILE__, __LINE__,
+					'PDO was unable to get lastInsertId'
+				);
+				$loggedMessageId = null;
 			}
 		}
-		catch(PDOException $ex){
+		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
-			throw new DuplicateUpdateException();
+			$this->tracer->logError(
+				'[DB ERROR]', __FILE__, __LINE__,
+				PHP_EOL.print_r($message, true)
+			);
+			
+			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
+				throw new DuplicateUpdateException();
+			}
+			else{
+				throw new \RuntimeException('logRequestQuery call has failed');
+			}
 		}
-
-		$this->handleMessage($update->message);
+		
+		return $loggedMessageId;
 	}
 
+	private function logOutgoingMessage(
+		DirectedOutgoingMessage $message,
+		$loggedRequestId,
+		$statusCode
+	){
+		while($message !== null){
+			$text = substr($message->getOutgoingMessage()->getText(), 0, 5000);
+			try{
+				$this->logResponseQuery->execute(
+					array(
+						':user_id'		=> $message->getUserId(),
+						':text'			=> $text,
+						':inResponseTo'	=> $loggedRequestId,
+						':statusCode'	=> $statusCode
+					)
+				);
+			}
+			catch(\PDOException $ex){
+				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logError(
+					'[DB ERROR]', __FILE__, __LINE__,
+					PHP_EOL.print_r($message, true)
+				);
+				
+				if($ex->errorInfo[1] === 1062){# Duplicate entry error code
+					throw new DuplicateUpdateException();
+				}
+				else{
+					throw new \RuntimeException('logRequestQuery call has failed');
+				}
+			}
+			finally{
+				$message = $message->nextMessage();
+			}
+		}
+	}
+
+		
+
+	public function processIncomingMessage(IncomingMessage $message){
+		$this->tracer->logDebug(
+			'[o]', __FILE__, __LINE__,
+			'Entered processIncomingMessage with message:'.PHP_EOL.
+			print_r($message, true)
+		);
+
+		$loggedRequestId = $this->logIncomingMessage($message);
+
+		$this->tracer->logDebug(
+			'[o]', __FILE__, __LINE__,
+			"IncomingMessage was logged with id=[$loggedRequestId]"
+		);
+
+		try{
+			$conversationStorage = new ConversationStorage($message->getUserId());
+			$conversationStorage->insertMessage($message->getText());
+			$initialCommand = $conversationStorage->getFirstMessage();
+		}
+		catch(\Exception $ex){
+			$this->tracer->logError(
+				'[o]', __FILE__, __LINE__,
+				'Conversation Storage Error'
+			);
+
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+
+			throw $ex;
+		}
+
+		try{
+			$userController = new UserController(
+				$message->getUserId(),
+				$conversationStorage
+			);
+		}
+		catch(\Exception $ex){
+			$this->tracer->logError(
+				'[o]', __FILE__, __LINE__,
+				'UserController creation error'
+			);
+
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			throw $ex;
+		}
+
+		$directedOutgoingMessage = $userController->processLastUpdate();
+
+		while($directedOutgoingMessage !== null){
+			try{
+				$route = $this->messageRouter->route(
+					$directedOutgoingMessage->getUserId()
+				);
+			
+				$result = $route->send($directedOutgoingMessage->getOutgoingMessage());
+
+				switch($result){
+					case SendResult::Success:
+						$statusCode = 0;
+						break;
+	
+					case SendResult::Fail:
+					default:
+						$statusCode = 1;
+						break;
+				}
+	
+					
+				$this->logOutgoingMessage(
+					$directedOutgoingMessage,
+					$loggedRequestId,
+					$statusCode
+				);
+			}
+			catch(\Exception $ex){
+				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			}
+			
+			$directedOutgoingMessage = $directedOutgoingMessage->nextMessage();
+		}
+			
+		$this->sendToBotan($message, $initialCommand);
+	}
 }
+
+
+
+
+
+
+
 
 
 

@@ -3,7 +3,7 @@ require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
-class SeriesIsNotPublishedYet extends RuntimeException{}
+class SeriesIsNotPublishedYet extends \RuntimeException{}
 
 class SeriesAboutParser extends Parser{
 	private $tracer;
@@ -18,7 +18,7 @@ class SeriesAboutParser extends Parser{
 	public function __construct(HTTPRequesterInterface $requester){
 		parent::__construct($requester);
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 	}
 
 	private function singleRegexSearch($regex){
@@ -28,7 +28,7 @@ class SeriesAboutParser extends Parser{
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Regex string: '$regex'");
 			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Source:'.PHP_EOL.$this->pageSrc);
-			throw new Exception('preg_match has failed');
+			throw new \Exception('preg_match has failed');
 		}
 
 		return $matches;

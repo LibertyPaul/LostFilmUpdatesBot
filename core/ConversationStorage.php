@@ -1,10 +1,15 @@
 <?php
+
+namespace core;
+
 require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/BotPDO.php');
+require_once(__DIR__.'/../lib/Config.php');
 
 
 class ConversationStorage{
-	private $telegram_id;
+	private $user_id;
 	private $memcache;
 	private $tracer;
 	private $conversation;
@@ -12,19 +17,25 @@ class ConversationStorage{
 
 	const MEMCACHE_STORE_TIME = 86400; // 1 day
 
-	public function __construct($telegram_id, $keyPrefix){
-		assert(is_int($telegram_id));
-		$this->telegram_id = $telegram_id;
+	public function __construct($user_id){
+		$this->tracer = new \Tracer(__CLASS__);
 
-		assert(is_string($keyPrefix));
-		$this->keyPrefix = $keyPrefix;
+		assert(is_int($user_id));
+		$this->user_id = $user_id;
 
-		$this->tracer = new Tracer(__CLASS__);
+		$config = new \Config(\BotPDO::getInstance());
+		$this->keyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
+		if($this->keyPrefix === null){
+			$this->tracer->logWarning(
+				'[CONFIG]', __FILE__, __LINE__,
+				'Parameter [Conversation Storage][Key Prefix] does not exist. Using "".'
+			);
+		}
 
 		try{
-			$this->memcache = Stuff\createMemcache();
+			$this->memcache = \Stuff\createMemcache();
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
@@ -33,7 +44,11 @@ class ConversationStorage{
 	}
 
 	private function getMemcacheKey(){
-		return $this->keyPrefix.$this->telegram_id;
+		return str_replace(
+			array('#PREFIX', '#USER_ID'),
+			array($this->keyPrefix, $this->user_id),
+			'#PREFIX/#USER_ID'
+		);
 	}
 	
 	private function fetchConversation(){
@@ -50,10 +65,16 @@ class ConversationStorage{
 	private function commitConversation(){
 		$conversation_serialized = serialize($this->conversation);
 
-		$res = $this->memcache->set($this->getMemcacheKey(), $conversation_serialized, 0, self::MEMCACHE_STORE_TIME);
+		$res = $this->memcache->set(
+			$this->getMemcacheKey(),
+			$conversation_serialized,
+			0,
+			self::MEMCACHE_STORE_TIME
+		);
+
 		if($res === false){
 			$this->tracer->logError('[FATAL]', __FILE__, __LINE__, 'memcache->set has failed');
-			throw new RuntimeException('memcache->set has failed');
+			throw new \RuntimeException('memcache->set has failed');
 		}
 	}
 
@@ -63,14 +84,14 @@ class ConversationStorage{
 
 	public function getFirstMessage(){
 		if($this->getConversationSize() < 1){
-			throw new RuntimeException('ConversationStorage is empty');
+			throw new \RuntimeException('ConversationStorage is empty');
 		}
 		return $this->conversation[0];
 	}
 
 	public function getLastMessage(){
 		if($this->getConversationSize() < 1){
-			throw new RuntimeException('ConversationStorage is empty');
+			throw new \RuntimeException('ConversationStorage is empty');
 		}
 		return $this->conversation[count($this->conversation) - 1];
 	}

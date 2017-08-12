@@ -10,7 +10,7 @@ class Config{
 	public function __construct(PDO $pdo){
 		assert($pdo !== null);
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->getValueQuery = $pdo->prepare('
 			SELECT	`value`

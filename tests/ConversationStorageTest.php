@@ -4,13 +4,10 @@ require_once(__DIR__.'/../core/ConversationStorage.php');
 
 class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 
-	const CONVERSATION_STORAGE_KEY_PREFIX = 'Test Prefix';
-
 	public function test(){
-		$telegram_id = rand(-1000000000, -1);
-		// negative in order not to broke anything even in case running on prod
+		$user_id = rand(0, 999999999999999);
 		
-		$storage = new ConversationStorage($telegram_id, self::CONVERSATION_STORAGE_KEY_PREFIX);
+		$storage = new core\ConversationStorage($user_id);
 		$this->assertEquals(array(), $storage->getConversation());
 
 		$testMessage1 = '
@@ -64,7 +61,7 @@ class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 
 		
 
-		$storage = new ConversationStorage($telegram_id, self::CONVERSATION_STORAGE_KEY_PREFIX);
+		$storage = new core\ConversationStorage($user_id);
 
 
 		$this->assertEquals(
@@ -76,7 +73,7 @@ class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(array(), $storage->getConversation());
 
 
-		$storage = new ConversationStorage($telegram_id, self::CONVERSATION_STORAGE_KEY_PREFIX);
+		$storage = new core\ConversationStorage($user_id);
 		$this->assertEquals(array(), $storage->getConversation());
 	}
 

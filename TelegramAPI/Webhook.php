@@ -1,4 +1,7 @@
 <?php
+
+namespace TelegramAPI;
+
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
@@ -23,25 +26,48 @@ class Webhook{
 
 	private $selfWebhookPassword;
 
+	private $messageResendEnabled = false;
+	private $messageResendURL = null;
+
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
 		$this->updateHandler = $updateHandler;
 
 		try{
-			$this->tracer = new Tracer(__CLASS__);
-			$this->incomingLog = new Tracer('incomingMessages');
+			$this->tracer = new \Tracer(__CLASS__);
+			$this->incomingLog = new \Tracer('incomingMessages');
 		}
-		catch(Exception $ex){
-			TracerBase::syslogCritical('[TRACER]', __FILE__, __LINE__, 'Unable to create Tracer instance');
+		catch(\Exception $ex){
+			TracerBase::syslogCritical(
+				'[TRACER]', __FILE__, __LINE__,
+				'Unable to create Tracer instance'
+			);
 		}
 
-		$config = new Config(BotPDO::getInstance());
+		$config = new \Config(\BotPDO::getInstance());
 		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
+
+		$this->messageResendEnabled = $config->getValue('TelegramAPI', 'Message Resend Enabled');
+		if($this->messageResendEnabled === 'Y'){
+			$this->messageResendURL = $config->getValue('TelegramAPI', 'Message Resend URL');
+			if($this->messageResendURL === null){
+				$this->tracer->logWarning(
+					'[o]', __FILE__, __LINE__,
+					'Message resend is enabled, but no URL is set'
+				);
+
+				$this->messageResendEnabled = 'N';
+			}
+		}
 	}
 
 	private function verifyPassword($password){
 		if($this->selfWebhookPassword === null){
-			$this->tracer->logNotice('[SECURITY]', __FILE__, __LINE__, 'Webhook password is not set. Check was skipped.');
+			$this->tracer->logNotice(
+				'[SECURITY]', __FILE__, __LINE__,
+				'Webhook password is not set. Check was skipped.'
+			);
+			
 			return true;
 		}
 
@@ -90,25 +116,41 @@ class Webhook{
 	private function logUpdate($update){
 		$prettyJSON = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 		if($prettyJSON === false){
-			$this->tracer->logError('[JSON]', __FILE__, __LINE__, 'json_encode error: '.json_last_error_msg());
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
+			$this->tracer->logError(
+				'[JSON]', __FILE__, __LINE__,
+				'json_encode error: '.json_last_error_msg()
+			);
+
+			$this->tracer->logNotice(
+				'[INFO]', __FILE__, __LINE__,
+				PHP_EOL.print_r($update, true)
+			);
 			return;
 		}
 
-		$this->incomingLog->logEvent('[INCOMING MESSAGE]', __FILE__, __LINE__, PHP_EOL.$prettyJSON);
+		$this->incomingLog->logEvent(
+			'[INCOMING MESSAGE]', __FILE__, __LINE__,
+			PHP_EOL.$prettyJSON
+		);
 	}
 
 	public function processUpdate($password, $postData){
 		if($this->verifyPassword($password) === false){
-			$this->tracer->logNotice('[SECURITY]', __FILE__, __LINE__, "Incorrect password: '$password'");
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.$postData);
+			$this->tracer->logNotice(
+				'[SECURITY]', __FILE__, __LINE__,
+				"Incorrect password: '$password'".PHP_EOL.
+				$postData
+			);
 			$this->respondFinal(WebhookReasons::invalidPassword);
 			return;
 		}
 		
 		$update = json_decode($postData);
 		if($update === null){
-			$this->tracer->logError('[JSON]', __FILE__, __LINE__, 'json_decode error: '.json_last_error_msg());
+			$this->tracer->logError(
+				'[JSON]', __FILE__, __LINE__,
+				'json_decode error: '.json_last_error_msg()
+			);
 			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL."'$postData'");
 			$this->respondFinal(WebhookReasons::formatError);
 			return;
@@ -127,19 +169,24 @@ class Webhook{
 			$this->updateHandler->handleUpdate($update);
 			$this->respondFinal(WebhookReasons::OK);
 		}
-		catch(DuplicateUpdateException $ex){
+		catch(\core\DuplicateUpdateException $ex){
 			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
-		catch(Exception $ex){
+		catch(\Exception $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
 				
-		if(defined('MESSAGE_STREAM_URL')){
+		if($this->messageResendEnabled === 'Y'){
 			try{
-				$this->resendUpdate($postData, MESSAGE_STREAM_URL);
+				$this->resendUpdate($postData, $this->messageResendURL);
 			}
-			catch(Exception $ex){
+			catch(\Exception $ex){
+				$this->tracer->logError(
+					'[MESSAGE STREAM]', __FILE__, __LINE__,
+					'Message resend has failed: URL=['.$this->messageResendURL.']'.PHP_EOL.
+					'postData:'.PHP_EOL.print_r($postData, true)
+				);
 				$this->tracer->logException('[MESSAGE STREAM]', __FILE__, __LINE__, $ex);
 			}
 		}
@@ -148,13 +195,9 @@ class Webhook{
 	private function resendUpdate($postData, $URL){
 		$testStream = new HTTPRequester();
 
-		if(defined('MESSAGE_STREAM_PASSWORD')){
-			$URL .= '?password='.MESSAGE_STREAM_PASSWORD;
-		}
-		
 		$res = $testStream->sendJSONRequest($URL, $postData);
 		if($res['code'] >= 400){
-			$this->tracer->logError('[STREAM]', __FILE__, __LINE__, 'message resend has failed with code '.$res['code']);
+			throw new \RuntimeException('Message resend has failed with code '.$res['code']);
 		}
 	}
 }

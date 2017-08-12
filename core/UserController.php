@@ -1,300 +1,242 @@
 <?php
+
+namespace core;
+
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/Message.php');
-require_once(__DIR__.'/MessageList.php');
+require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-class UserIsNotRegistredException extends OutOfBoundsException{}
-
 class UserController{
-	private $user_id;
-	private $telegram_id;
+	private $user_id; # TODO: load full users record
+	private $conversationStorage;
+	private $messageDestination;
 	private $pdo;
 	private $tracer;
 
-	public function __construct($telegram_id){
-		$this->pdo = BotPDO::getInstance();
+	public function __construct($user_id, ConversationStorage $conversationStorage){
+		$this->tracer = new \Tracer(__CLASS__);
+		$this->pdo = \BotPDO::getInstance();
 
-		$user_id = null;
-		
-		assert(is_int($telegram_id));
-		$this->telegram_id = $telegram_id;
+		if(is_int($user_id) === false){
+			$this->tracer->logError(
+				'[INVALID TYPE]', __FILE__, __LINE__,
+				"Invalid user_id type ($user_id)"
+			);
 
-		$this->tracer = new Tracer(__CLASS__);
-	}	
+			throw new \InvalidArgumentException("Invalid user_id type ($user_id)");
+		}
+
+		$this->user_id = $user_id;
+
+		if($conversationStorage === null){
+			$this->tracer->logError(
+				'[INVALID ARGUMENT]', __FILE__, __LINE__,
+				'Provided ConversationStorage is null'
+			);
+
+			throw new \InvalidArgumentException('Provided ConversationStorage is null');
+		}
+
+		$this->conversationStorage = $conversationStorage;
+
+	}
+
+	private function repeatQuestion(){
+		$this->conversationStorage->deleteLastMessage();
+	}
 	
-	private function getUserIdByTelegramId($telegram_id){
-		$isUserExistsQuery = $this->pdo->prepare('
-			SELECT `id`
-			FROM `users`
-			WHERE `telegram_id` = :telegram_id
+	private function welcomeUser(){
+		$this->conversationStorage->deleteConversation();
+
+		$getMessagesHistorySize = $this->pdo->prepare('
+			SELECT  COUNT(*) FROM `messagesHistory`
+			WHERE `user_id` = :user_id
 		');
-		
-		$isUserExistsQuery->execute(
-			array(
-				':telegram_id' => $this->telegram_id
-			)
-		);
-		
-		$user = $isUserExistsQuery->fetch();
-		if($user !== false){
-			return $user['id'];
-		}
-		else{
-			return null;
-		}
-	}
 
-	private function getUserId(){
-		if($this->user_id === null){
-			$this->user_id = $this->getUserIdByTelegramId($this->telegram_id);
-			if($this->user_id === null){// TODO: move error handling to another place
-				$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Unknown Telegram Id: '.$this->telegram_id);
-				throw new UserIsNotRegistredException();
-			}
-		}
-		return $this->user_id;
-	}
-	
-	private function repeatQuestion(ConversationStorage $conversationStorage){
-		$conversationStorage->deleteLastMessage();
-	}
-	
-	private function isUserRegistred(){
-		return $this->getUserIdByTelegramId($this->telegram_id) !== null;
-	}
-	
-	private function registerUser(ConversationStorage $conversationStorage, $username, $firstName, $lastName){
-		$conversationStorage->deleteConversation();
-		
-		if($this->isUserRegistred()){
-			return new Message($this->telegram_id, 'Мы ведь уже знакомы, правда?');
-		}
-		
-		$addUserQuery = $this->pdo->prepare('
-			INSERT INTO `users` (
-				`telegram_id`,
-				`telegram_username`,
-				`telegram_firstName`,
-				`telegram_lastName`
-			)
-			VALUES (
-				:telegram_id,
-				:telegram_username,
-				:telegram_firstname,
-				:telegram_lastname
-			)
-		');
-		
 		try{
-			$addUserQuery->execute(
+			$getMessagesHistorySize->execute(
 				array(
-					':telegram_id' 			=> $this->telegram_id,
-					':telegram_username' 	=> $username,
-					':telegram_firstname' 	=> $firstName,
-					':telegram_lastname'	=> $lastName
+					':user_id' => $this->user_id
 				)
 			);
+
+			$res = $getMessagesHistorySize->fetch();
+			$count = intval($res[0]);
+
+			if($count > 1){
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage(
+						'Мы ведь уже знакомы, правда?'
+					)
+				);
+			}
 		}
-		catch(PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			return new Message($this->telegram_id, 'Возникла ошибка. @libertypaul уже в курсе и скоро починит.');
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
+			$username = '';
 		}
+
+		$welcomingText =
+			'Привет, %username%'.PHP_EOL.	#TODO: pass real username
+			'Я - бот LostFilm updates.'.PHP_EOL.
+			'Моя задача - оповестить тебя о выходе новых серий '.
+			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
+			'Чтобы узнать что я умею - введи /help или выбери эту команду в списке';
 		
-		$messageList = new MessageList();
+		$response = new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage($welcomingText)
+		);
+
 		try{
 			$notificationGenerator = new NotificationGenerator();
-			$notification = $notificationGenerator->newUserEvent($this->getUserId());
-			$messageList->add($notification);
+			$adminNotification = $notificationGenerator->newUserEvent($this->user_id);
+			$response->appendMessage($adminNotification);
 		}
-		catch(UserIsNotRegistredException $ex){
-			$this->tracer->logWarning('[USER]', __FILE__, __LINE__, 'Attempt to use bot without registration');
-			return new Message($this->telegram_id, 'Твой Telegram ID не найден в БД, ты регистрировался командой /start ?');
+		catch(\Exception $ex){
+			$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
 		}
-		catch(Exception $ex){
-			$this->tracer->logError('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex->getMessage());
-		}
-		
-		
-		$welcomingText 	= "Привет, $username\n";
-		$welcomingText .= "Я - бот LostFilm updates.\n";
-		$welcomingText .= "Моя задача - оповестить тебя о выходе новых серий твоих любимых сериалов на сайте https://lostfilm.tv/\n\n";
-		$welcomingText .= "Чтобы узнать что я умею - введи /help или выбери эту команду в списке";
 
-		$messageList->add(new Message($this->telegram_id, $welcomingText, null, true));
-
-		return $messageList;
+		return $response;
 	}
 
-	private function cancelRequest(ConversationStorage $conversationStorage){
-		$conversationStorage->deleteConversation();
-	
-		return new Message(
-			$this->telegram_id,
-			'Действие отменено.',
-			null,
-			null,
-			null,
-			null,
-			array(
-				'hide_keyboard' => true
-			)
+	private function cancelRequest(){
+		$this->conversationStorage->deleteConversation();
+		return new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage('Действие отменено.')
 		);
 	}
-	
-	private function unregisterUser(ConversationStorage $conversationStorage){
-		try{
-			$user_id = $this->getUserId();
-		}
-		catch(UserIsNotRegistredException $ex){
-			$conversationStorage->deleteConversation();
 
-			$text = 'Ты еще не регистрировался, а уже пытаешься удалиться'.PHP_EOL.	
-					'Не надо так...';
-
-			return new Message($this->telegram_id, $text);
-		}
-
-
+	private function deleteUser(){
 		$ANSWER_YES = 'Да';
 		$ANSWER_NO = 'Нет';
-		$keyboard = array(
-			array(
-				$ANSWER_YES,
-				$ANSWER_NO
-			)
-		);
 		
-		switch($conversationStorage->getConversationSize()){
+		switch($this->conversationStorage->getConversationSize()){
 		case 1:
-			return new Message(
-				$this->telegram_id,
-				'Ты уверен? Вся информация о тебе будет безвозвратно потеряна...',
-				null,
-				null,
-				null,
-				null,
-				array(
-					'keyboard' => $keyboard,
-					'one_time_keyboard' => false
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(
+					'Ты уверен? Вся информация о тебе будет безвозвратно потеряна...',
+					false,
+					false,
+					array($ANSWER_YES, $ANSWER_NO)
 				)
 			);
 	
 			break;
 		
 		case 2:
-			$conversation = $conversationStorage->getConversation();
-			$resp = $conversation[1];
-			switch($resp){
+			switch($this->conversationStorage->getLastMessage()){
 			case $ANSWER_YES:
-				$conversationStorage->deleteConversation();
+				$this->conversationStorage->deleteConversation();
 
-				$messageList = new MessageList();
+				$response = null;
 				
 				try{
 					$notificationGenerator = new NotificationGenerator();
-					$notification = $notificationGenerator->userLeftEvent($user_id);
-					$messageList->add($notification);
+					$response = $notificationGenerator->userLeftEvent($this->user_id);
 				}
-				catch(Exception $ex){
+				catch(\Exception $ex){
 					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
 				}
 				
-				$deleteUserQuery = $this->pdo->prepare('
-					DELETE FROM `users`
+				$deleteUserQuery = $this->pdo->prepare("
+					UPDATE `users`
+					SET `deleted` = 'Y'
 					WHERE `id` = :user_id
-				');
+				");
 				
 				try{
 					$deleteUserQuery->execute(
 						array(
-							':user_id' => $user_id
+							':user_id' => $this->user_id
 						)
 					);
 				}
-				catch(PDOException $ex){
+				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					$conversationStorage->deleteConversation();
-					return new Message($this->telegram_id, 'Возникла ошибка. Записал, починят.');
+					$this->conversationStorage->deleteConversation();
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Возникла ошибка. Записал, починят.')
+					);
 				}
 				
-				$response = new Message(
-					$this->telegram_id,
-					'Прощай...',
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
+				$response->appendMessage(
+					new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Прощай...')
 					)
 				);
 
-				$messageList->add($response);
-				
-				return $messageList;
-				break;
+				return $response;
 				
 			case $ANSWER_NO:
-				$conversationStorage->deleteConversation();
-				
-				return new Message(
-					$this->telegram_id,
-					'Фух, а то я уже испугался',
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
-					)
+				$this->conversationStorage->deleteConversation();
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Фух, а то я уже испугался')
 				);
-					
-				break;
 			
 			default:
 				$this->repeatQuestion($conversationStorage);
-				return new Message($this->telegram_id, 'Что?');
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage(
+						'Давай конкретнее, либо да, либо нет',
+						false,
+						false,
+						array($ANSWER_YES, $ANSWER_NO)
+					)
+				);
 			}
 			break;
+
+		default:
+			$this->tracer->logError(
+				'[USER CONTROLLER]', __FILE__, __LINE__,
+				'3rd message in /stop conversation'.PHP_EOL.
+				print_r($this->conversationStorage->getConversation(), true)
+			);
+			$this->conversationStorage->deleteConversation();
 		}
 	}
 	
-	private function showHelp(ConversationStorage $conversationStorage){
-		$conversationStorage->deleteConversation();
+	private function showHelp(){
+		$this->conversationStorage->deleteConversation();
 		
-		$helpText  = "LostFilm updates - бот, который оповещает о новых сериях на https://lostfilm.tv/\n\n";
-		$helpText .= "Список команд:\n";
-		$helpText .= "/add_show - Добавить уведомления о сериале\n";
-		$helpText .= "/remove_show - Удалить уведомления о сериале\n";
-		$helpText .= "/get_my_shows - Показать, на что ты подписан\n";
-		$helpText .= "/mute - Выключить уведомления\n";
-		$helpText .= "/cancel - Отменить команду\n";
-		$helpText .= "/help - Показать это сообщение\n";
-		$helpText .= "/stop - Удалиться из контакт-листа бота\n\n";
-
-		$helpText .= "Telegram создателя: @libertypaul\n";
-		$helpText .= "Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru\n";
-		$helpText .= "Исходники бота есть на GitHub: https://github.com/LibertyPaul/LostFilmUpdatesBot\n\n";
-		$helpText .= "Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.";
+		$helpText =
+			'LostFilm updates - бот, который оповещает '								.
+			'о новых сериях на https://lostfilm.tv/'							.PHP_EOL
+																				.PHP_EOL.
+			'Список команд:'													.PHP_EOL.
+			'/add_show - Добавить уведомления о сериале'						.PHP_EOL.
+			'/remove_show - Удалить уведомления о сериале'						.PHP_EOL.
+			'/get_my_shows - Показать, на что ты подписан'						.PHP_EOL.
+			'/mute - Выключить уведомления'										.PHP_EOL.
+			'/cancel - Отменить командa'										.PHP_EOL.
+			'/help - Показать это сообщение'									.PHP_EOL.
+			'/stop - Удалиться из контакт-листа бота'							.PHP_EOL
+																				.PHP_EOL.
+			'Telegram создателя: @libertypaul'									.PHP_EOL.
+			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'		.PHP_EOL.
+			'Исходники бота есть на GitHub: '											.
+			'https://github.com/LibertyPaul/LostFilmUpdatesBot'					.PHP_EOL
+																				.PHP_EOL.
+			'Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.';
 		
-		return new Message(
-			$this->telegram_id,
-			$helpText,
-			null,
-			true,
-			null,
-			null,
-			array(
-				'hide_keyboard' => true
-			)
+		return new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage($helpText)
 		);
 	}
 	
-	private function showUserShows(ConversationStorage $conversationStorage){
-		$conversationStorage->deleteConversation();
+	private function showUserShows(){
+		$this->conversationStorage->deleteConversation();
 		$getUserShowsQuery = $this->pdo->prepare("
 			SELECT 
 				CONCAT(
@@ -310,34 +252,22 @@ class UserController{
 			ORDER BY `shows`.`title_ru`
 		");
 
-		try{
-			$user_id = $this->getUserId();
-		}
-		catch(UserIsNotRegistredException $ex){
-			return new Message($this->telegram_id, 'Сначала надо зарегистрироваться командой /start');
-		}
-		
 		$getUserShowsQuery->execute(
 			array(
-				':user_id' => $user_id
+				':user_id' => $this->user_id
 			)
 		);
 		
 		$userShows = $getUserShowsQuery->fetchAll();
 		
 		if(count($userShows) === 0){
-			return new Message(
-				$this->telegram_id,
-				'Вы не выбрали ни одного сериала',
-				null,
-				null,
-				null,
-				null,
-				array(
-					'hide_keyboard' => true
-				)
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Вы пока не выбрали ни одного сериала')
 			);
 		}
+
+		$parts = array();
 
 		$text = 'Ваши сериалы:';
 		
@@ -346,29 +276,34 @@ class UserController{
 			if($show['onAir'] === 'N'){
 				$icon = '✕';
 			}
-			
-			$text .= str_replace(
+
+			$showRow = str_replace(
 				array('#ICON', '#TITLE'),
 				array($icon, $show['title']),
 				PHP_EOL.PHP_EOL.'#ICON #TITLE'
 			);
+
+			if(strlen($text) + strlen($showRow) > 4000){
+				$parts[] = $text;
+				$text = '';
+			}
+
+			$text .= $showRow;
 		}
-		
-		return new Message(
-			$this->telegram_id,
-			$text,
-			null,
-			null,
-			null,
-			null,
-			array(
-				'hide_keyboard' => true
-			)
-		);
+
+		$parts[] = $text;
+
+		$outgoingMessage = new OutgoingMessage($parts[0]);
+		for($i = 1; $i < count($parts); ++$i){
+			$nextMessage = new OutgoingMessage($parts[$i]);
+			$outgoingMessage->appendMessage($nextMessage);
+		}
+
+		return new DirectedOutgoingMessage($this->user_id, $outgoingMessage);
 	}
 	
-	private function toggleMute(ConversationStorage $conversationStorage){
-		$conversationStorage->deleteConversation();
+	private function toggleMute(){
+		$this->conversationStorage->deleteConversation();
 		$isMutedQuery = $this->pdo->prepare('
 			SELECT `mute`
 			FROM `users`
@@ -376,38 +311,44 @@ class UserController{
 		');
 
 		try{
-			$user_id = $this->getUserId();
-		}
-		catch(UserIsNotRegistredException $ex){
-			return new Message($this->telegram_id, 'Сначала надо зарегистрироваться командой /start');
-		}
-		
-		try{
 			$isMutedQuery->execute(
 				array(
-					':user_id' => $user_id
+					':user_id' => $this->user_id
 				)
 			);
 		}
-		catch(PDOException $ex){
+		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__,$ex);
-			return new Message($this->telegram_id, 'Возникла ошибка в базе. Записал. Починят.');
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
+			);
 		}
 		
-		$user = $isMutedQuery->fetch();
-		if($user === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'User was not found '.$this->telegram_id);
-			return new Message($this->telegram_id, 'Не могу найти тебя в списке пользователей.\nПопробуй выполнить команду /start');
+		$res = $isMutedQuery->fetch();
+		if($res === false){
+			$this->tracer->logError(
+				'[ERROR]', __FILE__, __LINE__,
+				'User was not found '.$this->user_id
+			);
+
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(
+					'Не могу найти тебя в списке пользователей.'.PHP_EOL.
+					'Попробуй выполнить команду /start'
+				)
+			);
 		}
 
 		$action = null;
 		$newMode = null;
-		if($user['mute'] === 'N'){
+		if($res['mute'] === 'N'){
 			$newMode = 'Y';
 			$action = 'Выключил';
 		}
 		else{
-			assert($user['mute'] === 'Y');
+			assert($res['mute'] === 'Y');
 			$newMode = 'N';
 			$action = 'Включил';
 		}
@@ -422,39 +363,26 @@ class UserController{
 			$toggleMuteQuery->execute(
 				array(
 					':mute' 	=> $newMode,
-					':user_id'	=> $user_id
+					':user_id'	=> $this->user_id
 				)
 			);
 		}
-		catch(PDOException $ex){
+		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			return new Message($this->telegram_id, 'Возникла ошибка в базе. Записал. Починят.');
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
+			);
 		}
 		
-		return new Message(
-			$this->telegram_id,
-			"$action все уведомления",
-			null,
-			null,
-			null,
-			null,
-			array(
-				'hide_keyboard' => true
-			)
+		return new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage("$action все уведомления")
 		);
 	}
 	
-	private function insertOrDeleteShow(ConversationStorage $conversationStorage, $in_out_flag){
-		$conversation = $conversationStorage->getConversation();
-		
-		try{
-			$user_id = $this->getUserId();
-		}
-		catch(UserIsNotRegistredException $ex){
-			$conversationStorage->deleteConversation();
-			return new Message($this->telegram_id, 'Сначала надо зарегистрироваться командой /start');
-		}
-		
+	private function insertOrDeleteShow($in_out_flag){
+		$conversation = $this->conversationStorage->getConversation();
 		
 		$successText = '';
 		$action = null;
@@ -475,7 +403,7 @@ class UserController{
 		}
 	
 	
-		switch($conversationStorage->getConversationSize()){
+		switch($this->conversationStorage->getConversationSize()){
 		case 1:
 			$query = $this->pdo->prepare("
 				SELECT
@@ -495,63 +423,60 @@ class UserController{
 					XOR :in_out_flag
 				)
 				AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				ORDER BY `title_ru`, `title_en`
 			");
 
 			try{
 				$query->execute(
 					array(
-						':user_id'		=> $user_id,
+						':user_id'		=> $this->user_id,
 						':in_out_flag'	=> $in_out_flag
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				$conversationStorage->deleteConversation();
-				return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+				$this->conversationStorage->deleteConversation();
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+				); 
 			}
 			
-			$showTitles = $query->fetchAll(PDO::FETCH_COLUMN, 'title');
+			$showTitles = $query->fetchAll(\PDO::FETCH_COLUMN, 'title');
 			
 			if(count($showTitles) === 0){
-				$conversationStorage->deleteConversation();
+				$this->conversationStorage->deleteConversation();
 				
-				$reply = null;
+				$text = null;
 				if($in_out_flag){
-					$reply = 'Ты уже добавил все (!) сериалы из списка. И как ты успеваешь их смотреть??';
+					$text =
+						'Ты уже добавил все (!) сериалы из списка.'.PHP_EOL.
+						'И как ты успеваешь их смотреть??';
 				}
 				else{
-					$reply = 'Нечего удалять';
+					$text = 'Нечего удалять';
 				}
 				
-				return new Message(
-					$this->telegram_id,
-					$reply,
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
-					)
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage($text)
 				);
 			}
 			else{
-				$keyboard = $this->createKeyboard($showTitles);
-
 				$text = 'Как называется сериал?'.PHP_EOL.
 						'Выбери из списка или введи пару слов из названия.';
-
-				return new Message(
-					$this->telegram_id,
-					$text,
-					null,
-					null,
-					null,
-					null,
-					array(
-						'keyboard' => $keyboard,
-						'one_time_keyboard' => true
+				
+				array_unshift($showTitles, '/cancel');
+				array_push($showTitles, '/cancel');
+				
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage(
+						$text,
+						false,
+						false,
+						$showTitles
 					)
 				);
 			}
@@ -577,26 +502,32 @@ class UserController{
 					XOR :in_out_flag
 				)
 				HAVING `title_all` = :title
+				ORDER BY `title_ru`, `title_en`
 			");
 			
 			try{
 				$getShowId->execute(
 					array(
-						':title'		=> $conversation[1],
-						':user_id'		=> $user_id,
+						':title'		=> $this->conversationStorage->getLastMessage(),
+						':user_id'		=> $this->user_id,
 						':in_out_flag'	=> $in_out_flag
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				$conversationStorage->deleteConversation();
-				return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+				$this->conversationStorage->deleteConversation();
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+				); 
 			}
 				
 			$res = $getShowId->fetch();
-			if($res !== false){//нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, сам ввел точное название
-				$conversationStorage->deleteConversation();
+			if($res !== false){
+				# нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, 
+				# сам ввел точное название)
+				$this->conversationStorage->deleteConversation();
 				
 				$show_id = intval($res['id']);
 				$title_all = $res['title_all'];
@@ -605,29 +536,26 @@ class UserController{
 					$action->execute(
 						array(
 							':show_id' => $show_id,
-							':user_id' => $user_id
+							':user_id' => $this->user_id
 						)
 					);
 				}
-				catch(PDOException $ex){
+				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+					); 
 				}
 				
-				return new Message(
-					$this->telegram_id,
-					"$title_all $successText",
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
-					)
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage("$title_all $successText")
 				);
-				
 			}
-			else{//совпадения не найдено. Скорее всего юзверь проебланил с названием. Придется угадывать.
+			else{
+				# Совпадения не найдено. Скорее всего юзверь проебланил с названием.
+				# Придется угадывать.
 				$query = $this->pdo->prepare("
 					SELECT
 						`id`,
@@ -650,88 +578,75 @@ class UserController{
 					AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
 					HAVING `score` > 0.1
 					ORDER BY `score` DESC
-				");
+				"); #TODO: alter in_out_flag from bool to string ('Add', 'Remove')
 				
 				try{
 					$query->execute(
 						array(
-							':user_id' 		=> $user_id,
+							':user_id' 		=> $this->user_id,
 							':show_name'	=> $conversation[1],
 							':in_out_flag'	=> $in_out_flag
 						)
 					);
 				}
-				catch(PDOException $ex){
+				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					$conversationStorage->deleteConversation();
-					return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+					$this->conversationStorage->deleteConversation();
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+					); 
 				}
 				
 				$res = $query->fetchAll();
 				
 				switch(count($res)){
 				case 0://не найдено ни одного похожего названия
-					$conversationStorage->deleteConversation();
-					return new Message(
-						$this->telegram_id,
-						'Не найдено подходящих названий',
-						null,
-						null,
-						null,
-						null,
-						array(
-							'hide_keyboard' => true
-						)
+					$this->conversationStorage->deleteConversation();
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Не найдено подходящих названий')
 					);
 					break;
 								
 				case 1://найдено только одно подходящее название
-					$conversationStorage->deleteConversation();
+					$this->conversationStorage->deleteConversation();
 					$show = $res[0];
 					try{
 						$action->execute(
 							array(
 								':show_id' => $show['id'],
-								':user_id' => $user_id
+								':user_id' => $this->user_id
 							)
 						);
 					}
-					catch(PDOException $ex){
-						$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-						return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+					catch(\PDOException $ex){
+						$this->tracer->logException(
+							'[DB ERROR]', __FILE__, __LINE__, $ex);
+						return new DirectedOutgoingMessage(
+							$this->user_id,
+							new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+						); 
 					}
 					
-					return new Message(
-						$this->telegram_id,
-						"$show[title_all] $successText",
-						null,
-						null,
-						null,
-						null,
-						array(
-							'hide_keyboard' => true
-						)
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage("$show[title_all] $successText")
 					);
-					
 					break;
 				
 				default://подходят несколько вариантов
-					$showTitles = array();
-					foreach($res as $predictedShow){
-						$showTitles[] = $predictedShow['title_all'];
-					}
-					$keyboard = $this->createKeyboard($showTitles);
-				
-					return new Message(
-						$this->telegram_id,
-						'Какой из этих ты имел ввиду:',
-						null,
-						null,
-						null,
-						null,
-						array(
-							'keyboard' => $keyboard,
-							'one_time_keyboard' => true
+					$showTitles = array_column($res, 'title_all');
+					array_unshift($showTitles, '/cancel');
+					array_push($showTitles, '/cancel');
+					
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage(
+							'Какой из этих ты имел ввиду:',
+							false,
+							false,
+							$showTitles
 						)
 					);
 					break;
@@ -739,7 +654,7 @@ class UserController{
 			}
 			break;
 		case 3:
-			$conversationStorage->deleteConversation();
+			$this->conversationStorage->deleteConversation();
 			$query = $this->pdo->prepare("
 				SELECT 
 					`id`,
@@ -765,30 +680,26 @@ class UserController{
 			try{
 				$query->execute(
 					array(
-						':user_id' 		=> $user_id,
+						':user_id' 		=> $this->user_id,
 						':in_out_flag'	=> $in_out_flag,
 						':exactShowName' => $conversation[2]
 					)
 				);
 			}
-			catch(PDOException $ex){
+			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+				return new DirectedOutgoingMessage(
+					$this->user_id, 
+					new OurgoingMessage('Ошибка в базе. Записал. Починят.')
+				); 
 			}
 			
 			$res = $query->fetchAll();
 			
 			if(count($res) === 0){
-				return new Message(
-					$this->telegram_id,
-					'Не могу найти такое название.',
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
-					)
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Не могу найти такое название.')
 				);
 			}
 			else{
@@ -796,29 +707,24 @@ class UserController{
 				try{
 					$action->execute(
 						array(
-							':user_id' => $user_id,
+							':user_id' => $this->user_id,
 							':show_id' => $show['id']
 						)
 					);
 				}
-				catch(PDOException $ex){
+				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					return new Message($this->telegram_id, 'Ошибка в базе. Записал. Починят.'); 
+					return new DirectedOutgoingMessage(
+						$this->user_id,
+						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
+					); 
 				}
 				
-				return new Message(
-					$this->telegram_id,
-					"$show[title_all] $successText",
-					null,
-					null,
-					null,
-					null,
-					array(
-						'hide_keyboard' => true
-					)
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage("$show[title_all] $successText")
 				);
 			}
-			
 			break;
 		}
 	}
@@ -832,111 +738,63 @@ mute - Выключить уведомления на время
 cancel - Отменить команду
 stop - Удалиться из контакт-листа бота
 */
-
-	public function createKeyboard($items){
-		$rowSize = 2;
-		$keyboard = array();
-		$currentRow = array("/cancel");
-		$currentRowPos = 1;
-		foreach($items as $item){
-			$currentRow[] = $item;
-			if(++$currentRowPos % $rowSize == 0){
-				$keyboard[] = $currentRow;
-				$currentRow = array();
-			}
-		}
-		if(count($currentRow) !== 0)
-			$keyboard[] = $currentRow;
-		return $keyboard;
-	}
-
-	private function updateUserInfo($message){
-		$updateUserInfoQuery = $this->pdo->prepare('
-			UPDATE `users`
-			SET `telegram_username`		= :telegram_username,
-				`telegram_firstName`	= :telegram_firstName,
-				`telegram_lastName`		= :telegram_lastName
-			WHERE `id` = :id
-		');
-
-		try{
-			$updateUserInfoQuery->execute(
-				array(
-					'telegram_username'		=> $message->from->username,
-					'telegram_firstName'	=> $message->from->first_name,
-					'telegram_lastName'		=> $message->from->last_name,
-					'id'					=> $this->getUserId()
-				)
-			);
-		}
-		catch(UserIsNotRegistredException $ex){
-			$this->tracer->logWarning('[USER]', __FILE__, __LINE__, 'updateUserInfo on unregistred user');
-			return;
-		}
-		catch(PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($message, true));
-		}
-	}
-	
-	public function incomingUpdate(ConversationStorage $conversationStorage, $userInfo){
-		assert($conversationStorage !== null);
-		assert($conversationStorage->getConversationSize() > 0);
-
-		if($conversationStorage->getLastMessage() === '/cancel'){
-			return $this->cancelRequest($conversationStorage);
-		}
+	public function processLastUpdate(){
+		assert($this->conversationStorage->getConversationSize() > 0);
 
 		$response = null;
+
+		if($this->conversationStorage->getLastMessage() === '/cancel'){
+			$response = $this->cancelRequest();
+			return $response;
+		}
+
 		
 		try{
-			switch($conversationStorage->getFirstMessage()){
+			switch($this->conversationStorage->getFirstMessage()){
 			case '/start':
-				$response = $this->registerUser(
-					$conversationStorage,
-					$userInfo['username'],
-					$userInfo['first_name'],
-					$userInfo['last_name']
-				);
+				$response = $this->welcomeUser();
 				break;
 
 			case '/cancel':
-				$response = $this->cancelRequest($conversationStorage);
+				$response = $this->cancelRequest();
 				break;
 
 			case '/stop':
-				$response = $this->unregisterUser($conversationStorage);
+				$response = $this->deleteUser();
 				break;
 			
 			case '/help':
-				$response = $this->showHelp($conversationStorage);
+				$response = $this->showHelp();
 				break;
 			
 			case '/mute':
-				$response = $this->toggleMute($conversationStorage);
+				$response = $this->toggleMute();
 				break;
 			
 			case '/get_my_shows':
-				$response = $this->showUserShows($conversationStorage);
+				$response = $this->showUserShows();
 				break;
 				
 			case '/add_show':
-				$response = $this->insertOrDeleteShow($conversationStorage, true);
+				$response = $this->insertOrDeleteShow(true);
 				break;
 			
 			case '/remove_show':
-				$response = $this->insertOrDeleteShow($conversationStorage, false);
+				$response = $this->insertOrDeleteShow(false);
 				break;
 
 			default:
-				$conversationStorage->deleteConversation();
-				$response = new Message($this->telegram_id, 'Я хз чё это значит'); 
+				$this->conversationStorage->deleteConversation();
+				$response = new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Я хз чё это значит')
+				); 
 			}
 		}
-		catch(Exception $ex){
-			$response = new Message(
-				$this->telegram_id,
-				'Произошла ошибка, я сообщу об этом создателю.'
+		catch(\Exception $ex){
+			$response = new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
 			);
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
 		}

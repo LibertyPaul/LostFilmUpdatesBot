@@ -1,9 +1,10 @@
 <?php
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Config.php');
+require_once(__DIR__.'/../../core/BotPDO.php');
+
 require_once(__DIR__.'/VelocityCounter.php');
-require_once(__DIR__.'/BotPDO.php');
-require_once(__DIR__.'/../lib/Config.php');
 
 class VelocityController{
 	private $tracer;
@@ -14,11 +15,11 @@ class VelocityController{
 	public function __construct($keyPrefix){
 		assert(is_string($keyPrefix));
 
-		$this->tracer = new Tracer(__CLASS__);
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->velocityCounter = new VelocityCounter($keyPrefix);
 
-		$config = new Config(BotPDO::getInstance());
+		$config = new \Config(BotPDO::getInstance());
 
 		$this->maxMessagesFromBotPerSecond = $config->getValue(
 			'Velocity Controller',
@@ -26,7 +27,11 @@ class VelocityController{
 		);
 
 		if($this->maxMessagesFromBotPerSecond === null){
-			$this->tracer->logWarning('[CONFIG]', __FILE__, __LINE__, '[Velocity Controller][Max Messages From Bot Per Second] parameter is not sed. Velocity check is disabled.');
+			$this->tracer->logWarning(
+				'[CONFIG]', __FILE__, __LINE__,
+				'[Velocity Controller][Max Messages From Bot Per Second] parameter is not set. '.
+				'Velocity check is disabled.'
+			);
 		}
 
 		$this->maxMessagesToUserPerSecond = $config->getValue(
@@ -35,7 +40,11 @@ class VelocityController{
 		);
 
 		if($this->maxMessagesToUserPerSecond === null){
-			$this->tracer->logWarning('[CONFIG]', __FILE__, __LINE__, '[Velocity Controller][Max Messages To User Per Second] parameter is not sed. Velocity check is disabled.');
+			$this->tracer->logWarning(
+				'[CONFIG]', __FILE__, __LINE__,
+				'[Velocity Controller][Max Messages To User Per Second] parameter is not set. '.
+				'Velocity check is disabled.'
+			);
 		}
 	}
 
@@ -43,7 +52,10 @@ class VelocityController{
 		if($this->maxMessagesFromBotPerSecond !== null){
 			$currentBotVelocity = $this->velocityCounter->getBotVelocity();
 			if($currentBotVelocity >= $this->maxMessagesFromBotPerSecond){
-				$this->tracer->logNotice('[VELOCITY HIT]', __FILE__, __LINE__, "[Max Messages From Bot Per Second] velocity was reached: [$currentBotVelocity]");
+				$this->tracer->logNotice(
+					'[VELOCITY HIT]', __FILE__, __LINE__,
+					"[Max Messages From Bot Per Second] was reached: [$currentBotVelocity]"
+				);
 				return false;
 			}
 		}
@@ -51,7 +63,10 @@ class VelocityController{
 		if($this->maxMessagesToUserPerSecond !== null){
 			$currentUserVelocity = $this->velocityCounter->getUserVelocity($user_id);
 			if($currentUserVelocity >= $this->maxMessagesToUserPerSecond){
-				$this->tracer->logNotice('[VELOCITY HIT]', __FILE__, __LINE__, "[Max Messages To User Per Second] velocity was reached: [$currentUserVelocity]");
+				$this->tracer->logNotice(
+					'[VELOCITY HIT]', __FILE__, __LINE__,
+					"[Max Messages To User Per Second] was reached: [$currentUserVelocity]"
+				);
 				return false;
 			}
 		}
