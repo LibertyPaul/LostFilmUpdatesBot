@@ -12,7 +12,7 @@ class VelocityCounter{
 		assert(is_string($keyPrefix));
 		$this->keyPrefix = $keyPrefix;
 
-		$this->memcache = Stuff\createMemcache();
+		$this->memcache = \Stuff\createMemcache();
 	}
 
 	private function getUserVelocityKey($user_id){
