@@ -26,7 +26,7 @@ class NotificationDispatcher{
 		
 		$this->tracer = new \Tracer(__CLASS__);
 		
-		$this->pdo = BotPDO::getInstance();
+		$this->pdo = \BotPDO::getInstance();
 		$this->getNotificationDataQuery = $this->pdo->prepare("
 			SELECT 	`notificationsQueue`.`id`,
 					`notificationsQueue`.`responseCode`,
@@ -53,7 +53,7 @@ class NotificationDispatcher{
 			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
 		');
 
-		$config = new Config($this->pdo);
+		$config = new \Config($this->pdo);
 		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
@@ -101,11 +101,11 @@ class NotificationDispatcher{
 	}
 	
 	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
-		$template = 'https://www.lostfilm.tv/series/#ALIAS/season_#SEASON_NUMBER/episode_#SERIES_NUMBER';
-		return str_replace(
-			array('#ALIAS', '#SEASON_NUMBER', '#SERIES_NUMBER'),
-			array($showAlias, $seasonNumber, $seriesNumber),
-			$template
+		return sprintf(
+			'https://www.lostfilm.tv/series/%s/season_%d/episode_%d',
+			$showAlias,
+			$seasonNumber,
+			$seriesNumber
 		);
 	}
 
@@ -125,7 +125,7 @@ class NotificationDispatcher{
 		);
 
 		
-		while($notification = $this->getNotificationDataQuery->fetch(PDO::FETCH_ASSOC)){
+		while($notification = $this->getNotificationDataQuery->fetch(\PDO::FETCH_ASSOC)){
 			$gonnaBeSent = false;
 			try{
 				$gonnaBeSent = self::shallBeSent(
@@ -164,11 +164,8 @@ class NotificationDispatcher{
 					);
 
 					$route = $this->messageRouter->route($directredOutgoingMessage->getUserId());
-					$route->send($directredOutgoingMessage);
+					$sendResult = $route->send($directredOutgoingMessage);
 
-
-					$sendResult = $this->telegramAPI->sendMessage($message);
-				
 					$this->setNotificationDeliveryResult->execute(
 						array(
 							'notificationId'	=> $notification['id'],
