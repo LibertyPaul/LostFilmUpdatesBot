@@ -25,6 +25,9 @@ class Webhook{
 
 	private $selfWebhookPassword;
 
+	private $messageResendEnabled = false;
+	private $messageResendURL = null;
+
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
 		$this->updateHandler = $updateHandler;
@@ -42,6 +45,19 @@ class Webhook{
 
 		$config = new \Config(\BotPDO::getInstance());
 		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
+
+		$this->messageResendEnabled = $config->getValue('TelegramAPI', 'Message Resend Enabled');
+		if($this->messageResendEnabled === 'Y'){
+			$this->messageResendURL = $config->getValue('TelegramAPI', 'Message Resend URL');
+			if($this->messageResendURL === null){
+				$this->tracer->logWarning(
+					'[o]', __FILE__, __LINE__,
+					'Message resend is enabled, but no URL is set'
+				);
+
+				$this->messageResendEnabled = 'N';
+			}
+		}
 	}
 
 	private function verifyPassword($password){
@@ -148,11 +164,16 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::failed);
 		}
 				
-		if(defined('MESSAGE_STREAM_URL')){
+		if($this->messageResendEnabled === 'Y'){
 			try{
-				$this->resendUpdate($postData, MESSAGE_STREAM_URL);
+				$this->resendUpdate($postData, $this->messageResendURL);
 			}
 			catch(\Exception $ex){
+				$this->tracer->logError(
+					'[MESSAGE STREAM]', __FILE__, __LINE__,
+					'Message resend has failed: URL=['.$this->messageResendURL.']'.PHP_EOL.
+					'postData:'.PHP_EOL.print_r($postData, true)
+				);
 				$this->tracer->logException('[MESSAGE STREAM]', __FILE__, __LINE__, $ex);
 			}
 		}
@@ -161,13 +182,9 @@ class Webhook{
 	private function resendUpdate($postData, $URL){
 		$testStream = new HTTPRequester();
 
-		if(defined('MESSAGE_STREAM_PASSWORD')){
-			$URL .= '?password='.MESSAGE_STREAM_PASSWORD;
-		}
-		
 		$res = $testStream->sendJSONRequest($URL, $postData);
 		if($res['code'] >= 400){
-			$this->tracer->logError('[STREAM]', __FILE__, __LINE__, 'message resend has failed with code '.$res['code']);
+			throw new \RuntimeException('Message resend has failed with code '.$res['code']);
 		}
 	}
 }
