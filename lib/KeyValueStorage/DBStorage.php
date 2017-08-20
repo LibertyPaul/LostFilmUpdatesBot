@@ -42,9 +42,7 @@ class DBStorage implements \KeyValueStorageInterface{
 		$this->incrementValueQuery = $pdo->prepare('
 			INSERT INTO `KeyValueStorage` (`key`, `value`, `keepUntil`)
 			VALUES (:key, 1, FROM_UNIXTIME(UNIX_TIMESTAMP(NOW()) + :keepDuration))
-			ON DUPLICATE KEY UPDATE
-				`value`		= `value` + 1,
-				`keepUntil`	= FROM_UNIXTIME(UNIX_TIMESTAMP(NOW()) + :keepDuration)
+			ON DUPLICATE KEY UPDATE	`value` = `value` + 1
 		');
 
 		$this->deleteValueQuery = $pdo->prepare('

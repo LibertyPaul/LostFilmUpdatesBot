@@ -10,6 +10,8 @@ for php_file in $(find "$dir/.." -name "*.php" -type f); do
 	fi
 done
 
+exit;
+
 declare -a failedTests=()
 
 for test in $(find "$dir" -name "*Test.php" -type f); do

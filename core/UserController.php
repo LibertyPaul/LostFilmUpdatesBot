@@ -112,8 +112,8 @@ class UserController{
 	}
 
 	private function deleteUser(){
-		$ANSWER_YES = 'Да';
-		$ANSWER_NO = 'Нет';
+		$ANSWER_YES = 'да';
+		$ANSWER_NO = 'нет';
 		
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
@@ -130,7 +130,8 @@ class UserController{
 			break;
 		
 		case 2:
-			switch($this->conversationStorage->getLastMessage()){
+			$response = $this->conversationStorage->getLastMessage();
+			switch(strtolower($response)){
 			case $ANSWER_YES:
 				$this->conversationStorage->deleteConversation();
 
@@ -218,7 +219,7 @@ class UserController{
 			'/remove_show - Удалить уведомления о сериале'						.PHP_EOL.
 			'/get_my_shows - Показать, на что ты подписан'						.PHP_EOL.
 			'/mute - Выключить уведомления'										.PHP_EOL.
-			'/cancel - Отменить командa'										.PHP_EOL.
+			'/cancel - Отменить команду'										.PHP_EOL.
 			'/help - Показать это сообщение'									.PHP_EOL.
 			'/stop - Удалиться из контакт-листа бота'							.PHP_EOL
 																				.PHP_EOL.

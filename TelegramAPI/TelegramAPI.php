@@ -32,6 +32,16 @@ class TelegramAPI{
 		return 'https://api.telegram.org/bot'.$this->botToken.'/sendMessage';
 	}
 
+	private function getGetFileURL($file_id){
+		$format = 'https://api.telegram.org/bot%s/getFile?file_id=%s';
+		return sprintf($format, $this->botToken, $file_id);
+	}
+
+	private function getDownloadFileURL($file_path){
+		$format = 'https://api.telegram.org/file/bot%s/%s';
+		return sprintf($format, $this->botToken, $file_path);
+	}
+
 	private function waitForVelocity($user_id){
 		while($this->velocityController->isSendingAllowed($user_id) === false){
 			$res = time_nanosleep(0, 500000000); // 0.5s
@@ -113,63 +123,57 @@ class TelegramAPI{
 				
 		return $result;
 	}
-	/*
-	public function sendTextByLines($messageData, array $lines, $eol){
-		$emptyMessage = json_encode($messageData);
-		$emptyMessageLength = strlen($emptyMessage);
-		
-		$currentMessage = "";
-		$bufferLength = $emptyMessageLength + strlen($currentMessage);
-		
-		$messages = array();
-		
-		foreach($lines as $str){
-			$nextMessageLength = strlen($str) + strlen($eol);
-			if($bufferLength > self::MAX_MESSAGE_JSON_LENGTH){
-				$this->sentMessagesTracer->logWarning(
-					'[DATA]', __FILE__, __LINE__,
-					"Too long line: '$str'"
-				);
 
-				$str = substr($str, 0, self::MAX_MESSAGE_JSON_LENGTH - strlen($eol));
-			}
-			else if($bufferLength + $nextMessageLength > self::MAX_MESSAGE_JSON_LENGTH){
-				$messageData['text'] = $currentMessage;
-				$messages[] = json_encode($messageData);
-				
-				$currentMessage = "";
-				$bufferLength = $emptyMessageLength + strlen($currentMessage);
-			}
-			else{
-				$nextMessage = $str.$eol;
-				$currentMessage .= $nextMessage;
-				$bufferLength += strlen($nextMessage);
-			}
-		}
-		
-		if($bufferLength !== 0){
-			$messageData['text'] = $currentMessage;
-			$messages[] = json_encode($messageData);
+	public function downloadVoiceMessage($file_id){
+		$getFileURL = $this->getGetFileURL($file_id);
+		$result = $this->HTTPRequester->sendGETRequest($getFileURL);
+
+		if($result['code'] >= 400){
+			$this->tracer->logError(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				"getFile call has failed with code=[$result[code]]. Response text:".PHP_EOL.
+				$result['value']
+			);
+
+			throw new \RuntimeException('Failed to get file info');
 		}
 
-		foreach($messages as $request_json){
-			$this->sentMessagesTracer->logEvent(
-				'[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__,
-				PHP_EOL.$request_json
+		$File = json_decode($result['value']);
+		if($File === false){
+			$this->tracer->logError(
+				'[JSON]', __FILE__, __LINE__,
+				"Unable to parse Telegram getFile response. Raw text: '$result[value]'"
 			);
-			
-			$result = $this->HTTPRequester->sendJSONRequest(
-				$this->getSendMessageURL(),
-				$request_json
-			);
-			
-			$this->sentMessagesTracer->logEvent(
-				'[OUTGOING PARTIAL MESSAGE]', __FILE__, __LINE__,
-				"Return code: ($result[code])"
-			);
+
+			throw new \RuntimeException('Failed to parse getFile response');
 		}
+
+		$this->tracer->logDebug(
+			'[TELEGRAM API]', __FILE__, __LINE__,
+			'getFile has returned:'.PHP_EOL.print_r($File, true)
+		);
+
+		assert(isset($File->ok));
+		assert($File->ok === 1);
+		assert(isset($File->result));
+		assert(isset($File->result->file_path));
+		
+		$downloadURL = $this->getDownloadFileURL($File->result->file_path);
+		$result =$this->HTTPRequester->sendGETRequest($downloadURL);
+
+		if($result['code'] >= 400){
+			$this->tracer->logError(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				"File download has failed with code=[$result[code]]. File id=[$file_id]".PHP_EOL.
+				"Download URL=[$downloadURL], response:".PHP_EOL.
+				$result['value']
+			);
+
+			throw new \RuntimeException('Failed to download file');
+		}
+
+		return $result['value'];
 	}
-	*/
 }
 
 

@@ -36,7 +36,7 @@ class VelocityController{
 		}
 
 		$this->maxMessagesToUserPerSecond = $config->getValue(
-			'Velocity Controller',
+			'TelegramAPI',
 			'Max Messages To User Per Second'
 		);
 

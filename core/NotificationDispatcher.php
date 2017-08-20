@@ -47,6 +47,7 @@ class NotificationDispatcher{
 				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
 			) AND
 				`notificationsQueue`.`retryCount` < :maxRetryCount
+			FOR UPDATE
 		");
 		
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
@@ -110,14 +111,6 @@ class NotificationDispatcher{
 	}
 
 	public function run(){
-		$this->pdo->query('
-			LOCK TABLES 
-				notificationsQueue	WRITE,
-				users				READ,
-				series				READ,
-				shows				READ;
-		');
-
 		$this->getNotificationDataQuery->execute(
 			array(
 				'maxRetryCount' => $this->maxNotificationRetries
@@ -185,8 +178,6 @@ class NotificationDispatcher{
 				}
 			}
 		}
-
-		$this->pdo->query('UNLOCK TABLES');
 	}
 }
 			
