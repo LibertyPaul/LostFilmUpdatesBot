@@ -164,7 +164,7 @@ class NotificationDispatcher{
 					);
 
 					$route = $this->messageRouter->route($directredOutgoingMessage->getUserId());
-					$sendResult = $route->send($directredOutgoingMessage);
+					$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
 
 					$this->setNotificationDeliveryResult->execute(
 						array(
