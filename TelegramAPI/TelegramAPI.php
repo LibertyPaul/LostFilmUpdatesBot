@@ -5,7 +5,8 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/OutgoingMessage.php');
-require_once(__DIR__.'/../lib/VelocityController/VelocityController.php');
+require_once(__DIR__.'/VelocityController.php');
+require_once(__DIR__.'/VelocityControllerFactory.php');
 
 class TelegramAPI{
 	private $HTTPRequester;
@@ -24,7 +25,7 @@ class TelegramAPI{
 	
 		$this->tracer = new \Tracer(__CLASS__);
 
-		$this->velocityController = new \VelocityController(__CLASS__);
+		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(__CLASS__);
 	}
 	
 	private function getSendMessageURL(){
