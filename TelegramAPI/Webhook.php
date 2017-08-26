@@ -45,7 +45,7 @@ class Webhook{
 		}
 
 		$config = new \Config(\BotPDO::getInstance());
-		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook 1Password');
+		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 
 		$this->messageResendEnabled = $config->getValue('TelegramAPI', 'Message Resend Enabled');
 		if($this->messageResendEnabled === 'Y'){
@@ -177,7 +177,7 @@ class Webhook{
 				'Update is invalid:'.PHP_EOL.print_r($update, true)
 			);
 
-			$this->respondFinal(WebhookReasons::correctButIgnored);
+			$this->respondFinal(WebhookReasons::formatError);
 			return;
 		}
 

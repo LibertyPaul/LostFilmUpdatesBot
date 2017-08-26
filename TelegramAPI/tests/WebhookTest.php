@@ -1,10 +1,13 @@
 <?php
-require_once(__DIR__.'/TestsCommon.php');
-require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../core/BotPDO.php');
-require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
-class WebhookTest extends PHPUnit_Framework_TestCase{
+namespace TelegramAPI;
+
+require_once(__DIR__.'/../../lib/tests/TestsCommon.php');
+require_once(__DIR__.'/../../lib/Config.php');
+require_once(__DIR__.'/../../core/BotPDO.php');
+require_once(__DIR__.'/../../lib/HTTPRequester/HTTPRequester.php');
+
+class WebhookTest extends \PHPUnit_Framework_TestCase{
 	private $HTTPRequester;
 	
 	private $selfWebhookURL;
@@ -12,13 +15,13 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 
 
 	public function __construct(){
-		$config = new Config(BotPDO::getInstance());
-		$this->selfWebhookURL = $config->getValue('Webhook', 'URL');
+		$config = new \Config(\BotPDO::getInstance());
+		$this->selfWebhookURL = $config->getValue('TelegramAPI', 'Webhook URL');
 		assert($this->selfWebhookURL !== null);
 
-		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
+		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 
-		$this->HTTPRequester = new HTTPRequester();
+		$this->HTTPRequester = new \HTTPRequester();
 	}
 
 	private function send($password, $content){
@@ -49,11 +52,11 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(401, $resp['code']);
 
 		$resp = $this->send($this->selfWebhookPassword, $dummyMessage);
-		$this->assertEquals(500, $resp['code']);
+		$this->assertEquals(400, $resp['code']);
 	}
 
 	public function testMessageLogging(){
-		$key = TestsCommon\generateRandomString(32);
+		$key = \TestsCommon\generateRandomString(32);
 		$data = json_encode(
 			array(
 				'info'	=> 'TEST MESSAGE',
@@ -63,11 +66,11 @@ class WebhookTest extends PHPUnit_Framework_TestCase{
 
 		$resp = $this->send($this->selfWebhookPassword, $data);
 
-		$tracePath = __DIR__.'/../logs/incomingMessages.log';
-		$this->assertTrue(TestsCommon\keyExists($tracePath, $key));
+		$tracePath = __DIR__.'/../../logs/incomingMessages.log';
+		$this->assertTrue(\TestsCommon\keyExists($tracePath, $key));
 
-		$key = TestsCommon\generateRandomString(32);
-		$this->assertFalse(TestsCommon\keyExists($tracePath, $key));
+		$key = \TestsCommon\generateRandomString(32);
+		$this->assertFalse(\TestsCommon\keyExists($tracePath, $key));
 	}
 }
 

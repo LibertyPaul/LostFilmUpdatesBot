@@ -10,7 +10,7 @@ require_once(__DIR__.'/../lib/Config.php');
 
 class ConversationStorage{
 	private $user_id;
-	private $memcachedStorage;
+	private $storage;
 	private $tracer;
 	private $conversation;
 
@@ -34,7 +34,7 @@ class ConversationStorage{
 		}
 
 		try{
-			$this->memcachedStorage = new \MemcachedStorage(
+			$this->storage = new \MemcachedStorage(
 				$keyPrefix,
 				self::MEMCACHE_STORE_TIME
 			);
@@ -48,9 +48,9 @@ class ConversationStorage{
 	}
 	
 	private function fetchConversation(){
-		$conversation_serialized = $this->memcachedStorage->getValue($this->user_id);
+		$conversation_serialized = $this->storage->getValue($this->user_id);
 
-		if($conversation_serialized !== false){
+		if($conversation_serialized !== null){
 			$this->conversation = unserialize($conversation_serialized);
 		}
 		else{
@@ -60,15 +60,7 @@ class ConversationStorage{
 
 	private function commitConversation(){
 		$conversation_serialized = serialize($this->conversation);
-
-		$res = $this->memcachedStorage->setValue($this->user_id, $conversation_serialized);
-		if($res === false){
-			$this->tracer->logError(
-				'[FATAL]', __FILE__, __LINE__,
-				'memcachedStorage->set has failed'
-			);
-			throw new \RuntimeException('memcachedStorage->set has failed');
-		}
+		$res = $this->storage->setValue($this->user_id, $conversation_serialized);
 	}
 
 	public function getConversation(){
@@ -100,7 +92,7 @@ class ConversationStorage{
 	}
 
 	public function deleteConversation(){
-		$this->memcachedStorage->deleteValue($this->user_id);
+		$this->storage->deleteValue($this->user_id);
 		$this->conversation = array();
 	}
 

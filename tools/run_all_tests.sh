@@ -5,24 +5,21 @@ readonly dir=$(dirname "$0")
 for php_file in $(find "$dir/.." -name "*.php" -type f); do
 	php -l "$php_file"
 	if [ "$?" != 0 ]; then
-		echo "Aborting"
-		exit 1
+		echo "Failed $php_file"
 	fi
 done
 
-exit;
-
 declare -a failedTests=()
 
-for test in $(find "$dir" -name "*Test.php" -type f); do
-	echo "###### Testing $test... ######"
+for test in $(find "$dir/.." -name "*Test.php" -type f); do
+	echo "###### Testing $test ... ######"
 	
 	phpunit "$test"
 	if [ "$?" -ne 0 ]; then
 		failedTests+="$test"
 	fi
 		
-	echo "###### Finished $test.  ######"
+	echo "###### Finished $test  ######"
 	echo ""
 done
 

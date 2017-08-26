@@ -1,13 +1,15 @@
 <?php
 
-require_once(__DIR__.'/../core/ConversationStorage.php');
+namespace core;
 
-class ConversationStorageTest extends PHPUnit_Framework_TestCase{
+require_once(__DIR__.'/../ConversationStorage.php');
+
+class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 
 	public function test(){
 		$user_id = rand(0, 999999999999999);
 		
-		$storage = new core\ConversationStorage($user_id);
+		$storage = new ConversationStorage($user_id);
 		$this->assertEquals(array(), $storage->getConversation());
 
 		$testMessage1 = '
@@ -60,8 +62,7 @@ class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 		);
 
 		
-
-		$storage = new core\ConversationStorage($user_id);
+		$storage = new ConversationStorage($user_id);
 
 
 		$this->assertEquals(
@@ -73,10 +74,9 @@ class ConversationStorageTest extends PHPUnit_Framework_TestCase{
 		$this->assertEquals(array(), $storage->getConversation());
 
 
-		$storage = new core\ConversationStorage($user_id);
+		$storage = new ConversationStorage($user_id);
 		$this->assertEquals(array(), $storage->getConversation());
 	}
-
 }
 
 
