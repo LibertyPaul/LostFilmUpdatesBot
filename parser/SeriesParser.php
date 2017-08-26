@@ -32,6 +32,10 @@ class SeriesParser extends Parser{
 			return false;
 		}
 
+		if(strpos($link, 'details.php') !== false){
+			return false;
+		}
+
 		return true;
 	}
 	
