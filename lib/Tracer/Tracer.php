@@ -4,7 +4,7 @@ require_once(__DIR__.'/TracerBase.php');
 class Tracer extends TracerBase{
 	private $hFile = null;
 	const logsDir = __DIR__.'/../../logs';
-	const standaloneLogsDir = self::logsDir.'/standalone';
+	const standaloneTracePath = self::logsDir.'/Standalone.log';
 
 	public function __construct($traceName){
 		if($traceName[0] === '-'){
@@ -52,12 +52,15 @@ class Tracer extends TracerBase{
 		
 		$hFile = fopen($path, 'a');
 		if($hFile === false){
-			TracerBase::syslogCritical(
-				'[SETUP]', __FILE__, __LINE__,
-				"Unable to open file '$path'"
+			$errorDescription = sprintf(
+				'Unable to open file [%s]'.PHP_EOL.'%s',
+				$path,
+				print_r(error_get_last(), true)
 			);
 
-			throw new \Exception("Unable to open $path file.".PHP_EOL.print_r(error_get_last(), true));
+			TracerBase::syslogCritical('[SETUP]', __FILE__, __LINE__, $errorDescription);
+
+			throw new \Exception($errorDescription);
 		}
 
 		umask($prev_umask);
@@ -67,15 +70,21 @@ class Tracer extends TracerBase{
 	protected function storeStandalone($text){
 		assert(is_string($text));
 
-		$fName = $this->traceName.'.'.uniqid(rand(), true).'.txt';
-		$fPath = self::standaloneLogsDir."/$fName";
+		$id = uniqid($this->traceName.'_');
 		
-		$hFile = self::prepareTraceFile($fPath);
+		$hFile = self::prepareTraceFile(self::standaloneTracePath);
 
+		assert(flock($hFile, LOCK_EX));
+		assert(fwrite($hFile, "id=[$id]"));
+		assert(fwrite($hFile, PHP_EOL));
 		assert(fwrite($hFile, $text));
+		assert(fwrite($hFile, PHP_EOL));
+		assert(fwrite($hFile, PHP_EOL));
+		assert(flock($hFile, LOCK_UN));
+
 		assert(fclose($hFile));
 		
-		$this->write("<... Stored to standalone $fName ...>");
+		$this->write("<... Stored to standalone with id=[$id] ...>");
 	}
 
 	protected function write($text){
