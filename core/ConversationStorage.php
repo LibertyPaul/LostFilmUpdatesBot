@@ -48,6 +48,8 @@ class ConversationStorage{
 	}
 	
 	private function fetchConversation(){
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Fetching Conversation ...');
+
 		$conversation_serialized = $this->storage->getValue($this->user_id);
 
 		if($conversation_serialized !== null){
@@ -56,11 +58,25 @@ class ConversationStorage{
 		else{
 			$this->conversation = array();
 		}
+
+		$this->tracer->logDebug(
+			'[o]', __FILE__, __LINE__,
+			'Fetched Conversation:'.PHP_EOL.
+			print_r($this->conversation, true)
+		);
 	}
 
 	private function commitConversation(){
+		$this->tracer->logDebug(
+			'[o]', __FILE__, __LINE__,
+			'Committing Conversation:'.PHP_EOL.
+			print_r($this->conversation, true)
+		);
+
 		$conversation_serialized = serialize($this->conversation);
 		$res = $this->storage->setValue($this->user_id, $conversation_serialized);
+
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation was committed');
 	}
 
 	public function getConversation(){
@@ -71,6 +87,7 @@ class ConversationStorage{
 		if($this->getConversationSize() < 1){
 			throw new \RuntimeException('ConversationStorage is empty');
 		}
+
 		return $this->conversation[0];
 	}
 
@@ -78,6 +95,7 @@ class ConversationStorage{
 		if($this->getConversationSize() < 1){
 			throw new \RuntimeException('ConversationStorage is empty');
 		}
+
 		return $this->conversation[count($this->conversation) - 1];
 	}
 
@@ -85,19 +103,34 @@ class ConversationStorage{
 		return count($this->conversation); // O(1)
 	}
 
-	public function insertMessage($text){
-		assert(is_string($text));
-		$this->conversation[] = $text;
+	public function insertMessage(IncomingMessage $incomingMessage){
+		$this->tracer->logDebug(
+			'[o]', __FILE__, __LINE__,
+			'Inserting message:'.PHP_EOL.
+			$incomingMessage
+		);
+
+		$this->conversation[] = $incomingMessage;
 		$this->commitConversation();
+
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
 	}
 
 	public function deleteConversation(){
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Deleting conversation ...');
+
 		$this->storage->deleteValue($this->user_id);
 		$this->conversation = array();
+
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
 	}
 
 	public function deleteLastMessage(){
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Deleting last message ...');
+
 		array_pop($this->conversation);
 		$this->commitConversation();
+		
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
 	}
 }
