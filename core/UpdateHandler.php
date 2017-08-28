@@ -185,8 +185,8 @@ class UpdateHandler{
 
 		try{
 			$conversationStorage = new ConversationStorage($message->getUserId());
-			$conversationStorage->insertMessage($message->getText());
-			$initialCommand = $conversationStorage->getFirstMessage();
+			$conversationStorage->insertMessage($message);
+			$initialCommand = $conversationStorage->getFirstMessage()->getUserCommand();
 		}
 		catch(\Exception $ex){
 			$this->tracer->logError(
@@ -195,7 +195,6 @@ class UpdateHandler{
 			);
 
 			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-
 			throw $ex;
 		}
 
@@ -249,8 +248,10 @@ class UpdateHandler{
 			
 			$directedOutgoingMessage = $directedOutgoingMessage->nextMessage();
 		}
-			
-		$this->sendToBotan($message, $initialCommand);
+		
+		if($initialCommand !== null){
+			$this->sendToBotan($message, $initialCommand->__toString());
+		}
 	}
 }
 

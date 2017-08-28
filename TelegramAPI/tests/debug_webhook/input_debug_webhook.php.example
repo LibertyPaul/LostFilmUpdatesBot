@@ -16,7 +16,7 @@ $update_json = '{
             "type": "private"
         },
         "date": XXXXXXXXXX,
-        "text": "/stop"
+        "text": "/help"
     }
 }
 ';

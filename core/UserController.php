@@ -130,7 +130,7 @@ class UserController{
 			break;
 		
 		case 2:
-			$response = $this->conversationStorage->getLastMessage();
+			$response = $this->conversationStorage->getLastMessage()->getText();
 			switch(strtolower($response)){
 			case $ANSWER_YES:
 				$this->conversationStorage->deleteConversation();
@@ -383,8 +383,6 @@ class UserController{
 	}
 	
 	private function insertOrDeleteShow($in_out_flag){
-		$conversation = $this->conversationStorage->getConversation();
-		
 		$successText = '';
 		$action = null;
 		if($in_out_flag){
@@ -507,9 +505,10 @@ class UserController{
 			");
 			
 			try{
+				$messageText = $this->conversationStorage->getLastMessage()->getText();
 				$getShowId->execute(
 					array(
-						':title'		=> $this->conversationStorage->getLastMessage(),
+						':title'		=> $messageText,
 						':user_id'		=> $this->user_id,
 						':in_out_flag'	=> $in_out_flag
 					)
@@ -555,7 +554,7 @@ class UserController{
 				);
 			}
 			else{
-				# Совпадения не найдено. Скорее всего юзверь проебланил с названием.
+				# Совпадения не найдено. Скорее всего юзер ввел не полное название.
 				# Придется угадывать.
 				$query = $this->pdo->prepare("
 					SELECT
@@ -582,10 +581,11 @@ class UserController{
 				"); #TODO: alter in_out_flag from bool to string ('Add', 'Remove')
 				
 				try{
+					$messageText = $this->conversationStorage->getLastMessage()->getText();
 					$query->execute(
 						array(
 							':user_id' 		=> $this->user_id,
-							':show_name'	=> $conversation[1],
+							':show_name'	=> $messageText,
 							':in_out_flag'	=> $in_out_flag
 						)
 					);
@@ -655,7 +655,9 @@ class UserController{
 			}
 			break;
 		case 3:
+			$messageText = $this->conversationStorage->getLastMessage()->getText();
 			$this->conversationStorage->deleteConversation();
+
 			$query = $this->pdo->prepare("
 				SELECT 
 					`id`,
@@ -681,9 +683,9 @@ class UserController{
 			try{
 				$query->execute(
 					array(
-						':user_id' 		=> $this->user_id,
-						':in_out_flag'	=> $in_out_flag,
-						':exactShowName' => $conversation[2]
+						':user_id' 			=> $this->user_id,
+						':in_out_flag'		=> $in_out_flag,
+						':exactShowName'	=> $messageText
 					)
 				);
 			}
@@ -740,56 +742,71 @@ cancel - Отменить команду
 stop - Удалиться из контакт-листа бота
 */
 	public function processLastUpdate(){
-		assert($this->conversationStorage->getConversationSize() > 0);
-
-		$response = null;
-
-		if($this->conversationStorage->getLastMessage() === '/cancel'){
-			$response = $this->cancelRequest();
-			return $response;
-		}
-
-		
 		try{
-			switch($this->conversationStorage->getFirstMessage()){
-			case '/start':
-				$response = $this->welcomeUser();
-				break;
+			if($this->conversationStorage->getConversationSize() < 1){
+				throw new \LogicException('Empty Conversation Storage');
+			}
+			
+			$response = null;
 
-			case '/cancel':
-				$response = $this->cancelRequest();
-				break;
+			$currentMessage = $this->conversationStorage->getLastMessage();
+			$currentCommand = $currentMessage->getUserCommand();
+			
+			if($currentCommand !== null){
+				if($currentCommand->getCommandId() === UserCommandMap::Cancel){
+					return $this->cancelRequest();
+				}
+			}
 
-			case '/stop':
-				$response = $this->deleteUser();
-				break;
-			
-			case '/help':
-				$response = $this->showHelp();
-				break;
-			
-			case '/mute':
-				$response = $this->toggleMute();
-				break;
-			
-			case '/get_my_shows':
-				$response = $this->showUserShows();
-				break;
-				
-			case '/add_show':
-				$response = $this->insertOrDeleteShow(true);
-				break;
-			
-			case '/remove_show':
-				$response = $this->insertOrDeleteShow(false);
-				break;
+			$initialMessage = $this->conversationStorage->getFirstMessage();
+			$initialCommand = $initialMessage->getUserCommand();
+			if($initialCommand === null){
+				$initialText = $initialMessage->getText();
 
-			default:
-				$this->conversationStorage->deleteConversation();
 				$response = new DirectedOutgoingMessage(
 					$this->user_id,
-					new OutgoingMessage('Я хз чё это значит')
-				); 
+					new OutgoingMessage(
+						sprintf('Я хз чё "%s" значит.', $initialText).PHP_EOL.
+						'Нажми на /help чтобы увидеть список команд.'
+					)
+				);
+
+				$response->appendMessage($this->cancelRequest());
+				return $response;
+			}
+
+			switch($initialCommand->getCommandId()){
+				case UserCommandMap::Start:
+					$response = $this->welcomeUser();
+					break;
+
+				case UserCommandMap::Cancel:
+					$response = $this->cancelRequest();
+					break;
+
+				case UserCommandMap::Stop:
+					$response = $this->deleteUser();
+					break;
+				
+				case UserCommandMap::Help:
+					$response = $this->showHelp();
+					break;
+				
+				case UserCommandMap::Mute:
+					$response = $this->toggleMute();
+					break;
+				
+				case UserCommandMap::GetMyShows:
+					$response = $this->showUserShows();
+					break;
+					
+				case UserCommandMap::AddShow:
+					$response = $this->insertOrDeleteShow(true);
+					break;
+				
+				case UserCommandMap::RemoveShow:
+					$response = $this->insertOrDeleteShow(false);
+					break;
 			}
 		}
 		catch(\Exception $ex){

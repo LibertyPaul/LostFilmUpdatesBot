@@ -5,6 +5,8 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../../../lib/ErrorHandler.php');
 require_once(__DIR__.'/../../../lib/ExceptionHandler.php');
 
+require_once(__DIR__.'/../../../core/BotPDO.php');
+require_once(__DIR__.'/../../../lib/Config.php');
 require_once(__DIR__.'/../../UpdateHandler.php');
 require_once(__DIR__.'/../../Webhook.php');
 
@@ -15,6 +17,9 @@ $tracer = new \Tracer('DebugWebhook');
 
 $updateJSON = $update_json;
 assert($updateJSON !== false);
+
+$config = new \Config(\BotPDO::getInstance());
+$password = $config->getValue('TelegramAPI', 'Webhook Password');
 
 $updateHandler = new UpdateHandler();
 

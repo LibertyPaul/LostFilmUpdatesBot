@@ -38,7 +38,7 @@ class DirectedOutgoingMessage{
 		# Not sure if this check is redundant. It might be possible to optimize it.
 	}
 
-	public function appendMessage(DirectedOutgoingMessage $message){
+	public function appendMessage(self $message){
 		if(self::findLoop($this, $message)){
 			throw new \LogicException(
 				'Loop was found in message chains:'.PHP_EOL.

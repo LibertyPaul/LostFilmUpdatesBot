@@ -74,7 +74,7 @@ class OutgoingMessage{
 		}
 	}
 
-	public function appendMessage(OutgoingMessage $message){
+	public function appendMessage(self $message){
 		if($this->nextMessage === null){
 			$this->nextMessage = $message;
 		}

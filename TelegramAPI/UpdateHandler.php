@@ -2,6 +2,7 @@
 
 namespace TelegramAPI;
 
+require_once(__DIR__.'/../core/UserCommand.php');
 require_once(__DIR__.'/../core/IncomingMessage.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
@@ -78,6 +79,7 @@ class UpdateHandler{
 			JOIN `users` ON `users`.`id` = `telegramUserData`.`user_id`
 			WHERE `users`.`deleted` = 'N'
 			AND `telegramUserData`.`telegram_id` = :telegram_id
+			FOR UPDATE
 		");
 
 		$getUserIdQuery->execute(
@@ -240,7 +242,38 @@ class UpdateHandler{
 		return $topOptions[0];
 	}
 
-		
+	private function mapUserCommand($text){
+		$result = null;
+
+		switch($text){
+			case '/start':
+				$result = new \core\UserCommand(\core\UserCommandMap::Start);
+				break;
+			case '/add_show':
+				$result = new \core\UserCommand(\core\UserCommandMap::AddShow);
+				break;
+			case '/remove_show':
+				$result = new \core\UserCommand(\core\UserCommandMap::RemoveShow);
+				break;
+			case '/get_my_shows':
+				$result = new \core\UserCommand(\core\UserCommandMap::GetMyShows);
+				break;
+			case '/mute':
+				$result = new \core\UserCommand(\core\UserCommandMap::Mute);
+				break;
+			case '/cancel':
+				$result = new \core\UserCommand(\core\UserCommandMap::Cancel);
+				break;
+			case '/help':
+				$result = new \core\UserCommand(\core\UserCommandMap::Help);
+				break;
+			case '/stop':
+				$result = new \core\UserCommand(\core\UserCommandMap::Stop);
+				break;
+		}
+
+		return $result;
+	}
 
 	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
@@ -276,14 +309,14 @@ class UpdateHandler{
 			throw new \RuntimeException('Both message->text and message->voice are absent');
 		}
 
-		$coreHandler = new \core\UpdateHandler();
 		$incomingMessage = new \core\IncomingMessage(
 			$user_id,
+			$this->mapUserCommand($text),
 			$text,
-			$update->message,
 			$update->update_id
 		);
 
+		$coreHandler = new \core\UpdateHandler();
 		$coreHandler->processIncomingMessage($incomingMessage);
 	}
 
