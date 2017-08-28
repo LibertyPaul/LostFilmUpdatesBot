@@ -1,4 +1,7 @@
 <?php
+
+namespace parser;
+
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
@@ -77,40 +80,90 @@ class SeriesParserExecutor{
 		');
 		
 		foreach($latestSeriesList as $series){
-			if($this->wasSeriesNotificationSent($series['alias'], $series['seasonNumber'], $series['seriesNumber'])){
+			if($this->wasSeriesNotificationSent(
+				$series['alias'],
+				$series['seasonNumber'],
+				$series['seriesNumber'])
+			){
 				continue;
 			}
+
 			try{
 				$this->seriesAboutParser->loadSrc($series['link']);
 				$about = $this->seriesAboutParser->run();
-				$this->addSeriesQuery->execute(
-					array(
-						':seasonNumber'	=> $series['seasonNumber'],
-						':seriesNumber'	=> $series['seriesNumber'],
-						':title_ru'		=> $about['title_ru'],
-						':title_en'		=> $about['title_en'],
-						':alias'		=> $series['alias']
-					)
-				);
+
+				switch($about['status']){
+					case SeriesStatus::Ready:
+						$this->tracer->logEvent(
+							'[o]', __FILE__, __LINE__,
+							sprintf(
+								"New series: %s S%02dE%02d %s(%s)",
+								$series['alias'],
+								$series['seasonNumber'],
+								$series['seriesNumber'],	
+                                $about['title_ru'],
+                                $about['title_en']
+							)
+						);
+
+						$this->addSeriesQuery->execute(
+							array(
+								':seasonNumber'	=> $series['seasonNumber'],
+								':seriesNumber'	=> $series['seriesNumber'],
+								':title_ru'		=> $about['title_ru'],
+								':title_en'		=> $about['title_en'],
+								':alias'		=> $series['alias']
+							)
+						);
+
+						$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Added.');
+
+						break;
+
+					case SeriesStatus::NotReady:
+						$this->tracer->logDebug(
+							'[o]', __FILE__, __LINE__,
+							sprintf(
+								"%s S%02dE%02d %s(%s) seems not to be ready yet [%d]",
+								$series['alias'],
+								$series['seasonNumber'],
+								$series['seriesNumber'],	
+                                $about['title_ru'],
+                                $about['title_en'],
+								$about['why']
+							)
+						);
+						continue;
+
+					default:
+						throw new \RuntimeException("Unknown status value: [$about[status]]");
+				}
 			}
 			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					
 				switch($ex->getCode()){
 					case '02000':
-						$this->tracer->logError('[WARNING]', __FILE__, __LINE__, 'Show wasn\'t found');
+						$this->tracer->logError(
+							'[WARNING]', __FILE__, __LINE__,
+							'Show was not found'
+						);
 						break;
 					
 					default:
-						$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'Unknown error code: '.$ex->getCode().PHP_EOL.$ex->getMessage().PHP_EOL);
+						$this->tracer->logError(
+							'[ERROR]', __FILE__, __LINE__,
+							'Unknown error code: '.$ex->getCode().PHP_EOL.
+							$ex->getMessage()
+						);
 						break;
 				}
 				
 
-				$this->tracer->logEvent('[NEW SERIES]', __FILE__, __LINE__, PHP_EOL.print_r($series, true));
-			}
-			catch(SeriesIsNotPublishedYet $ex){
-				continue;
+				$this->tracer->logEvent(
+					'[NEW SERIES]', __FILE__, __LINE__,
+					PHP_EOL.print_r($series, true)
+				);
 			}
 			catch(\Exception $ex){
 				$this->tracer->logException('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex);
@@ -122,11 +175,11 @@ class SeriesParserExecutor{
 }
 
 
-$requester = new HTTPRequester();
+$requester = new \HTTPRequester();
 $parser = new SeriesParser($requester);
 $seriesAboutParser = new SeriesAboutParser($requester);
-$SPE = new SeriesParserExecutor($parser, $seriesAboutParser);
-$SPE->run();
+$seriesParserExecutor = new SeriesParserExecutor($parser, $seriesAboutParser);
+$seriesParserExecutor->run();
 
 
 

@@ -1,5 +1,5 @@
 <?php
-require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/OwnerPDO.php');
 require_once(__DIR__.'/MessageTester.php');
 

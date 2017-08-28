@@ -45,7 +45,7 @@ class Webhook{
 		}
 
 		$config = new \Config(\BotPDO::getInstance());
-		$this->selfWebhookPassword = $config->getValue('Webhook', 'Password');
+		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 
 		$this->messageResendEnabled = $config->getValue('TelegramAPI', 'Message Resend Enabled');
 		if($this->messageResendEnabled === 'Y'){
@@ -134,6 +134,19 @@ class Webhook{
 		);
 	}
 
+	private static function validateFields($update){
+		return
+			isset($update->message)				&&
+			isset($update->message->from)		&&
+			isset($update->message->from->id)	&&
+			isset($update->message->chat)		&&
+			isset($update->message->chat->id)	&&
+			(
+				isset($update->message->text) ||
+				isset($update->message->voice)
+			);
+	}
+
 	public function processUpdate($password, $postData){
 		if($this->verifyPassword($password) === false){
 			$this->tracer->logNotice(
@@ -158,10 +171,13 @@ class Webhook{
 
 		$this->logUpdate($update);
 
-		if(isset($update->message->text) === false){
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, 'Ignored message:'.PHP_EOL);
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL.print_r($update, true));
-			$this->respondFinal(WebhookReasons::correctButIgnored);
+		if(self::validateFields($update) === false){
+			$this->tracer->logError(
+				'[DATA ERROR]', __FILE__, __LINE__,
+				'Update is invalid:'.PHP_EOL.print_r($update, true)
+			);
+
+			$this->respondFinal(WebhookReasons::formatError);
 			return;
 		}
 

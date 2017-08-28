@@ -1,4 +1,7 @@
 <?php
+
+namespace parser;
+
 require_once(__DIR__.'/../lib/PDOInit.php');
 
 class ParserPDO{
@@ -7,7 +10,7 @@ class ParserPDO{
 	public static function getInstance(){
 		$credentialsFile = __DIR__.'/../DBCredentials/Parser.ini';
 		if(self::$instance === null){
-			self::$instance = PDOInit::initialize($credentialsFile);
+			self::$instance = \PDOInit::initialize($credentialsFile);
 		}
 
 		return self::$instance;

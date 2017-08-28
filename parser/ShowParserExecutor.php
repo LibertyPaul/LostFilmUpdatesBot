@@ -1,4 +1,7 @@
 <?php
+
+namespace parser;
+
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
@@ -8,54 +11,19 @@ require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
+require_once(__DIR__.'/../core/Show.php');
+
 
 class ShowParserExecutor{
 	private $showListFetcher;
-
 	private $pdo;
-	private $getCurrentAliasList;
-	private $addShowQuery;
 	private $renewShowQuery;
 
 	public function __construct(ShowListFetcher $showListFetcher){
 		assert($showListFetcher !== null);
 		$this->showListFetcher = $showListFetcher;
-
 		$this->tracer = new \Tracer(__CLASS__);
-
 		$this->pdo = ParserPDO::getInstance();
-
-		$this->getCurrentAliasList = $this->pdo->prepare('
-			SELECT `alias` FROM `shows`
-		');
-
-		$this->addShowQuery = $this->pdo->prepare('
-			INSERT INTO `shows` (
-				alias,
-				title_ru,
-				title_en,
-				onAir,
-				firstAppearanceTime,
-				lastAppearanceTime
-			)
-			VALUES (
-				:alias,
-				:title_ru,
-				:title_en,
-				:onAir,
-				NOW(),
-				NOW()
-			)
-		');
-
-		$this->renewShowQuery = $this->pdo->prepare('
-			UPDATE `shows`
-			SET	`title_ru`				= :title_ru,
-				`title_en`				= :title_en,
-				`onAir`					= :onAir,
-				`lastAppearanceTime`	= NOW()
-			WHERE `alias` = :alias
-		');
 	}
 
 	private static function isOnAir($status){
@@ -73,19 +41,97 @@ class ShowParserExecutor{
 		$result = array();
 	
 		foreach($showList as $showInfo){
-			$result[$showInfo['alias']] = array(
-				'title_ru'	=> $showInfo['title'],
-				'title_en'	=> $showInfo['title_orig'],
-				'onAir'		=> self::isOnAir(intval($showInfo['status']))
+			$show = new \core\Show(
+				$showInfo['alias'],
+				$showInfo['title'],
+				$showInfo['title_orig'],
+				self::isOnAir(intval($showInfo['status']))
 			);
+
+			assert(array_key_exists($showInfo['alias'], $result) === false);
+			$result[$showInfo['alias']] = $show;
 		}
 
 		return $result;
 	}
 
-	private function getCurrentAliasList(){
-		$this->getCurrentAliasList->execute();
-		return $this->getCurrentAliasList->fetchAll(PDO::FETCH_COLUMN, 0);
+	private function getCurrentAliases(){
+		static $getCurrentAliasesQuery;
+		if(isset($getCurrentAliasesQuery) === false){
+			$getCurrentAliasesQuery = $this->pdo->prepare('SELECT `alias` FROM `shows`');
+		}
+
+		$getCurrentAliasesQuery->execute();
+		return $getCurrentAliasesQuery->fetchAll(\PDO::FETCH_COLUMN, 0);
+	}
+
+	private function addShow(\core\Show $show){
+		static $addShowQuery;
+		if(isset($addShowQuery) === false){
+			$addShowQuery = $this->pdo->prepare('
+				INSERT INTO `shows` (
+					alias,
+					title_ru,
+					title_en,
+					onAir,
+					firstAppearanceTime,
+					lastAppearanceTime
+				)
+				VALUES (
+					:alias,
+					:title_ru,
+					:title_en,
+					:onAir,
+					NOW(),
+					NOW()
+				)
+			');
+		}
+		
+		try{
+			$addShowQuery->execute(
+				array(
+					':alias'	=> $show->getAlias(),
+					':title_ru'	=> $show->getTitleRu(),
+					':title_en'	=> $show->getTitleEn(),
+					':onAir'	=> $show->getOnAir()
+				)
+			);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+			$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.$show);
+		}
+	}
+
+	private function renewShow(\core\Show $show){
+		static $renewShowQuery;
+		
+		if(isset($renewShowQuery) === false){
+			$renewShowQuery = $this->pdo->prepare('
+				UPDATE `shows`
+				SET	`title_ru`				= :title_ru,
+					`title_en`				= :title_en,
+					`onAir`					= :onAir,
+					`lastAppearanceTime`	= NOW()
+				WHERE `alias` = :alias
+			');
+		}
+
+		try{
+			$renewShowQuery->execute(
+				array(
+					':alias'	=> $show->getAlias(),
+					':title_ru'	=> $show->getTitleRu(),
+					':title_en'	=> $show->getTitleEn(),
+					':onAir'	=> $show->getOnAir()
+				)
+			);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+			$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.$show);
+		}
 	}
 
 	public function run(){
@@ -95,59 +141,36 @@ class ShowParserExecutor{
 
 		$this->pdo->query('LOCK TABLES `shows` WRITE');
 
-		$currentAliasList = $this->getCurrentAliasList();
+		$currentAliasList = $this->getCurrentAliases();
 
 		$newAliasList = array_diff($parsedAliasList, $currentAliasList);
 		foreach($newAliasList as $newAlias){
-			try{
-				$this->addShowQuery->execute(
-					array(
-						':alias'	=> $newAlias,
-						':title_ru'	=> $parsedShowList[$newAlias]['title_ru'],
-						':title_en'	=> $parsedShowList[$newAlias]['title_en'],
-						':onAir'	=> $parsedShowList[$newAlias]['onAir']
-					)
-				);
-			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $newAlias);
-				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
-				continue;
-			}
-			$this->tracer->logEvent('[NEW SHOW]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
+			$this->tracer->logEvent(
+				'[NEW SHOW]', __FILE__, __LINE__,
+				PHP_EOL.$parsedShowList[$newAlias]
+			);
+
+			$this->addShow($parsedShowList[$newAlias]);
 		}
 		
 		$sameAliasList = array_intersect($parsedAliasList, $currentAliasList);
 		foreach($sameAliasList as $sameAlias){
-			try{
-				$this->renewShowQuery->execute(
-					array(
-						':alias'	=> $sameAlias,
-						':title_ru'	=> $parsedShowList[$sameAlias]['title_ru'],
-						':title_en'	=> $parsedShowList[$sameAlias]['title_en'],
-						':onAir'	=> $parsedShowList[$sameAlias]['onAir']
-					)
-				);
-			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, $sameAlias);
-				$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.print_r($parsedShowList[$newAlias], true));
-				continue;
-			}
+			$this->renewShow($parsedShowList[$sameAlias]);
 		}
 
 		$outdatedAliasList = array_diff($currentAliasList, $parsedAliasList);
 		foreach($outdatedAliasList as $outdatedAlias){
-			$this->tracer->logEvent('[OUTDATED SHOW]', __FILE__, __LINE__, "Show $outdatedAlias has became outdated");
+			$this->tracer->logWarning(
+				'[OUTDATED SHOW]', __FILE__, __LINE__,
+				"Show $outdatedAlias has become outdated"
+			);
 		}
 
 		$this->pdo->query('UNLOCK TABLES');
 	}
 }
 
-$requester = new HTTPRequester();
+$requester = new \HTTPRequester();
 $showListFetcher = new ShowListFetcher($requester);
 $showParserExecutor = new ShowParserExecutor($showListFetcher);
 $showParserExecutor->run();

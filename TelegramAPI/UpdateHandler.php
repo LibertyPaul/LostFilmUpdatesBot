@@ -7,18 +7,18 @@ require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
+require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/TelegramAPI.php');
 
 class UpdateHandler{
 	private $tracer;
-	private $telegramAPI;
 	private $pdo;
+	private $speechRecognizer;
+	private $telegramAPI;
 	
-	public function __construct(TelegramAPI $telegramAPI){
-		assert($telegramAPI !== null);
-		$this->telegramAPI = $telegramAPI;
-		
+	public function __construct(){
 		$this->tracer = new \Tracer(__CLASS__);
 		
 		try{
@@ -28,16 +28,25 @@ class UpdateHandler{
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
-	}
 
-	private static function validateFields($update){
-		return
-			isset($update->message)				&&
-			isset($update->message->from)		&&
-			isset($update->message->from->id)	&&
-			isset($update->message->chat)		&&
-			isset($update->message->chat->id)	&&
-			isset($update->message->text);
+		try{
+			$config = new \Config($this->pdo);
+			$HTTPrequesterFactory = new \HTTPRequesterFactory($config);
+			$HTTPRequester = $HTTPrequesterFactory->getInstance();
+
+			$this->speechRecognizer = new \SpeechRecognizer\SpeechRecognizer(
+				$config,
+				$HTTPRequester
+			);
+
+			$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
+			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
+		}
+		catch(\Exception $ex){
+			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+			$this->speechRecognizer = null;
+			$this->telegramAPI = null;
+		}
 	}
 
 	private static function normalizeUpdateFields($update){
@@ -193,23 +202,84 @@ class UpdateHandler{
 		return $user_id;
 	}
 
-	public function handleUpdate($update){
-		if(self::validateFields($update) === false){
+	private function recognizeVoiceMessage($voice){
+		if($this->speechRecognizer === null){
 			$this->tracer->logError(
-				'[DATA ERROR]', __FILE__, __LINE__,
-				'Update is invalid:'.PHP_EOL.print_r($update, true)
+				'[SPEECH RECOGNITION]', __FILE__, __LINE__,
+				'SpeechRecognizer was not initialized.'
 			);
-			throw new \RuntimeException('Invalid update');
+
+			return null;
 		}
 
+		if($this->telegramAPI === null){
+			$this->tracer->logError(
+				'[SPEECH RECOGNITION]', __FILE__, __LINE__,
+				'TelegramAPI was not initialized.'
+			);
+
+			return null;
+		}
+
+		if($voice->duration > 15){
+			return null; #TODO: properly explain max voice length to the user
+		}
+
+		assert(strpos($voice->mime_type, 'ogg') !== -1);
+			
+		$voiceBinary = $this->telegramAPI->downloadVoiceMessage($voice->file_id);
+		$voiceBase64 = base64_encode($voiceBinary);
+
+		$possibleVariants = $this->speechRecognizer->recognize($voiceBase64, 'ogg');
+		if(count($possibleVariants) < 1){
+			return null;
+		}
+
+		$topOptions = array_keys($possibleVariants, max($possibleVariants));
+
+		return $topOptions[0];
+	}
+
+		
+
+	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
 
 		$user_id = $this->createOrUpdateUser($update->message->from);
 
+		if(isset($update->message->text)){
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				'Message->text is present'
+			);
+			$text = $update->message->text;
+		}
+		elseif(isset($update->message->voice)){
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				'Message->text is absent, but voice is present. Recognizing...'
+			);
+
+			$text = $this->recognizeVoiceMessage($update->message->voice);
+
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				"SpeechRecognition result: '$text'"
+			);
+		}
+		else{
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				'Both message->text and message->voice are absent. Aborting.'
+			);
+
+			throw new \RuntimeException('Both message->text and message->voice are absent');
+		}
+
 		$coreHandler = new \core\UpdateHandler();
 		$incomingMessage = new \core\IncomingMessage(
 			$user_id,
-			$update->message->text,
+			$text,
 			$update->message,
 			$update->update_id
 		);
