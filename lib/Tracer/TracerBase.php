@@ -82,36 +82,32 @@ abstract class TracerBase{
 	}
 
 	abstract protected function write($text);
-
-	protected function storeStandalone($text){
-		$this->write($text); // default behavior for case we don't want to use this feature
-	}
+	abstract protected function storeStandalone($text);
 
 	private static function compileRecord($level, $tag, $file, $line, $message){
 		assert(is_string($tag));
 		assert(is_string($file));
 		assert(is_int($line));
-		assert($message === null || is_string($message));
+		assert(is_string($message));
 
-		$date = date('Y.m.d H:i:s');
-		
-		// basename should never fail on any input
-		$record = "$level\t$tag $date ".basename($file).":$line";		
-		
-		if($message !== null){
-			$record .= "\t$message";
-		}
-		
-		return $record;
+		return sprintf(
+			"%s\t%s %s %s:%s\t%s",
+			$level,
+			$tag,
+			date('Y.m.d H:i:s'),
+			basename($file),
+			$line,
+			$message
+		);
 	}
 
-	public function log($level, $tag, $file, $line, $message = null){
+	private function log($level, $tag, $file, $line, $message = null){
 		$messageLevel = TracerLevel::getLevelByName($level);
 
 		if($messageLevel <= $this->maxLevel){
 			$record = self::compileRecord($level, $tag, $file, $line, $message);
 			
-			if(defined('TRACER_COPMPESSION_BOUND') && strlen($record) > TRACER_COPMPESSION_BOUND){
+			if(defined('TRACER_STANDALONE_SIZE') && strlen($record) > TRACER_STANDALONE_SIZE){
 				try{
 					$this->storeStandalone($record);
 				}

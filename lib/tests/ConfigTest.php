@@ -1,10 +1,10 @@
 <?php
 
-require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/TestsCommon.php');
 require_once(__DIR__.'/OwnerPDO.php');
-require_once(__DIR__.'/../core/BotPDO.php');
-require_once(__DIR__.'/../parser/ParserPDO.php');
+require_once(__DIR__.'/../../core/BotPDO.php');
+require_once(__DIR__.'/../../parser/ParserPDO.php');
 
 class ConfigTest extends PHPUnit_Framework_TestCase{
 	private $addParameterQuery;
@@ -65,7 +65,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase{
 	}
 
 	public function testParserConfigPermissions(){
-		$this->parameterGetSet(ParserPDO::getInstance());
+		$this->parameterGetSet(\parser\ParserPDO::getInstance());
 	}
 
 }

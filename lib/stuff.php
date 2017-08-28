@@ -2,17 +2,18 @@
 
 namespace Stuff;
 
-function createMemcache(){
-	static $memcache;
+function createMemcached(){
+	static $memcached;
 
-	if(isset($memcache) === false){
-		$memcache = new \Memcache;
-		$res = $memcache->connect('localhost', 11211);
+	if(isset($memcached) === false){
+		$memcached = new \Memcached();
+		
+		$res = $memcached->addServer('localhost', 11211);
 		if($res === false){
-			unset($memcache);
-			throw new \RuntimeException('memcached connect error');
+			unset($memcached);
+			throw new \RuntimeException('memcached connection error');
 		}
 	}
-	return $memcache;
-}
 
+	return $memcached;
+}

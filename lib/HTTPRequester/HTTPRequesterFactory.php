@@ -11,11 +11,9 @@ class HTTPRequesterFactory{
 	private $undeliveredMessageStorage;
 	private $tracer;
 
-	public function __construct(PDO $pdo){
+	public function __construct(\Config $config){
 		$this->tracer = new \Tracer(__CLASS__);
 
-		$config = new Config($pdo);
-		
 		$res = $config->getValue('TelegramAPI', 'Perform Actual Send');
 		switch($res){
 			case 'Y':

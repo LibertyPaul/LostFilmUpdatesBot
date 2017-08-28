@@ -1,4 +1,7 @@
 <?php
+
+namespace parser;
+
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
 abstract class Parser{
@@ -6,7 +9,7 @@ abstract class Parser{
 	protected $srcEncoding;
 	private $requester;
 
-	public function __construct(HTTPRequesterInterface $requester, $srcEncoding = null){
+	public function __construct(\HTTPRequesterInterface $requester, $srcEncoding = null){
 		assert($requester !== null);
 		
 		$this->requester = $requester;

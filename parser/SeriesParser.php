@@ -1,4 +1,7 @@
 <?php
+
+namespace parser;
+
 require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
@@ -9,7 +12,7 @@ class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
 	
-	public function __construct(HTTPRequesterInterface $requester){
+	public function __construct(\HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
 		$this->tracer = new \Tracer(__CLASS__);
@@ -18,7 +21,7 @@ class SeriesParser extends Parser{
 	public function loadSrc($path){
 		parent::loadSrc($path);
 		try{
-			$this->rssData = new SimpleXMLElement($this->pageSrc);
+			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
 		catch(\Exception $ex){
 			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
@@ -32,6 +35,10 @@ class SeriesParser extends Parser{
 			return false;
 		}
 
+		if(strpos($link, 'details.php') !== false){
+			return false;
+		}
+
 		return true;
 	}
 	
@@ -40,13 +47,21 @@ class SeriesParser extends Parser{
 		$matches = array();
 		$matchesRes = preg_match($regexp, $link, $matches);
 		if($matchesRes === false){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, 'preg_match has failed with code: '.preg_last_error());
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "Link: '$link'");
+			$this->tracer->logError(
+				'[ERROR]', __FILE__, __LINE__,
+				'preg_match has failed with code: '.preg_last_error().PHP_EOL.
+				"Link: '$link'"
+			);
+
 			throw new \Exception('preg_match has failed');
 		}
 
 		if($matchesRes === 0){
-			$this->tracer->logError('[DATA ERROR]', __FILE__, __LINE__, "Link '$link' doesn't match pattern");
+			$this->tracer->logError(
+				'[DATA ERROR]', __FILE__, __LINE__,
+				"Link '$link' doesn't match pattern"
+			);
+
 			throw new \Exception("Link doesn't match pattern");
 		}
 
@@ -59,7 +74,6 @@ class SeriesParser extends Parser{
 			'seriesNumber'	=> $matches[3]
 		);
 	}
-		
 	
 	public function run(){
 		assert($this->pageSrc !== null);
@@ -79,7 +93,10 @@ class SeriesParser extends Parser{
 			}
 			catch(\Exception $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError('[PARSE ERROR]', __FILE__, __LINE__, PHP_EOL.print_r($item, true));
+				$this->tracer->logError(
+					'[PARSE ERROR]', __FILE__, __LINE__,
+					PHP_EOL.print_r($item, true)
+				);
 			}
 		}
 		

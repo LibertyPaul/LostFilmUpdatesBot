@@ -1,6 +1,6 @@
 <?php
 
-require_once(__DIR__.'/../lib/ExceptionHandler.php');
+require_once(__DIR__.'/../ExceptionHandler.php');
 
 if(isset($argv[1]) === false){
 	echo "Usage $argv[0] <key>\n";

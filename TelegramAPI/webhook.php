@@ -15,18 +15,7 @@ $password = isset($_GET['password']) ? $_GET['password'] : null;
 $updateJSON = file_get_contents('php://input');
 assert($updateJSON !== false);
 
-$pdo = \BotPDO::getInstance();
-
-$HTTPRequesterFactory = new \HTTPRequesterFactory($pdo);
-$HTTPRequester = $HTTPRequesterFactory->getInstance();
-
-$config = new \Config($pdo);
-$botToken = $config->getValue('TelegramAPI', 'token');
-assert($botToken !== null);
-
-$telegramAPI = new TelegramAPI($botToken, $HTTPRequester);
-
-$updateHandler = new UpdateHandler($telegramAPI);
+$updateHandler = new UpdateHandler();
 
 $webhook = new Webhook($updateHandler);
 $webhook->processUpdate($password, $updateJSON);
