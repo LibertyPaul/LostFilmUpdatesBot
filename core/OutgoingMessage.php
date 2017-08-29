@@ -7,6 +7,7 @@ class OutgoingMessage{
 	private $textContainsMarkup;
 	private $enableURLExpand;
 	private $responseOptions;
+	private $shareBotContact;
 
 	private $nextMessage = null;
 
@@ -14,7 +15,8 @@ class OutgoingMessage{
 		$text,
 		$textContainsMarkup = false,
 		$enableURLExpand = false,
-		$responseOptions = null
+		$responseOptions = null,
+		$shareBotContact = false
 	){
 		if(is_string($text)){
 			$this->text = $text;
@@ -60,6 +62,11 @@ class OutgoingMessage{
 				'responseOptions is expected to be not empty array'
 			);
 		}
+		elseif($shareBotContact){
+			throw new \InvalidArgumentException(
+				'responseOptions and shareBotContact can not be both true'
+			);
+		}
 		else{
 			foreach($responseOptions as $option){
 				if(is_string($option) === false){
@@ -71,6 +78,21 @@ class OutgoingMessage{
 			}
 
 			$this->responseOptions = $responseOptions;
+		}
+
+		if(is_bool($shareBotContact) === false){
+			throw new \InvalidArgumentException(
+				'Incorrect shareBotContact type (boolean was expected): '.
+				gettype($shareBotContact)
+			);
+		}
+		elseif($shareBotContact && empty($responseOptions) === false){
+			throw new \InvalidArgumentException(
+				'responseOptions and shareBotContact can not be both true'
+			);
+		}
+		else{
+			$this->shareBotContact = $shareBotContact;
 		}
 	}
 
@@ -103,14 +125,20 @@ class OutgoingMessage{
 		return $this->responseOptions;
 	}
 
+	public function getShareBotContact(){
+		return $this->shareBotContact;
+	}
+
 	public function __toString(){
 		$containsMarkupYN = $this->textContainsMarkup ? 'Y' : 'N';
 		$enableURLExpandYN = $this->enableURLExpand ? 'Y' : 'N';
+		$shareBotContact = $this->shareBotContact ? 'Y' : 'N';
 
 		$result  = '***********************************'					.PHP_EOL;
 		$result .= 'OutgoingMessage:'										.PHP_EOL;
 		$result .= sprintf("\ttextContainsMarkup: [%s]", $containsMarkupYN)	.PHP_EOL;
 		$result .= sprintf("\tURLExpandEnabled:   [%s]", $enableURLExpandYN).PHP_EOL;
+		$result .= sprintf("\tshareBotContact:    [%s]", $shareBotContact)	.PHP_EOL;
 		$result .= sprintf(
 			"\tResponse Options:   [%s]",
 			join(

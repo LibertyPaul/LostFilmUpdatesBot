@@ -731,6 +731,16 @@ class UserController{
 			break;
 		}
 	}
+
+	private function getShareButton(){
+		$this->conversationStorage->deleteConversation();
+
+		return new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage('Вот тебе кнопочка:', false, false, null, true)
+		);
+	}
+
 /*
 Commands:
 help - Показать инфо о боте
@@ -806,6 +816,10 @@ stop - Удалиться из контакт-листа бота
 				
 				case UserCommandMap::RemoveShow:
 					$response = $this->insertOrDeleteShow(false);
+					break;
+
+				case UserCommandMap::GetShareButton:
+					$response = $this->getShareButton();
 					break;
 			}
 		}

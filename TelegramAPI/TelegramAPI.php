@@ -76,14 +76,15 @@ class TelegramAPI{
 		$text				,
 		$textContainsHTML	,
 		$URLExpandEnabled	,
-		$responseOptions
+		$responseOptions	,
+		$shareBotContact
 	){
 		assert(is_int($telegram_id));
-		$this->waitForVelocity($telegram_id);
+		assert(is_string($text));
 
 		$request = array(
-			'chat_id'		=> $telegram_id,
-			'text'			=> $text,
+			'chat_id'	=> $telegram_id,
+			'text'		=> $text
 		);
 
 		if($textContainsHTML){
@@ -102,6 +103,19 @@ class TelegramAPI{
 				'keyboard' => self::createKeyboard($responseOptions)
 			);
 		}
+
+		if($shareBotContact){
+			$request['reply_markup'] = array(
+				'inline_keyboard' => array(
+					array(
+						array(
+							'text' => 'Поделиться',
+							'switch_inline_query' => ''
+						)
+					)
+				)
+			);
+		}
 		
 		$request_json = json_encode($request, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 		if($request_json === false){
@@ -114,6 +128,7 @@ class TelegramAPI{
 		
 		$URL = $this->getSendMessageURL();
 		try{
+			$this->waitForVelocity($telegram_id);
 			$result = $this->HTTPRequester->sendJSONRequest($URL, $request_json);
 		}
 		catch(\HTTPException $HTTPException){

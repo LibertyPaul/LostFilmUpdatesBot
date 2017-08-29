@@ -270,6 +270,9 @@ class UpdateHandler{
 			case '/stop':
 				$result = new \core\UserCommand(\core\UserCommandMap::Stop);
 				break;
+			case '/share':
+				$result = new \core\UserCommand(\core\UserCommandMap::GetShareButton);
+				break;
 		}
 
 		return $result;

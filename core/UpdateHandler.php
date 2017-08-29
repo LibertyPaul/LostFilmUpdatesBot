@@ -167,8 +167,6 @@ class UpdateHandler{
 		}
 	}
 
-		
-
 	public function processIncomingMessage(IncomingMessage $message){
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
@@ -234,8 +232,7 @@ class UpdateHandler{
 						$statusCode = 1;
 						break;
 				}
-	
-					
+				
 				$this->logOutgoingMessage(
 					$directedOutgoingMessage,
 					$loggedRequestId,
@@ -250,8 +247,10 @@ class UpdateHandler{
 		}
 		
 		if($initialCommand !== null){
-			$this->sendToBotan($message, $initialCommand->__toString());
+			$this->sendToBotan($message, $initialCommand);
 		}
+
+		return $loggedRequestId;
 	}
 }
 

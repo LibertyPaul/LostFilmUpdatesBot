@@ -5,16 +5,17 @@ namespace core;
 abstract class UserCommandMap{
 	const MIN_COMMAND	= 1;
 
-	const Start			= 1;
-	const AddShow		= 2;
-	const RemoveShow	= 3;
-	const GetMyShows	= 4;
-	const Mute			= 5;
-	const Cancel		= 6;
-	const Help			= 7;
-	const Stop			= 8;
+	const Start				= 1;
+	const AddShow			= 2;
+	const RemoveShow		= 3;
+	const GetMyShows		= 4;
+	const Mute				= 5;
+	const Cancel			= 6;
+	const Help				= 7;
+	const Stop				= 8;
+	const GetShareButton	= 9;
 
-	const MAX_COMMAND	= 8;
+	const MAX_COMMAND	= 9;
 }
 
 
@@ -68,6 +69,10 @@ class UserCommand{
 
 			case UserCommandMap::Stop:
 				$result = 'Command:Stop';
+				break;
+
+			case UserCommandMap::GetShareButton:
+				$result = 'Command:GetShareButton';
 				break;
 
 			default:
