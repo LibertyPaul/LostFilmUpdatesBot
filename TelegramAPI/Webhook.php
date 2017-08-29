@@ -177,7 +177,7 @@ class Webhook{
 				'Update is invalid:'.PHP_EOL.print_r($update, true)
 			);
 
-			$this->respondFinal(WebhookReasons::formatError);
+			$this->respondFinal(WebhookReasons::correctButIgnored);
 			return;
 		}
 

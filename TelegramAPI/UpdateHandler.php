@@ -186,11 +186,11 @@ class UpdateHandler{
 	}
 				
 
-	private function createOrUpdateUser($from){
-		$telegram_id = $from->id;
-		$username = isset($from->username) ? $from->username : null;
-		$first_name = isset($from->first_name) ? $from->first_name : null;
-		$last_name = isset($from->last_name) ? $from->first_name : null;
+	private function createOrUpdateUser($chat){
+		$telegram_id = $chat->id;
+		$username = isset($chat->username) ? $chat->username : null;
+		$first_name = isset($chat->first_name) ? $chat->first_name : null;
+		$last_name = isset($chat->last_name) ? $chat->first_name : null;
 
 		$user_id = $this->getUserId($telegram_id);
 		
@@ -242,6 +242,25 @@ class UpdateHandler{
 		return $topOptions[0];
 	}
 
+	private function extractUserCommand($rawText){
+		$text = trim($rawText);
+		if($text[0] !== '/'){
+			return $rawText;
+		}
+
+		$atPos = strpos($text, '@');
+		if($atPos !== false){
+			$text = substr($text, 0, $atPos);
+		}
+
+		$spacePos = strpos($text, ' ');
+		if($spacePos !== false){
+			$text = substr($text, 0, $spacePos);
+		}
+
+		return $text;
+	}
+
 	private function mapUserCommand($text){
 		$result = null;
 
@@ -281,7 +300,7 @@ class UpdateHandler{
 	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
 
-		$user_id = $this->createOrUpdateUser($update->message->from);
+		$user_id = $this->createOrUpdateUser($update->message->chat);
 
 		if(isset($update->message->text)){
 			$this->tracer->logDebug(
@@ -312,9 +331,11 @@ class UpdateHandler{
 			throw new \RuntimeException('Both message->text and message->voice are absent');
 		}
 
+		$command = $this->extractUserCommand($text);
+
 		$incomingMessage = new \core\IncomingMessage(
 			$user_id,
-			$this->mapUserCommand($text),
+			$this->mapUserCommand($command),
 			$text,
 			$update->update_id
 		);
