@@ -67,7 +67,7 @@ class MessageSender implements \core\MessageSenderInterface{
 				$message->textContainsMarkup(),
 				$message->URLExpandEnabled(),
 				$message->getResponseOptions(),
-				$message->getShareBotContact()
+				$message->getInlineOptions()
 			);
 
 			$this->outgoingMessagesTracer->logEvent(

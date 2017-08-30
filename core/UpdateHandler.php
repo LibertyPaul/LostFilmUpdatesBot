@@ -212,13 +212,30 @@ class UpdateHandler{
 			throw $ex;
 		}
 
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing message ...');
+
 		$directedOutgoingMessage = $userController->processLastUpdate();
+
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing has finished.');
 
 		while($directedOutgoingMessage !== null){
 			try{
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Routing message:'.PHP_EOL.
+					$directedOutgoingMessage
+				);
+
 				$route = $this->messageRouter->route(
 					$directedOutgoingMessage->getUserId()
 				);
+
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Message was successfully routed.'
+				);
+
+				$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Sending ...');
 			
 				$result = $route->send($directedOutgoingMessage->getOutgoingMessage());
 
@@ -232,6 +249,11 @@ class UpdateHandler{
 						$statusCode = 1;
 						break;
 				}
+
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					"Sending status: [$statusCode]"
+				);
 				
 				$this->logOutgoingMessage(
 					$directedOutgoingMessage,

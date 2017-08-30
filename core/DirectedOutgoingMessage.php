@@ -68,4 +68,17 @@ class DirectedOutgoingMessage{
 	public function nextMessage(){
 		return $this->nextMessage;
 	}
+
+	public function __toString(){
+		$nextMessagePresent = $this->nextMessage() === null ? 'N' : 'Y';
+
+		$result  = '##### [Directed Outgoing Message] #####'			.PHP_EOL;
+		$result .= sprintf('User Id:      [%s]', $this->getUserId())	.PHP_EOL;
+		$result .= sprintf('Next Message: [%s]', $nextMessagePresent)	.PHP_EOL;
+		$result .= 'Message Body:'										.PHP_EOL;
+		$result .= $this->getOutgoingMessage()							.PHP_EOL;
+		$result .= '#######################################'			.PHP_EOL;
+
+		return $result;
+	}
 }

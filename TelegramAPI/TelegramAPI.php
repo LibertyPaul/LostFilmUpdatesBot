@@ -2,6 +2,7 @@
 
 namespace TelegramAPI;
 
+require_once(__DIR__.'/../core/InlineOption.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/OutgoingMessage.php');
@@ -54,7 +55,7 @@ class TelegramAPI{
 		}
 	}
 
-	private static function createKeyboard($options){
+	private static function createKeyboard(array $options){
 		$rowSize = 2;
 		$keyboard = array();
 		$currentRow = array();
@@ -70,14 +71,51 @@ class TelegramAPI{
 			$keyboard[] = $currentRow;
 		return $keyboard;
 	}
+
+	private static function createInlineKeyboard(array $inlineOptions){
+		$keyboard = array();
+		$row = array();
+
+		foreach($inlineOptions as $option){
+			switch($option->getType()){
+				case \core\InlineOptionType::Option:
+					$row[] = array(
+						'text'			=> $option->getText(),
+						'callback_data'	=> $option->getPayload()
+					);
+					
+					break;
+
+				case \core\InlineOptionType::ExternalLink:
+					$row[] = array(
+						'text'	=> $option->getText(),
+						'url'	=> $option->getPayload()
+					);
+
+					break;
+
+				case \core\InlineOptionType::ShareButton:
+					$row[] = array(
+						'text'					=> $option->getText(),
+						'switch_inline_query'	=> $option->getPayload()
+					);
+
+					break;
+			}
+		}
+
+		$keyboard[] = $row;
+		return $keyboard;
+	}
+		
 	
 	public function send(
-		$telegram_id		,
-		$text				,
-		$textContainsHTML	,
-		$URLExpandEnabled	,
-		$responseOptions	,
-		$shareBotContact
+		$telegram_id,
+		$text,
+		$textContainsHTML,
+		$URLExpandEnabled,
+		array $responseOptions = null,
+		array $inlineOptions = null
 	){
 		assert(is_int($telegram_id));
 		assert(is_string($text));
@@ -95,12 +133,18 @@ class TelegramAPI{
 			$request['disable_web_page_preview'] = true;
 		}
 
-		if(empty($responseOptions)){
+		if(empty($responseOptions) && empty($inlineOptions)){
 			$request['reply_markup'] = array('remove_keyboard' => true);
 		}
 		else{
 			$request['reply_markup'] = array(
 				'keyboard' => self::createKeyboard($responseOptions)
+			);
+		}
+
+		if(empty($inlineOptions) === false){
+			$request['reply_markup'] = array(
+				'inline_keyboard' => self::createInlineKeyboard($inlineOptions)
 			);
 		}
 

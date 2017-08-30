@@ -3,7 +3,7 @@
 namespace core;
 
 abstract class UserCommandMap{
-	const MIN_COMMAND	= 1;
+	const MIN_COMMAND		= 1;
 
 	const Start				= 1;
 	const AddShow			= 2;
@@ -14,8 +14,9 @@ abstract class UserCommandMap{
 	const Help				= 7;
 	const Stop				= 8;
 	const GetShareButton	= 9;
+	const Donate			= 10;
 
-	const MAX_COMMAND	= 9;
+	const MAX_COMMAND		= 10;
 }
 
 
@@ -73,6 +74,10 @@ class UserCommand{
 
 			case UserCommandMap::GetShareButton:
 				$result = 'Command:GetShareButton';
+				break;
+
+			case UserCommandMap::Donate:
+				$result = 'Command:Donate';
 				break;
 
 			default:

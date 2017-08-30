@@ -292,6 +292,9 @@ class UpdateHandler{
 			case '/share':
 				$result = new \core\UserCommand(\core\UserCommandMap::GetShareButton);
 				break;
+			case '/donate':
+				$result = new \core\UserCommand(\core\UserCommandMap::Donate);
+				break;
 		}
 
 		return $result;

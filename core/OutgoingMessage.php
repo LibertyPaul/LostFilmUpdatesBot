@@ -2,12 +2,14 @@
 
 namespace core;
 
+require_once(__DIR__.'/InlineOption.php');
+
 class OutgoingMessage{
 	private $text;
 	private $textContainsMarkup;
 	private $enableURLExpand;
 	private $responseOptions;
-	private $shareBotContact;
+	private $inlineOptions;
 
 	private $nextMessage = null;
 
@@ -15,9 +17,10 @@ class OutgoingMessage{
 		$text,
 		$textContainsMarkup = false,
 		$enableURLExpand = false,
-		$responseOptions = null,
-		$shareBotContact = false
+		array $responseOptions = null,
+		array $inlineOptions = null
 	){
+		# Text verification
 		if(is_string($text)){
 			$this->text = $text;
 		}
@@ -28,6 +31,7 @@ class OutgoingMessage{
 			);
 		}
 
+		# Markup Flag verification
 		if(is_bool($textContainsMarkup)){
 			$this->textContainsMarkup = $textContainsMarkup;
 		}
@@ -38,6 +42,7 @@ class OutgoingMessage{
 			);
 		}
 
+		# URL Expand Flag verification
 		if(is_bool($enableURLExpand) === false){
 			throw new \InvalidArgumentException(
 				'Incorrect enableURLExpand type (bool was expected): '.
@@ -48,24 +53,16 @@ class OutgoingMessage{
 			$this->enableURLExpand = $enableURLExpand;
 		}
 
-		if($responseOptions === null){
+		# Options presence verification
+		if($responseOptions !== null && $inlineOptions !== null){
+			throw new \InvalidArgumentException(
+				'Options Presense Verification has failed'
+			);
+		}
+			
+		# Response Options verification
+		if(empty($responseOptions)){
 			$this->responseOptions = null;
-		}
-		elseif(is_array($responseOptions) === false){
-			throw new \InvalidArgumentException(
-				'Incorrect responseOptions type (array was expected): '.
-				gettype($enableURLExpand)
-			);
-		}
-		elseif(empty($responseOptions)){
-			throw new \InvalidArgumentException(
-				'responseOptions is expected to be not empty array'
-			);
-		}
-		elseif($shareBotContact){
-			throw new \InvalidArgumentException(
-				'responseOptions and shareBotContact can not be both true'
-			);
 		}
 		else{
 			foreach($responseOptions as $option){
@@ -80,19 +77,21 @@ class OutgoingMessage{
 			$this->responseOptions = $responseOptions;
 		}
 
-		if(is_bool($shareBotContact) === false){
-			throw new \InvalidArgumentException(
-				'Incorrect shareBotContact type (boolean was expected): '.
-				gettype($shareBotContact)
-			);
-		}
-		elseif($shareBotContact && empty($responseOptions) === false){
-			throw new \InvalidArgumentException(
-				'responseOptions and shareBotContact can not be both true'
-			);
+		# Inline Options verification
+		if(empty($inlineOptions)){
+			$this->inlineOptions = null;
 		}
 		else{
-			$this->shareBotContact = $shareBotContact;
+			foreach($inlineOptions as $option){
+				if($option instanceof InlineOption === false){
+					throw new \InvalidArgumentException(
+						'Incorrect Inline Option type (InlineOption was expected): '.
+						gettype($option)
+					);
+				}
+			}
+
+			$this->inlineOptions = $inlineOptions;
 		}
 	}
 
@@ -125,29 +124,29 @@ class OutgoingMessage{
 		return $this->responseOptions;
 	}
 
-	public function getShareBotContact(){
-		return $this->shareBotContact;
+	public function getInlineOptions(){
+		return $this->inlineOptions;
 	}
 
 	public function __toString(){
-		$containsMarkupYN = $this->textContainsMarkup ? 'Y' : 'N';
-		$enableURLExpandYN = $this->enableURLExpand ? 'Y' : 'N';
-		$shareBotContact = $this->shareBotContact ? 'Y' : 'N';
+		$containsMarkupYN = $this->textContainsMarkup() ? 'Y' : 'N';
+		$enableURLExpandYN = $this->URLExpandEnabled() ? 'Y' : 'N';
 
-		$result  = '***********************************'					.PHP_EOL;
-		$result .= 'OutgoingMessage:'										.PHP_EOL;
-		$result .= sprintf("\ttextContainsMarkup: [%s]", $containsMarkupYN)	.PHP_EOL;
-		$result .= sprintf("\tURLExpandEnabled:   [%s]", $enableURLExpandYN).PHP_EOL;
-		$result .= sprintf("\tshareBotContact:    [%s]", $shareBotContact)	.PHP_EOL;
-		$result .= sprintf(
-			"\tResponse Options:   [%s]",
-			join(
-				', ',
-				is_array($this->responseOptions) ? $this->responseOptions : array()
-			)
-		)																	.PHP_EOL;
-		$result .= "\tText:"												.PHP_EOL;
-		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$this->text)	.PHP_EOL;
+		$responseOptions = is_array($this->responseOptions) ? $this->responseOptions : array();
+		$responseOptionsStr = join(', ', $responseOptions);
+
+		$inlineOptions = is_array($this->inlineOptions) ? $this->inlineOptions : array();
+		$inlineOptionsStr = join(PHP_EOL.PHP_EOL, $inlineOptions);
+
+		$result  = '***********************************'							.PHP_EOL;
+		$result .= 'OutgoingMessage:'												.PHP_EOL;
+		$result .= sprintf("\ttextContainsMarkup: [%s]", $containsMarkupYN)			.PHP_EOL;
+		$result .= sprintf("\tURLExpandEnabled:   [%s]", $enableURLExpandYN)		.PHP_EOL;
+		$result .= sprintf("\tText: [%s]", $this->getText())						.PHP_EOL;
+		$result .= sprintf("\tResponse Options:   [%s]", $responseOptionsStr)		.PHP_EOL;
+		$result .= "\tInlineOptions:"												.PHP_EOL;
+		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
+		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$this->text)			.PHP_EOL;
 		$result .= '***********************************';
 		
 		return $result;

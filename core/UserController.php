@@ -735,11 +735,83 @@ class UserController{
 	private function getShareButton(){
 		$this->conversationStorage->deleteConversation();
 
+		$donateButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, null);
+
 		return new DirectedOutgoingMessage(
 			$this->user_id,
-			new OutgoingMessage('Вот тебе кнопочка:', false, false, null, true)
+			new OutgoingMessage('Вот тебе кнопочка:', false, false, null, array($donateButton))
 		);
 	}
+
+	private function getDonateOptions(){
+		$this->conversationStorage->deleteConversation();
+		$YandexMoneyButton = null;
+		$PayPalButton = null;
+
+		$res = $this->pdo->query("
+			SELECT `value`
+			FROM `config`
+			WHERE `section` = 'Donate'
+			AND `item` = 'Yandex.Money'
+		");
+
+		$res = $res->fetch();
+		if($res !== false){
+			$YandexMoneyButton = new InlineOption(
+				'Яндекс.Деньги / Visa / Mastercard',
+				InlineOptionType::ExternalLink,
+				$res[0]
+			);
+		}
+
+		$res = $this->pdo->query("
+			SELECT `value`
+			FROM `config`
+			WHERE `section` = 'Donate'
+			AND `item` = 'PayPal'
+		");
+
+		$res = $res->fetch();
+		if($res !== false){
+			$PayPalButton = new InlineOption(
+				'PayPal / Visa / Mastercard / American Express / и т.д.',
+				InlineOptionType::ExternalLink,
+				$res[0]
+			);
+		}
+
+		$inlineOptions = array();
+		if($YandexMoneyButton !== null){
+			$inlineOptions[] = $YandexMoneyButton;
+		}
+
+		if($PayPalButton !== null){
+			$inlineOptions[] = $PayPalButton;
+		}
+
+		if(empty($inlineOptions)){
+			throw new \RuntimeException('No Donate URL is defined');
+		}
+
+		if(count($inlineOptions) > 1){
+			$phrase = 'Выбирай любой вариант:';
+		}
+		else{
+			$phrase = 'Вот тебе кнопочка:';
+		}
+
+		return new DirectedOutgoingMessage(
+			$this->user_id,
+			new OutgoingMessage(
+				$phrase,
+				false,
+				false,
+				null,
+				$inlineOptions
+			)
+		);
+	}
+		
 
 /*
 Commands:
@@ -820,6 +892,10 @@ stop - Удалиться из контакт-листа бота
 
 				case UserCommandMap::GetShareButton:
 					$response = $this->getShareButton();
+					break;
+
+				case UserCommandMap::Donate:
+					$response = $this->getDonateOptions();
 					break;
 			}
 		}
