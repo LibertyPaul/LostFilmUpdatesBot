@@ -93,13 +93,13 @@ class UpdateHandler{
 		$this->botan->track($message_assoc, $event);
 	}
 
-	private function logIncomingMessage(IncomingMessage $message){
+	private function logIncomingMessage(IncomingMessage $incomingMessage){
 		try{
 			$this->logRequestQuery->execute(
 				array(
-					':user_id'		=> $message->getUserId(),
-					':update_id'	=> $message->getUpdateId(),
-					':text'			=> $message->getText()
+					':user_id'		=> $incomingMessage->getUserId(),
+					':update_id'	=> $incomingMessage->getUpdateId(),
+					':text'			=> $incomingMessage->getText()
 				)
 			);
 
@@ -115,8 +115,8 @@ class UpdateHandler{
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError(
-				'[DB ERROR]', __FILE__, __LINE__,
-				PHP_EOL.print_r($message, true)
+				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
+				$incomingMessage
 			);
 			
 			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
@@ -131,16 +131,16 @@ class UpdateHandler{
 	}
 
 	private function logOutgoingMessage(
-		DirectedOutgoingMessage $message,
+		DirectedOutgoingMessage $outgoingMessage,
 		$loggedRequestId,
 		$statusCode
 	){
-		while($message !== null){
-			$text = substr($message->getOutgoingMessage()->getText(), 0, 5000);
+		while($outgoingMessage !== null){
+			$text = substr($outgoingMessage->getOutgoingMessage()->getText(), 0, 5000);
 			try{
 				$this->logResponseQuery->execute(
 					array(
-						':user_id'		=> $message->getUserId(),
+						':user_id'		=> $outgoingMessage->getUserId(),
 						':text'			=> $text,
 						':inResponseTo'	=> $loggedRequestId,
 						':statusCode'	=> $statusCode
@@ -151,7 +151,7 @@ class UpdateHandler{
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError(
 					'[DB ERROR]', __FILE__, __LINE__,
-					PHP_EOL.print_r($message, true)
+					$outgoingMessage
 				);
 				
 				if($ex->errorInfo[1] === 1062){# Duplicate entry error code
@@ -162,19 +162,19 @@ class UpdateHandler{
 				}
 			}
 			finally{
-				$message = $message->nextMessage();
+				$outgoingMessage = $outgoingMessage->nextMessage();
 			}
 		}
 	}
 
-	public function processIncomingMessage(IncomingMessage $message){
+	public function processIncomingMessage(IncomingMessage $incomingMessage){
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
 			'Entered processIncomingMessage with message:'.PHP_EOL.
-			print_r($message, true)
+			$incomingMessage
 		);
 
-		$loggedRequestId = $this->logIncomingMessage($message);
+		$loggedRequestId = $this->logIncomingMessage($incomingMessage);
 
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
@@ -182,8 +182,8 @@ class UpdateHandler{
 		);
 
 		try{
-			$conversationStorage = new ConversationStorage($message->getUserId());
-			$conversationStorage->insertMessage($message);
+			$conversationStorage = new ConversationStorage($incomingMessage->getUserId());
+			$conversationStorage->insertMessage($incomingMessage);
 			$initialCommand = $conversationStorage->getFirstMessage()->getUserCommand();
 		}
 		catch(\Exception $ex){
@@ -198,7 +198,7 @@ class UpdateHandler{
 
 		try{
 			$userController = new UserController(
-				$message->getUserId(),
+				$incomingMessage->getUserId(),
 				$conversationStorage
 			);
 		}
@@ -269,7 +269,7 @@ class UpdateHandler{
 		}
 		
 		if($initialCommand !== null){
-			$this->sendToBotan($message, $initialCommand);
+			$this->sendToBotan($incomingMessage, $initialCommand);
 		}
 
 		return $loggedRequestId;
