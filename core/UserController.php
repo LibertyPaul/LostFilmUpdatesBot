@@ -735,7 +735,7 @@ class UserController{
 	private function getShareButton(){
 		$this->conversationStorage->deleteConversation();
 
-		$donateButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, null);
+		$donateButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, '');
 
 		return new DirectedOutgoingMessage(
 			$this->user_id,
