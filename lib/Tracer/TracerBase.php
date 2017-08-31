@@ -59,7 +59,13 @@ abstract class TracerBase{
 
 	protected function __construct($traceName, TracerBase $secondTracer = null){
 		assert(is_string($traceName));
-		$this->traceName = str_replace('\\', '.', $traceName);
+		if($traceName[0] === '-'){
+			$traceName = substr($traceName, 1);
+		}
+
+		$traceName = str_replace('\\', '.', $traceName);
+
+		$this->traceName = $traceName;
 		$this->secondTracer = $secondTracer;
 			
 		if(defined('TRACER_LEVEL')){

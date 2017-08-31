@@ -7,10 +7,6 @@ class Tracer extends TracerBase{
 	const standaloneTracePath = self::logsDir.'/Standalone.log';
 
 	public function __construct($traceName){
-		if($traceName[0] === '-'){
-			$traceName = substr($traceName, 1);
-		}
-
 		parent::__construct($traceName);
 	}
 
