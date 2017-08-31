@@ -146,7 +146,6 @@ class OutgoingMessage{
 		$result .= sprintf("\tResponse Options:   [%s]", $responseOptionsStr)		.PHP_EOL;
 		$result .= "\tInlineOptions:"												.PHP_EOL;
 		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
-		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$this->text)			.PHP_EOL;
 		$result .= '***********************************';
 		
 		return $result;
