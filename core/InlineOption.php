@@ -20,7 +20,7 @@ class InlineOption{
 	public function __construct($text, $type, $payload){
 		assert(is_string($text));
 		assert(is_int($type));
-		assert(is_string($payload));
+		assert($payload === null || is_string($payload));
 
 		if($type < InlineOptionType::MIN_OPTION || $type > InlineOptionType::MAX_OPTION){
 			throw new \LogicException("Unknown Inline Option Type: [$type]");
