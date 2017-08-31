@@ -148,19 +148,6 @@ class TelegramAPI{
 			);
 		}
 
-		if($shareBotContact){
-			$request['reply_markup'] = array(
-				'inline_keyboard' => array(
-					array(
-						array(
-							'text' => 'Поделиться',
-							'switch_inline_query' => ''
-						)
-					)
-				)
-			);
-		}
-		
 		$request_json = json_encode($request, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 		if($request_json === false){
 			$this->tracer->logError(
