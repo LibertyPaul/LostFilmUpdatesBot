@@ -73,12 +73,16 @@ abstract class TracerBase{
 			);
 		}
 
-		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
+		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
+		}
 
 	}
 
 	public function __destruct(){
-		$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
+		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
+		}
 	}
 
 	abstract protected function write($text);
