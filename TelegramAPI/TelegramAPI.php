@@ -136,7 +136,8 @@ class TelegramAPI{
 		if(empty($responseOptions) && empty($inlineOptions)){
 			$request['reply_markup'] = array('remove_keyboard' => true);
 		}
-		else{
+
+		if(empty($responseOptions) === false){
 			$request['reply_markup'] = array(
 				'keyboard' => self::createKeyboard($responseOptions)
 			);
