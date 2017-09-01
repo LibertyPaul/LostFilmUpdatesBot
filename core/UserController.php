@@ -189,7 +189,7 @@ class UserController{
 				);
 			
 			default:
-				$this->repeatQuestion($conversationStorage);
+				$this->repeatQuestion();
 				return new DirectedOutgoingMessage(
 					$this->user_id,
 					new OutgoingMessage(
