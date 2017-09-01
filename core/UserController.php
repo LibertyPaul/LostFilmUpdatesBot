@@ -94,7 +94,10 @@ class UserController{
 		try{
 			$notificationGenerator = new NotificationGenerator();
 			$adminNotification = $notificationGenerator->newUserEvent($this->user_id);
-			$response->appendMessage($adminNotification);
+
+			if($adminNotification !== null){
+				$response->appendMessage($adminNotification);
+			}
 		}
 		catch(\Exception $ex){
 			$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
@@ -135,11 +138,11 @@ class UserController{
 			case $ANSWER_YES:
 				$this->conversationStorage->deleteConversation();
 
-				$response = null;
+				$adminNotification = null;
 				
 				try{
 					$notificationGenerator = new NotificationGenerator();
-					$response = $notificationGenerator->userLeftEvent($this->user_id);
+					$adminNotification = $notificationGenerator->userLeftEvent($this->user_id);
 				}
 				catch(\Exception $ex){
 					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
@@ -167,14 +170,16 @@ class UserController{
 					);
 				}
 				
-				$response->appendMessage(
-					new DirectedOutgoingMessage(
-						$this->user_id,
-						new OutgoingMessage('Прощай...')
-					)
+				$userResponse = new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Прощай...')
 				);
 
-				return $response;
+				if($adminNotification !== null){
+					$userResponse->appendMessage($adminNotification);
+				}
+
+				return $userResponse;
 				
 			case $ANSWER_NO:
 				$this->conversationStorage->deleteConversation();
