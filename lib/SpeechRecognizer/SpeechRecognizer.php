@@ -27,12 +27,14 @@ class SpeechRecognizer{
 		assert($HTTPRequester !== null);
 
 		$this->HTTPRequester = $HTTPRequester;
-
 		$this->tracer = new \Tracer(__CLASS__);
-
 		$this->APIURL = 'https://speech.googleapis.com/v1/speech:recognize';
-
 		$this->APIKey = $config->getValue('SpeechRecognizer', 'API Key');
+
+		#$this->velocityController = new \VelocityController(__CLASS__);
+	}
+
+	private function createGetRequest(){
 		if($this->APIKey === null){
 			$this->tracer->logError(
 				'[CONFIG]', __FILE__, __LINE__,
@@ -41,8 +43,8 @@ class SpeechRecognizer{
 
 			throw new \RuntimeException('[SpeechRecognizer][API Key] was not set');
 		}
-
-		#$this->velocityController = new \VelocityController(__CLASS__);
+		
+		return sprintf('%s?key=%s', $this->APIURL, $this->APIKey);
 	}
 
 	public function recognize($audioBase64, $format){
@@ -79,9 +81,7 @@ class SpeechRecognizer{
 		);
 
 		$JSONRequest = json_encode($Request, JSON_PRETTY_PRINT);
-
-		$URL = sprintf('%s?key=%s', $this->APIURL, $this->APIKey);
-
+		$URL = $this->createGetRequest();
 		$result = $this->HTTPRequester->sendJSONRequest($URL, $JSONRequest);
 
 		if($result['code'] >= 400){
