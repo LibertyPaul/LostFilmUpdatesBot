@@ -244,6 +244,10 @@ class UpdateHandler{
 
 	private function extractUserCommand($rawText){
 		$text = trim($rawText);
+		if(empty($text)){
+			return $rawText;
+		}
+
 		if($text[0] !== '/'){
 			return $rawText;
 		}
