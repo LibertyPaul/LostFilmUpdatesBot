@@ -28,19 +28,15 @@ class TelegramAPI{
 
 		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(__CLASS__);
 	}
+
+	private function getBaseMethodURL($method){
+		assert(is_string($method));
+		return sprintf('https://api.telegram.org/bot%s/%s', $this->botToken, $method);
+	}
 	
-	private function getSendMessageURL(){
-		return 'https://api.telegram.org/bot'.$this->botToken.'/sendMessage';
-	}
-
-	private function getGetFileURL($file_id){
-		$format = 'https://api.telegram.org/bot%s/getFile?file_id=%s';
-		return sprintf($format, $this->botToken, $file_id);
-	}
-
 	private function getDownloadFileURL($file_path){
-		$format = 'https://api.telegram.org/file/bot%s/%s';
-		return sprintf($format, $this->botToken, $file_path);
+		assert(is_string($file_path));
+		return sprintf('https://api.telegram.org/file/bot%s/%s', $this->botToken, $file_path);
 	}
 
 	private function waitForVelocity($user_id){
@@ -149,19 +145,21 @@ class TelegramAPI{
 			);
 		}
 
-		$request_json = json_encode($request, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-		if($request_json === false){
+		$requestJSON = json_encode($request, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+		if($requestJSON === false){
 			$this->tracer->logError(
 				'[JSON]', __FILE__, __LINE__,
-				'json_encode has failed on:'.PHP_EOL.print_r($request, true)
+				'json_encode has failed on:'.PHP_EOL.
+				print_r($request, true)
 			);
+
 			throw new \RuntimeException('json_encode has failed on:'.print_r($request, true));
 		}				
 		
-		$URL = $this->getSendMessageURL();
+		$URL = $this->getBaseMethodURL('sendMessage');
 		try{
 			$this->waitForVelocity($telegram_id);
-			$result = $this->HTTPRequester->sendJSONRequest($URL, $request_json);
+			$result = $this->HTTPRequester->sendJSONRequest($URL, $requestJSON);
 		}
 		catch(\HTTPException $HTTPException){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
@@ -171,9 +169,23 @@ class TelegramAPI{
 		return $result;
 	}
 
+	public function forwardMessage($chat_id, $source_chat_id, $message_id, $silent = false){
+		$URL = $this->getBaseMethodURL('forwardMessage');
+		$args = array(
+			'chat_id'				=> $chat_id,
+			'from_chat_id'			=> $source_chat_id,
+			'message_id'			=> $message_id,
+			'disable_notification'	=> $silent
+		);
+
+		$this->HTTPRequester->sendGETRequest($URL, $args);
+	}
+
 	public function downloadVoiceMessage($file_id){
-		$getFileURL = $this->getGetFileURL($file_id);
-		$result = $this->HTTPRequester->sendGETRequest($getFileURL);
+		$getFileURL = $this->getBaseMethodURL('getFile');
+		$args = array('file_id' => $file_id);
+
+		$result = $this->HTTPRequester->sendGETRequest($getFileURL, $args);
 
 		if($result['code'] >= 400){
 			$this->tracer->logError(

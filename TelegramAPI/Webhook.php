@@ -29,6 +29,11 @@ class Webhook{
 	private $messageResendEnabled = false;
 	private $messageResendURL = null;
 
+	private $attachmentForwardingChat;
+	private $attachmentForwardingSilent;
+
+	private $telegramAPI;
+
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
 		$this->updateHandler = $updateHandler;
@@ -58,6 +63,38 @@ class Webhook{
 
 				$this->messageResendEnabled = 'N';
 			}
+		}
+
+		$this->attachmentForwardingChat = $config->getValue(
+			'TelegramAPI',
+			'Attachment Forwarding Chat'
+		);
+
+		$res = $config->getValue(
+			'TelegramAPI',
+			'Attachment Forwarding Silent'
+		);
+
+		if($res === 'Y'){
+			$this->attachmentForwardingSilent = true;
+		}
+		else{
+			$this->attachmentForwardingSilent = false;
+		}
+
+		$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
+		try{
+			$HTTPrequesterFactory = new \HTTPRequesterFactory($config);
+			$HTTPRequester = $HTTPrequesterFactory->getInstance();
+			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
+		}
+		catch(\Exception $ex){
+			$this->tracer->logError(
+				'[o]', __FILE__, __LINE__,
+				'Unable to create Telegram API'
+			);
+
+			$this->telegramAPI = null;
 		}
 	}
 
@@ -147,6 +184,21 @@ class Webhook{
 			);
 	}
 
+	private static function shouldBeForwarded($message){
+		return
+			isset($message->entities)	||
+			isset($message->audio)		||
+			isset($message->document)	||
+			isset($message->game)		||
+			isset($message->photo)		||
+			isset($message->sticker)	||
+			isset($message->video)		||
+			isset($message->video_note)	||
+			isset($message->contact)	||
+			isset($message->location)	||
+			isset($message->venue);
+	}
+
 	public function processUpdate($password, $postData){
 		if($this->verifyPassword($password) === false){
 			$this->tracer->logNotice(
@@ -172,6 +224,32 @@ class Webhook{
 		}
 
 		$this->logUpdate($update);
+
+		if(
+			$this->attachmentForwardingChat !== null &&
+			self::shouldBeForwarded($update->message) &&
+			$this->telegramAPI !== null
+		){
+			$this->tracer->logDebug(
+				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
+				'Message is eligible for forwarding.'
+			);
+
+			try{
+				$this->telegramAPI->forwardMessage(
+					$this->attachmentForwardingChat,
+					$update->message->chat->id,
+					$update->message->message_id,
+					$this->attachmentForwardingSilent
+				);
+			}
+			catch(\Exception $ex){
+				$this->tracer->logException(
+					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
+					$ex
+				);
+			}
+		}
 
 		if(self::validateFields($update) === false){
 			$this->tracer->logNotice(
