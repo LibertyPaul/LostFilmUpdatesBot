@@ -162,9 +162,11 @@ class Webhook{
 		if($update === null){
 			$this->tracer->logError(
 				'[JSON]', __FILE__, __LINE__,
-				'json_decode error: '.json_last_error_msg()
+				'Unable to parse JSON update: '.json_last_error_msg().PHP_EOL.
+				'Raw JSON:'.PHP_EOL.
+				$postData
 			);
-			$this->tracer->logNotice('[INFO]', __FILE__, __LINE__, PHP_EOL."'$postData'");
+
 			$this->respondFinal(WebhookReasons::formatError);
 			return;
 		}
@@ -172,9 +174,10 @@ class Webhook{
 		$this->logUpdate($update);
 
 		if(self::validateFields($update) === false){
-			$this->tracer->logError(
-				'[DATA ERROR]', __FILE__, __LINE__,
-				'Update is invalid:'.PHP_EOL.print_r($update, true)
+			$this->tracer->logNotice(
+				'[o]', __FILE__, __LINE__,
+				'Update is not supported:'.PHP_EOL.
+				print_r($update, true)
 			);
 
 			$this->respondFinal(WebhookReasons::correctButIgnored);
