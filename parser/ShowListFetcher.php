@@ -6,6 +6,8 @@ require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
 class ShowListFetcher{
+	const URL = 'https://www.lostfilm.tv/ajaxik.php';
+
 	private $requester;
 	private $tracer;
 	
@@ -14,20 +16,25 @@ class ShowListFetcher{
 		$this->requester = $requester;
 		$this->tracer = new \Tracer(__CLASS__);
 	}
-	
-	private static function getShowsInfoURL($from){
-		assert(is_int($from));
-		return "https://www.lostfilm.tv/ajaxik.php?act=serial&type=search&o=$from&s=3&t=0";
-	}
 
 	public function fetchShowList(){
 		$showInfoList = array();
+
+		$args = array(
+			'act' => 'serial',
+			'type' => 'search',
+			'o' => 0,
+			's' => 3,
+			't' => 0
+		);
+
 		$pos = 0;
 
 		do{
-			$url = self::getShowsInfoURL($pos);
+			$args['o'] = $pos;
+
 			try{
-				$result = $this->requester->sendGETRequest($url);
+				$result = $this->requester->sendGETRequest(self::URL, $args);
 			}
 			catch(\HTTPException $ex){
 				$this->tracer->logException('[HTTP]', __FILE__, __LINE__, $ex);

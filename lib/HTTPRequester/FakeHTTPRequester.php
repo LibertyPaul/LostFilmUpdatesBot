@@ -82,9 +82,17 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $this->randomResponse();
 	}
 
-	public function sendGETRequest($destination){
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $destination);
-		$this->writeOut($destination);	
+	public function sendGETRequest($destination, array $args = null){
+		assert(is_string($destination));
+
+		$request = $destination;
+		if($args !== null){
+			assert(strpos($destination, '?') === false);
+			$request .= '?'.http_build_query($args);
+		}
+
+		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $request);
+		$this->writeOut($request);	
 		return $this->randomResponse();
 	}
 

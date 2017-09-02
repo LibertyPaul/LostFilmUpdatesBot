@@ -65,7 +65,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$this->tracer->logEvent(
 			'[JSON REQUEST]', __FILE__, __LINE__,
 			'HTTP code: '.$code.PHP_EOL.
-			'Response: '.PHP_EOL.self::prettifyIfPossible($response)
+			'Response: '.PHP_EOL.
+			self::prettifyIfPossible($response)
 		);
 
 		return array(
@@ -75,24 +76,43 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 	}
 	
-	public function sendGETRequest($destination){
-		assert(curl_setopt($this->curl, CURLOPT_URL, $destination));
+	public function sendGETRequest($destination, array $args = null){
+		assert(is_string($destination));
+
+		$request = $destination;
+		if($args !== null){
+			assert(strpos($destination, '?') === false);
+			$request .= '?'.http_build_query($args);
+		}
+
+		assert(curl_setopt($this->curl, CURLOPT_URL, $request));
 		assert(curl_setopt($this->curl, CURLOPT_HTTPGET, true));
 		assert(curl_setopt($this->curl, CURLOPT_HTTPHEADER, array('Content-type: text/html')));
 		
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $destination);
+		$this->tracer->logEvent(
+			'[GET REQUEST]', __FILE__, __LINE__,
+			"Destination=[$destination], args:".PHP_EOL.
+			print_r($args, true)	
+		);
 		
 		$response = curl_exec($this->curl);
 		if($response === false){
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, 'curl_exec error: '.curl_error($this->curl));
-			$this->tracer->logError('[HTTP ERROR]', __FILE__, __LINE__, "url: '$destination'");
+			$this->tracer->logError(
+				'[HTTP ERROR]', __FILE__, __LINE__,
+				'curl_exec error: '.curl_error($this->curl)
+			);
+
 			throw new HTTPException('curl_exec error: '.curl_error($this->curl));
 		}
 
 		$code = intval(curl_getinfo($this->curl, CURLINFO_HTTP_CODE));
 		
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'HTTP code: '.$code);
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, 'Body:'.PHP_EOL.$response.PHP_EOL);
+		$this->tracer->logEvent(
+			'[GET RESPONSE]', __FILE__, __LINE__,
+			"HTTP code: [$code]".PHP_EOL.
+			'Body:'.PHP_EOL.
+			$response
+		);
 
 		return array(
 			'value' => $response,
