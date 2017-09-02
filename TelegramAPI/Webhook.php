@@ -129,7 +129,7 @@ class Webhook{
 				break;
 
 			case WebhookReasons::failed:
-				http_response_code(500);
+				http_response_code(200);
 				echo 'Failed for some reason.'.PHP_EOL;
 				break;
 

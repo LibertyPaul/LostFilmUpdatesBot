@@ -229,7 +229,7 @@ class UpdateHandler{
 
 		assert(strpos($voice->mime_type, 'ogg') !== -1);
 			
-		$voiceBinary = $this->telegramAPI->downloadVoiceMessage($voice->file_id);
+		$voiceBinary = $this->telegramAPI->downloadFile($voice->file_id);
 		$voiceBase64 = base64_encode($voiceBinary);
 
 		$possibleVariants = $this->speechRecognizer->recognize($voiceBase64, 'ogg');
@@ -321,8 +321,14 @@ class UpdateHandler{
 				'[o]', __FILE__, __LINE__,
 				'Message->text is absent, but voice is present. Recognizing...'
 			);
-
-			$text = $this->recognizeVoiceMessage($update->message->voice);
+			
+			try{
+				$text = $this->recognizeVoiceMessage($update->message->voice);
+			}
+			catch(\Exception $ex){
+				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+				throw $ex;
+			}
 
 			$this->tracer->logDebug(
 				'[o]', __FILE__, __LINE__,

@@ -181,7 +181,7 @@ class TelegramAPI{
 		$this->HTTPRequester->sendGETRequest($URL, $args);
 	}
 
-	public function downloadVoiceMessage($file_id){
+	public function downloadFile($file_id){
 		$getFileURL = $this->getBaseMethodURL('getFile');
 		$args = array('file_id' => $file_id);
 
@@ -209,11 +209,15 @@ class TelegramAPI{
 
 		$this->tracer->logDebug(
 			'[TELEGRAM API]', __FILE__, __LINE__,
-			'getFile has returned:'.PHP_EOL.print_r($File, true)
+			'getFile has returned:'.PHP_EOL.
+			print_r($File, true)
 		);
 
 		assert(isset($File->ok));
-		assert($File->ok === 1);
+		if($File->ok === false){
+			throw new \RuntimeException('Unable to retreive file info: '.$File->description);
+		}
+
 		assert(isset($File->result));
 		assert(isset($File->result->file_path));
 		
