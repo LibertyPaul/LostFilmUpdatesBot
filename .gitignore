@@ -5,6 +5,7 @@ TelegramAPI/tests/debug_webhook/input_debug_webhook.php
 DBCredentials/*.ini
 DBCredentials/*
 tools/data/
+lib/Tracer/TracerConfig.php
 
 *.swp
 .my.cnf
