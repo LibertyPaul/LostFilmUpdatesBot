@@ -186,7 +186,6 @@ class Webhook{
 
 	private static function shouldBeForwarded($message){
 		return
-			isset($message->entities)	||
 			isset($message->audio)		||
 			isset($message->document)	||
 			isset($message->game)		||
