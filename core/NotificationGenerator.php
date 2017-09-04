@@ -38,9 +38,8 @@ class NotificationGenerator{
 		$url
 	){
 		$template = 
-			'Вышла новая серия <b>%s</b>'	.PHP_EOL.
-			'S%02dE%02d "%s"'				.PHP_EOL.
-			'Серию можно скачать по ссылке:'.PHP_EOL.
+			'<b>%s</b>: <b>S%02dE%02d</b> "%s"'	.PHP_EOL.
+			'Серию можно скачать по ссылке:'	.PHP_EOL.
 			'%s'
 		;
 
