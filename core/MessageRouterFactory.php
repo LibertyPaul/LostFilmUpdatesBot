@@ -7,6 +7,7 @@ require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../TelegramAPI/MessageSender.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 class MessageRouterFactory{
 	private static $instance;
