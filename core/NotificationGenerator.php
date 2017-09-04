@@ -38,26 +38,20 @@ class NotificationGenerator{
 		$url
 	){
 		$template = 
-			'Вышла новая серия <b>#showName</b>'				.PHP_EOL.
-			'Сезон #season, серия #seriesNumber, "#seriesTitle"'.PHP_EOL.
-			'Серию можно скачать по ссылке:'					.PHP_EOL.
-			'#URL'
+			'Вышла новая серия <b>%s</b>'	.PHP_EOL.
+			'S%02dE%02d "%s"'				.PHP_EOL.
+			'Серию можно скачать по ссылке:'.PHP_EOL.
+			'%s'
 		;
-			
-		
-		$text = str_replace(
-			array('#showName', '#season', '#seriesNumber', '#seriesTitle', '#URL'),
-			array(
-				htmlspecialchars($showTitleRu),
-				$season,
-				$seriesNumber,
-				htmlspecialchars($seriesTitle),
-				$url
-			),
-			$template
+
+		return sprintf(
+			$template,
+			htmlspecialchars($showTitleRu),
+			$season,
+			$seriesNumber,
+			htmlspecialchars($seriesTitle),
+			$url
 		);
-		
-		return $text;
 	}
 
 	public function newSeriesEvent(
