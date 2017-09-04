@@ -34,36 +34,36 @@ class ShowListFetcher{
 			$args['o'] = $pos;
 
 			try{
-				$result = $this->requester->sendGETRequest(self::URL, $args);
+				$res = $this->requester->sendGETRequest(self::URL, $args);
+				$showsJSON = $res['value'];
 			}
 			catch(\HTTPException $ex){
 				$this->tracer->logException('[HTTP]', __FILE__, __LINE__, $ex);
 				throw $ex;
 			}
 
-			$result_json = $result['value'];
-
-			$result = json_decode($result_json, true);
-			if($result === false){
+			$shows = json_decode($showsJSON, true);
+			if($shows === false){
 				$this->tracer->logError(
 					'[JSON ERROR]', __FILE__, __LINE__,
-					'json_decode error: '.json_last_error_msg().PHP_EOL.$result_json
+					'json_decode error: '.json_last_error_msg().PHP_EOL.
+					$showsJSON
 				);
 
 				throw new \RuntimeException('json_decode error: '.json_last_error_msg());
 			}
 
-			if(is_array($result['data']) === false){
+			if(is_array($shows['data']) === false){
 				$this->tracer->logError(
 					'[DATA ERROR]', __FILE__, __LINE__,
 					'Incorrect show info'.PHP_EOL.
-					print_r($result, true)
+					print_r($shows, true)
 				);
 
 				throw new \RuntimeException('Incorrect show info: data element is not found');
 			}
 
-			foreach($result as $show){
+			foreach($shows['data'] as $show){
 				if(empty($show['alias'])){
 					$this->tracer->logWarning(
 						'[DATA WARNING]', __FILE__, __LINE__,
@@ -77,8 +77,8 @@ class ShowListFetcher{
 				$showInfoList[] = $show;
 			}
 
-			$pos += count($result);
-		}while(count($result['data']) > 0);
+			$pos += count($shows['data']);
+		}while(count($shows['data']) > 0);
 
 		return $showInfoList;
 	}
