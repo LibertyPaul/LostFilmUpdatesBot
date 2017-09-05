@@ -46,7 +46,15 @@ class NotificationDispatcher{
 				`notificationsQueue`.`responseCode` IS NULL OR
 				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
 			) AND
-				`notificationsQueue`.`retryCount` < :maxRetryCount
+				`notificationsQueue`.`retryCount` < SELECT IFNULL(
+					(
+						SELECT `value`
+						FROM `config`
+						WHERE `section` = 'Notification Dispatcher'
+						AND `item` = 'Max Attempts Count'
+					),
+					1
+				)
 			FOR UPDATE
 		");
 		
@@ -58,7 +66,7 @@ class NotificationDispatcher{
 		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
-	private static function shallBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
+	private static function eligibleToBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
 		if($responseCode === null){
 			return true;
 		}
@@ -70,33 +78,33 @@ class NotificationDispatcher{
 		$waitTime = null;
 		switch($retryCount){
 			case 0:
-				$waitTime = new DateInterval('PT0S');
+				$waitTime = new \DateInterval('PT0S');
 				break;
 			
 			case 1:
-				$waitTime = new DateInterval('PT1M');
+				$waitTime = new \DateInterval('PT1M');
 				break;
 
 			case 2:
-				$waitTime = new DateInterval('PT15M');
+				$waitTime = new \DateInterval('PT15M');
 				break;
 
 			case 3:
-				$waitTime = new DateInterval('PT1H');
+				$waitTime = new \DateInterval('PT1H');
 				break;
 
 			case 4:
-				$waitTime = new DateInterval('P1D');
+				$waitTime = new \DateInterval('P1D');
 				break;
 
 			default:
 				$daysExtra = $retryCount - 3;
-				$waitTime = new DateInterval('P'.$daysExtra.'D');
+				$waitTime = new \DateInterval('P'.$daysExtra.'D');
 				break;
 		}
 		
-		$lastAttemptTime 	= new DateTime($lastDeliveryAttemptTime);
-		$currentTime		= new DateTime();
+		$lastAttemptTime 	= new \DateTime($lastDeliveryAttemptTime);
+		$currentTime		= new \DateTime();
 		
 		return $lastAttemptTime->add($waitTime) < $currentTime;
 	}
@@ -119,9 +127,8 @@ class NotificationDispatcher{
 
 		
 		while($notification = $this->getNotificationDataQuery->fetch(\PDO::FETCH_ASSOC)){
-			$gonnaBeSent = false;
 			try{
-				$gonnaBeSent = self::shallBeSent(
+				$eligible = self::eligibleToBeSent(
 					$notification['responseCode'],
 					$notification['retryCount'],
 					$notification['lastDeliveryAttemptTime']
@@ -130,12 +137,13 @@ class NotificationDispatcher{
 			catch(\Exception $ex){
 				$this->tracer->logException(
 					'[ERROR]', __FILE__, __LINE__,
-					$ex.PHP_EOL.print_r($notification, true)
+					$ex.PHP_EOL.
+					print_r($notification, true)
 				);
 				continue;
 			}
 			
-			if($gonnaBeSent){
+			if($eligible){
 				try{
 					$url = self::makeURL(
 						$notification['showAlias'],
