@@ -128,8 +128,6 @@ class SeriesParserExecutor{
 								$series['alias'],
 								$series['seasonNumber'],
 								$series['seriesNumber'],	
-                                $about['title_ru'],
-                                $about['title_en'],
 								$about['why']
 							)
 						);
