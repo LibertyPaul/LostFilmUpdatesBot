@@ -45,16 +45,20 @@ class NotificationDispatcher{
 			WHERE (
 				`notificationsQueue`.`responseCode` IS NULL OR
 				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
-			) AND
-				`notificationsQueue`.`retryCount` < SELECT IFNULL(
-					(
-						SELECT `value`
-						FROM `config`
-						WHERE `section` = 'Notification Dispatcher'
-						AND `item` = 'Max Attempts Count'
-					),
-					1
+			)
+			AND (
+				`notificationsQueue`.`retryCount` < (
+					SELECT IFNULL (
+						(
+							SELECT `value`
+							FROM `config`
+							WHERE `section` = 'Notification Dispatcher'
+							AND `item` = 'Max Attempts Count'
+						),
+						1
+					)
 				)
+			)
 			FOR UPDATE
 		");
 		
@@ -70,38 +74,40 @@ class NotificationDispatcher{
 		if($responseCode === null){
 			return true;
 		}
-		
+
 		if($lastDeliveryAttemptTime === null){
 			throw new \Exception('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
 		$waitTime = null;
-		switch($retryCount){
+		switch($retryCount){ # TODO: move intervals to `config` table
 			case 0:
-				$waitTime = new \DateInterval('PT0S');
+				$interval = 'PT0S';
 				break;
 			
 			case 1:
-				$waitTime = new \DateInterval('PT1M');
+				$interval = 'PT1M';
 				break;
 
 			case 2:
-				$waitTime = new \DateInterval('PT15M');
+				$interval = 'PT15M';
 				break;
 
 			case 3:
-				$waitTime = new \DateInterval('PT1H');
+				$interval = 'PT1H';
 				break;
 
 			case 4:
-				$waitTime = new \DateInterval('P1D');
+				$interval = 'P1D';
 				break;
 
 			default:
 				$daysExtra = $retryCount - 3;
-				$waitTime = new \DateInterval('P'.$daysExtra.'D');
+				$interval = sprintf('P%dD', $daysExtra);
 				break;
 		}
+
+		$waitTime = new \DateInterval($interval);
 		
 		$lastAttemptTime 	= new \DateTime($lastDeliveryAttemptTime);
 		$currentTime		= new \DateTime();
