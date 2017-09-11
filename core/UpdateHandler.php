@@ -3,7 +3,6 @@
 namespace core;
 
 require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
@@ -36,21 +35,6 @@ class UpdateHandler{
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
 
-		$this->botan = null;
-		$botanEnabled = $this->config->getValue('Botan', 'Enabled');
-
-		if($botanEnabled === 'Y'){
-			$botanAPIKey = $this->config->getValue('Botan', 'API Key');
-			$this->tracer->logWarning(
-				'[o]', __FILE__, __LINE__, 
-				'Botan is enabled but no API key was found.'
-			);
-			
-			if($botanAPIKey !== null){
-				$this->botan = new \Botan($botanAPIKey);
-			}
-		}
-
 		$this->logRequestQuery = $this->pdo->prepare("
 			INSERT INTO `messagesHistory` (
 				source,
@@ -82,15 +66,6 @@ class UpdateHandler{
 				:statusCode
 			)
 		");
-	}
-
-	private function sendToBotan(IncomingMessage $message, $event){
-		if($this->botan === null){
-			return;
-		}
-	
-		$message_assoc = json_decode($message->getRawMessage());
-		$this->botan->track($message_assoc, $event);
 	}
 
 	private function logIncomingMessage(IncomingMessage $incomingMessage){
@@ -266,10 +241,6 @@ class UpdateHandler{
 			}
 			
 			$directedOutgoingMessage = $directedOutgoingMessage->nextMessage();
-		}
-		
-		if($initialCommand !== null){
-			$this->sendToBotan($incomingMessage, $initialCommand);
 		}
 
 		return $loggedRequestId;

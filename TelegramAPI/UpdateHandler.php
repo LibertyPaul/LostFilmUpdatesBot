@@ -5,12 +5,13 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../core/UserCommand.php');
 require_once(__DIR__.'/../core/IncomingMessage.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
+require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
-require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
 
 class UpdateHandler{
@@ -18,6 +19,7 @@ class UpdateHandler{
 	private $pdo;
 	private $speechRecognizer;
 	private $telegramAPI;
+	private $botan;
 	
 	public function __construct(){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -42,6 +44,22 @@ class UpdateHandler{
 
 			$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
 			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
+
+			$this->botan = null;
+			$botanEnabled = $config->getValue('Botan', 'Enabled');
+
+			if($botanEnabled === 'Y'){
+				$botanAPIKey = $config->getValue('Botan', 'API Key');
+				$this->tracer->logWarning(
+					'[o]', __FILE__, __LINE__, 
+					'Botan is enabled but no API key was found.'
+				);
+				
+				if($botanAPIKey !== null){
+					$this->botan = new \Botan($botanAPIKey);
+				}
+			}
+
 		}
 		catch(\Exception $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
@@ -344,17 +362,36 @@ class UpdateHandler{
 			throw new \RuntimeException('Both message->text and message->voice are absent');
 		}
 
-		$command = $this->extractUserCommand($text);
+		$rawCommand = $this->extractUserCommand($text);
+		$command = $this->mapUserCommand($rawCommand);
 
 		$incomingMessage = new \core\IncomingMessage(
 			$user_id,
-			$this->mapUserCommand($command),
+			$command,
 			$text,
 			$update->update_id
 		);
 
 		$coreHandler = new \core\UpdateHandler();
 		$coreHandler->processIncomingMessage($incomingMessage);
+
+		if($command !== null){
+			try{
+				$this->sendToBotan(json_encode($update), $rawCommand);
+			}
+			catch(\Exception $ex){
+				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			}
+		}
+	}
+
+	private function sendToBotan($messageJSON, $event){
+		if($this->botan === null){
+			return;
+		}
+	
+		$message_assoc = json_decode($messageJSON, true);
+		$this->botan->track($message_assoc, $event);
 	}
 
 }
