@@ -66,8 +66,6 @@ class NotificationDispatcher{
 			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
 		');
 
-		$config = new \Config($this->pdo);
-		$this->maxNotificationRetries = $config->getValue('Notification', 'Max Retries', 5);		
 	}
 
 	private static function eligibleToBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
@@ -125,12 +123,7 @@ class NotificationDispatcher{
 	}
 
 	public function run(){
-		$this->getNotificationDataQuery->execute(
-			array(
-				'maxRetryCount' => $this->maxNotificationRetries
-			)
-		);
-
+		$this->getNotificationDataQuery->execute();
 		
 		while($notification = $this->getNotificationDataQuery->fetch(\PDO::FETCH_ASSOC)){
 			try{
