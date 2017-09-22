@@ -21,7 +21,7 @@ UPDATE `users`
 	SET `APIIdentifier` = `telegram_id`;
 
 ALTER TABLE `telegramUserData`
-	DROP FOREIGN KEY `telegramUserData_ibfk_1`;
+	DROP FOREIGN KEY `APIIdentifier_ibfk_1`;
 
 ALTER TABLE `users`
 	ADD UNIQUE (`API`, `APIIdentifier`);
