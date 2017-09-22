@@ -1,38 +1,40 @@
 <?php
+
+namespace core;
+
 require_once(__DIR__.'/../BotPDO.php');
-require_once(__DIR__.'/OwnerPDO.php');
+require_once(__DIR__.'/../../lib/tests/OwnerPDO.php');
 require_once(__DIR__.'/MessageTester.php');
 
-class UserControllerTest extends PHPUnit_Framework_TestCase{
-	const TEST_TELEGRAM_ID = 100500;
+class UserControllerTest extends \PHPUnit_Framework_TestCase{
+	const TEST_USER_ID = 100500;
 	private $userController;
 
 	public function __construct(){
 		$this->messageTester = new MessageTester(
-			self::TEST_TELEGRAM_ID,
-			'🇩 🇮 🇲  🇦  🇳 ',
-			'🇩 🇮 🇲  🇦  🇳 ', // once such shitty nickname was unable to register
-			'🇩 🇮 🇲  🇦  🇳 '
 		);
 
-		$pdo = OwnerPDO::getInstance();
-		$pdo->query('DELETE FROM `messagesHistory` WHERE `chat_id` = '.self::TEST_TELEGRAM_ID);
+		$pdo = \OwnerPDO::getInstance();
+		$pdo->query('DELETE FROM `messagesHistory` WHERE `user_id` = '.self::TEST_USER_ID);
+
+
+
 	}
 
 	public function __destruct(){
-		$pdo = OwnerPDO::getInstance();
-		$pdo->query('DELETE FROM `messagesHistory` WHERE `chat_id` = '.self::TEST_TELEGRAM_ID);
+		$pdo = \OwnerPDO::getInstance();
+		$pdo->query('DELETE FROM `messagesHistory` WHERE `user_id` = '.self::TEST_USER_ID);
 	}
 
-	private function userExists($telegram_id){
-		$pdo = BotPDO::getInstance();
+	private function userExists($user_id){
+		$pdo = \BotPDO::getInstance();
 		$userExists = $pdo->prepare('
-			SELECT COUNT(*) FROM `users` WHERE `telegram_id` = :telegram_id
+			SELECT COUNT(*) FROM `users` WHERE `id` = :user_id
 		');
 
 		$userExists->execute(
 			array(
-				':telegram_id' => $telegram_id
+				':user_id' => $user_id
 			)
 		);
 		
@@ -40,7 +42,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 	}
 
 	private function start(){
-		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
+		$isExist = $this->userExists(self::TEST_USER_ID);
 
 		$response = $this->messageTester->send('/start');
 
@@ -67,7 +69,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 			$this->assertContains('знакомы', $resp->text);
 		}
 		
-		$this->assertTrue($this->userExists(self::TEST_TELEGRAM_ID));
+		$this->assertTrue($this->userExists(self::TEST_USER_ID));
 	}
 
 	private function cancel(){
@@ -79,7 +81,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 	}
 
 	private function stop(){
-		$isExist = $this->userExists(self::TEST_TELEGRAM_ID);
+		$isExist = $this->userExists(self::TEST_USER_ID);
 
 		$resp = $this->messageTester->send('/stop')['sentMessages'];
 		assert(count($resp) === 1);
@@ -109,7 +111,7 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 			$this->assertTrue($adminNotificationSent);
 		}
 
-		$this->assertFalse($this->userExists(self::TEST_TELEGRAM_ID));
+		$this->assertFalse($this->userExists(self::TEST_USER_ID));
 	}
 
 	public function testRegistration(){
@@ -194,23 +196,23 @@ class UserControllerTest extends PHPUnit_Framework_TestCase{
 		$this->cancel();
 		$this->start();
 		
-		$pdo = BotPDO::getInstance();
-		$getMute = $pdo->prepare('SELECT mute FROM users WHERE telegram_id = :telegram_id');
-		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$pdo = \BotPDO::getInstance();
+		$getMute = $pdo->prepare('SELECT mute FROM users WHERE id = :user_id');
+		$getMute->execute(array(':user_id' => self::TEST_USER_ID));
 		$res = $getMute->fetch();
 		$this->assertEquals('N', $res[0]);
 		
 		$resp = $this->messageTester->send('/mute')['sentMessages'][0];
 		$this->assertContains('Выключил все уведомления', $resp->text);
 		
-		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$getMute->execute(array(':user_id' => self::TEST_USER_ID));
 		$res = $getMute->fetch();
 		$this->assertEquals('Y', $res[0]);
 		
 		$resp = $this->messageTester->send('/mute')['sentMessages'][0];
 		$this->assertContains('Включил все уведомления', $resp->text);
 		
-		$getMute->execute(array(':telegram_id' => self::TEST_TELEGRAM_ID));
+		$getMute->execute(array(':user_id' => self::TEST_USER_ID));
 		$res = $getMute->fetch();
 		$this->assertEquals('N', $res[0]);
 		

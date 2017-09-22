@@ -55,6 +55,15 @@ class WebhookTest extends \PHPUnit_Framework_TestCase{
 		$this->assertEquals(400, $resp['code']);
 	}
 
+	public function testAccountCreation(){
+		$telegram_id = 100500;
+		$username = '🇩 🇮 🇲 🇦 🇳 ';
+		$firstName = '🇩 🇮 🇲 🇦 🇳 ';
+		$lastName = '🇩 🇮 🇲 🇦 🇳 ';
+
+		
+	}
+
 	public function testMessageLogging(){
 		$key = \TestsCommon\generateRandomString(32);
 		$data = json_encode(
