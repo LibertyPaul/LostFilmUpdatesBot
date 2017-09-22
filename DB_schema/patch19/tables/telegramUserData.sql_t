@@ -6,10 +6,13 @@ CREATE TABLE IF NOT EXISTS `telegramUserData` (
 	 PRIMARY KEY (`telegram_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `users`
+	ADD INDEX (`telegram_id`);
+
 ALTER TABLE `telegramUserData`
-	ADD CONSTRAINT `telegramUserData_ibfk_1`
+	ADD CONSTRAINT `APIIdentifier_ibfk_1`
 		FOREIGN KEY (`telegram_id`)
-		REFERENCES `&&db_name`.`users`(`APIIdentifier`)
+		REFERENCES `&&db_name`.`users`(`telegram_id`)
 		ON DELETE CASCADE
 		ON UPDATE CASCADE;
 
@@ -21,12 +24,11 @@ INSERT INTO `telegramUserData` (
 	`last_name`
 )
 SELECT 
-	`APIIdentifier`,
+	`telegram_id`,
 	`telegram_username`,
 	`telegram_firstName`,
 	`telegram_lastName`
-FROM `users`
-WHERE `API` = 'TelegramAPI';
+FROM `users`;
 
 
 ALTER TABLE `users`
