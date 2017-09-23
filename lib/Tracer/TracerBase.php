@@ -111,8 +111,12 @@ abstract class TracerBase{
 		);
 	}
 
-	private function log($level, $tag, $file, $line, $message = null){
+	private function log($level, $tag, $file, $line, $message){
 		$messageLevel = TracerLevel::getLevelByName($level);
+
+		if(empty($message)){
+			$message = 'No message provided.';
+		}
 
 		if($messageLevel <= $this->maxLevel){
 			$record = self::compileRecord($level, $tag, $file, $line, $message);
@@ -178,6 +182,10 @@ abstract class TracerBase{
 	}
 
 	public static function syslogCritical($tag, $file, $line, $message = null){
+		if(empty($message)){
+			$message = 'No message provided.';
+		}
+
 		$record = self::compileRecord('CRITICAL', $tag, $file, $line, $message);
 		assert(syslog(LOG_CRIT, $record));
 	}

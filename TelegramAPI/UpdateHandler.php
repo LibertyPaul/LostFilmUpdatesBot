@@ -377,7 +377,7 @@ class UpdateHandler{
 
 		if($command !== null){
 			try{
-				$this->sendToBotan(json_encode($update), $rawCommand);
+				$this->sendToBotan($update->message, $rawCommand);
 			}
 			catch(\Exception $ex){
 				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
@@ -385,12 +385,17 @@ class UpdateHandler{
 		}
 	}
 
-	private function sendToBotan($messageJSON, $event){
+	private function sendToBotan($message, $event){
 		if($this->botan === null){
 			return;
 		}
-	
+
+		$messageJSON = json_encode($message);
+		assert($messageJSON !== false);
+
 		$message_assoc = json_decode($messageJSON, true);
+		assert($message_assoc !== null);
+
 		$this->botan->track($message_assoc, $event);
 	}
 
