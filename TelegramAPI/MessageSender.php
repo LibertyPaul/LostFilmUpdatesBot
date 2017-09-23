@@ -5,6 +5,7 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../core/MessageSenderInterface.php');
 require_once(__DIR__.'/../core/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 
@@ -13,6 +14,7 @@ class MessageSender implements \core\MessageSenderInterface{
 	private $outgoingMessagesTracer;
 	private $telegramAPI;
 	private $getTelegramIdQuery;
+	private $sleepOn429CodeMs;
 
 	public function __construct(TelegramAPI $telegramAPI){
 		assert($telegramAPI !== null);
@@ -22,6 +24,15 @@ class MessageSender implements \core\MessageSenderInterface{
 		$this->outgoingMessagesTracer = new \Tracer('OutgoingMessages');
 
 		$pdo = \BotPDO::getInstance();
+
+		$config = new \Config($pdo);
+		$this->sleepOn429CodeMs = $config->getValue(
+			'Telegram API',
+			'Sleep On 429 Code ms',
+			500
+		);
+
+		$this->maxSendAttempts = $config->getValue('Telegram API', 'Max Send Attempts', 5);
 
 		$this->getTelegramIdQuery = $pdo->prepare('
 			SELECT `telegram_id`
@@ -59,16 +70,39 @@ class MessageSender implements \core\MessageSenderInterface{
 		$sendResult = \core\SendResult::Success;
 
 		while($message !== null){
-			$this->outgoingMessagesTracer->logEvent('[o]', __FILE__, __LINE__, PHP_EOL.$message);
-
-			$result = $this->telegramAPI->send(
-				$telegram_id,
-				$message->getText(),
-				$message->markupType(),
-				$message->URLExpandEnabled(),
-				$message->getResponseOptions(),
-				$message->getInlineOptions()
+			$this->outgoingMessagesTracer->logEvent(
+				'[o]', __FILE__, __LINE__,
+				PHP_EOL.$message
 			);
+
+			$attempt = 0;
+			
+			do{
+				$result = $this->telegramAPI->send(
+					$telegram_id,
+					$message->getText(),
+					$message->markupType(),
+					$message->URLExpandEnabled(),
+					$message->getResponseOptions(),
+					$message->getInlineOptions()
+				);
+
+				if($result['code'] === 429){
+					$this->tracer->logWarning(
+						'[TELEGRAM API]', __FILE__, __LINE__,
+						'Got 429 HTTP Code. Nap for '.$this->sleepOn429CodeMs.' ms.'
+					);
+					usleep($this->sleepOn429CodeMs);
+				}					
+
+			}while($result['code'] === 429 && $attempt++ < $this->maxSendAttempts);
+
+			if($result['code'] === 429){
+				$this->tracer->logError(
+					'[TELEGRAM API]', __FILE__, __LINE__,
+					"After $attempt attempts, still got 429 code"
+				);
+			}
 
 			$this->outgoingMessagesTracer->logEvent(
 				'[o]', __FILE__, __LINE__,
