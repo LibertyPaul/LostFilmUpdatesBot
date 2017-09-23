@@ -76,7 +76,7 @@ class NotificationGenerator{
 
 		return new OutgoingMessage(
 			$notificationText,
-			true
+			MarkupTypeEnum::HTML
 		);
 	}
 

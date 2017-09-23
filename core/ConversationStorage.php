@@ -6,6 +6,7 @@ require_once(__DIR__.'/../lib/KeyValueStorage/MemcachedStorage.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/IncomingMessage.php');
 
 
 class ConversationStorage{
@@ -89,6 +90,11 @@ class ConversationStorage{
 		}
 
 		return $this->conversation[0];
+	}
+
+	public function getMessage($number){
+		assert(array_key_exists($number, $this->conversation));
+		return $this->conversation[$number];
 	}
 
 	public function getLastMessage(){

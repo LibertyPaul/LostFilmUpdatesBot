@@ -3,6 +3,7 @@
 namespace core;
 
 require_once(__DIR__.'/../ConversationStorage.php');
+require_once(__DIR__.'/../IncomingMessage.php');
 
 class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 
@@ -12,7 +13,7 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 		$storage = new ConversationStorage($user_id);
 		$this->assertEquals(array(), $storage->getConversation());
 
-		$testMessage1 = '
+		$text1 = '
 			─────────▄──────────────▄────
 			────────▌▒█───────────▄▀▒▌───
 			────────▌▒▒▀▄───────▄▀▒▒▒▐───
@@ -33,12 +34,23 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 			───▐▀▒▀▄▄▄▄▄▄▀▀▀▒▒▒▒▒▄▄▀─────
 			──▐▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▀▀────────
 		';
+		$text2 = '/WOW - SO UNIT - SO TESTY/';
+		$text3 = '/BA DUM TSS/';
+		$text4 = '/TSS DUM BA/';
+
+		$command1 = new UserCommand(UserCommandMap::Donate);
+		$command2 = new UserCommand(UserCommandMap::GetMyShows);
+		$command3 = new UserCommand(UserCommandMap::GetShareButton);
+		$command4 = new UserCommand(UserCommandMap::Broadcast);
+
+		$testMessage1 = new IncomingMessage($user_id, $command1, $text1, 10001);
+		$testMessage2 = new IncomingMessage($user_id, $command2, $text2, 10002);
+		$testMessage3 = new IncomingMessage($user_id, $command3, $text3, 10003);
+		$testMessage4 = new IncomingMessage($user_id, $command4, $text4, 10004);
+
+
 		$storage->insertMessage($testMessage1);
-
-		$testMessage2 = '/WOW - SO UNIT - SO TESTY/';
 		$storage->insertMessage($testMessage2);
-
-		$testMessage3 = '/BA DUM TSS/';
 		$storage->insertMessage($testMessage3);
 
 		$this->assertEquals(
@@ -46,14 +58,14 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 			$storage->getConversation()
 		);
 
-		$this->assertEquals($testMessage1, $storage->getFirstMessage());
-		$this->assertEquals($testMessage3, $storage->getLastMessage());
+		$this->assertEquals($text1, $storage->getFirstMessage()->getText());
+		$this->assertEquals($text2, $storage->getMessage(1)->getText());
+		$this->assertEquals($text3, $storage->getLastMessage()->getText());
 
 		$this->assertEquals(3, $storage->getConversationSize());
 
 		$storage->deleteLastMessage();
 
-		$testMessage4 = '/TSS DUM BA/';
 		$storage->insertMessage($testMessage4);
 
 		$this->assertEquals(
@@ -63,7 +75,6 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 
 		
 		$storage = new ConversationStorage($user_id);
-
 
 		$this->assertEquals(
 			array($testMessage1, $testMessage2, $testMessage4),

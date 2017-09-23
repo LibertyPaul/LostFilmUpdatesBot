@@ -71,9 +71,7 @@ class UserController{
 			if($count > 1){
 				return new DirectedOutgoingMessage(
 					$this->user_id,
-					new OutgoingMessage(
-						'Мы ведь уже знакомы, правда?'
-					)
+					new OutgoingMessage('Мы ведь уже знакомы, правда?')
 				);
 			}
 		}
@@ -127,7 +125,7 @@ class UserController{
 				$this->user_id,
 				new OutgoingMessage(
 					'Ты уверен? Вся информация о тебе будет безвозвратно потеряна...',
-					false,
+					MarkupTypeEnum::NoMarkup,
 					false,
 					array($ANSWER_YES, $ANSWER_NO)
 				)
@@ -197,7 +195,7 @@ class UserController{
 					$this->user_id,
 					new OutgoingMessage(
 						'Давай конкретнее, либо да, либо нет',
-						false,
+						MarkupTypeEnum::NoMarkup,
 						false,
 						array($ANSWER_YES, $ANSWER_NO)
 					)
@@ -484,7 +482,7 @@ class UserController{
 					$this->user_id,
 					new OutgoingMessage(
 						$text,
-						false,
+						MarkupTypeEnum::NoMarkup,
 						false,
 						$showTitles
 					)
@@ -656,7 +654,7 @@ class UserController{
 						$this->user_id,
 						new OutgoingMessage(
 							'Какой из этих ты имел ввиду:',
-							false,
+							MarkupTypeEnum::NoMarkup,
 							false,
 							$showTitles
 						)
@@ -750,7 +748,13 @@ class UserController{
 
 		return new DirectedOutgoingMessage(
 			$this->user_id,
-			new OutgoingMessage('Вот тебе кнопочка:', false, false, null, array($donateButton))
+			new OutgoingMessage(
+				'Вот тебе кнопочка:',
+				MarkupTypeEnum::NoMarkup,
+				false,
+				null,
+				array($donateButton)
+			)
 		);
 	}
 
@@ -815,11 +819,85 @@ class UserController{
 			$this->user_id,
 			new OutgoingMessage(
 				$phrase,
-				false,
+				MarkupTypeEnum::NoMarkup,
 				false,
 				null,
 				$inlineOptions
 			)
+		);
+	}
+
+	private function buildBroadcastMessage(){
+		$text = $this->conversationStorage->getMessage(1)->getText();
+		$enablePush = $this->conversationStorage->getMessage(2)->getText();
+		$markup = $this->conversationStorage->getMessage(3)->getText();
+		$URLExpand = $this->conversationStorage->getMessage(4)->getText();
+
+		switch($enablePush){
+			case 'Да':
+				$disablePush = false;
+				break;
+
+			case 'Нет':
+				$disablePush = true;
+				break;
+
+			default:
+				return array(
+					'success' => false,
+					'why' => "Disable Push Flag=[$enablePush]"
+				);
+		}
+
+		switch($markup){
+			case 'HTML':
+				$markup = MarkupTypeEnum::HTML;
+				break;
+			
+			case 'Telegram API Markup':
+				$markup = MarkupTypeEnum::Telegram;
+				break;			
+
+			case 'Без разметки':
+				$markup = MarkupTypeEnum::NoMarkup;
+				break;
+
+			default:
+				return array(
+					'success' => false,
+					'why' => "Markup=[$markup]"
+				);
+		}
+
+		switch($URLExpand){
+			case 'Да':
+				$URLExpand = true;
+				break;
+
+			case 'Нет':
+				$URLExpand = false;
+				break;
+
+			default:
+				return array(
+					'success' => false,
+					'why' => "URL Expand Flag=[$URLExpand]"
+				);
+		}
+		
+
+		$message = new OutgoingMessage(
+			$text,
+			$markup,
+			$URLExpand,
+			null,
+			null,
+			$disablePush
+		);
+		
+		return array(
+			'success' => true,
+			'message' => $result
 		);
 	}
 	
@@ -845,10 +923,80 @@ class UserController{
 			break;
 
 		case 2:
-			$broadcastText = $this->conversationStorage->getLastMessage()->getText();
-			$this->conversationStorage->deleteConversation();
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(
+					'Пуш уведомление?',
+					MarkupTypeEnum::NoMarkup,
+					false,
+					array('Да', 'Нет', '/cancel')
+				)
+			);
 
-			$message = new OutgoingMessage($broadcastText);
+		case 3:
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(
+					'Будет ли разметка?',
+					MarkupTypeEnum::NoMarkup,
+					false,
+					array('HTML', 'Telegram API Markup', 'Без разметки', '/cancel')
+				)
+			);
+
+		case 4:
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(
+					'Превью ссылок?',
+					MarkupTypeEnum::NoMarkup,
+					false,
+					array('Да', 'Нет', '/cancel')
+				)
+			);
+			
+		case 5:
+			$result = $this->buildBroadcastMessage();
+
+			if($result['success']){
+				$example = new OutgoingMessage('Вот что получилось:');
+				$example->appendMessage($result['message']);
+				$confirm = new OutgoingMessage(
+					'Отправляем?',
+					MarkupTypeEnum::NoMarkup,
+					false,
+					array('Да', 'Нет')
+				);
+				$example->appendMessage($confirm);
+
+				$response = new DirectedOutgoingMessage($this->user_id,	$example);
+				return $response;
+			}
+			else{
+				$this->conversationStorage->deleteConversation();
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Ты накосячил!. '.$result['why'])
+				);
+			}
+
+			break;
+
+		case 6:
+			$confirmation = $this->conversationStorage->getLastMessage()->getText();
+			if($confirmation !== 'Да'){
+				$this->conversationStorage->deleteConversation();
+				return new DirectedOutgoingMessage(
+					$this->user_id,
+					new OutgoingMessage('Рассылка отменена.')
+				);
+			}
+
+			$result = $this->buildBroadcastMessage();
+			$this->conversationStorage->deleteConversation();
+			assert($result['success']);
+			$message = $result['message'];
+
 			$broadcastChain = new DirectedOutgoingMessage(
 				$this->user_id,
 				new OutgoingMessage('Начал рассылку.')
