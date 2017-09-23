@@ -11,6 +11,7 @@ class NotificationGenerator{
 	private $config;
 	private $getUserFirstNameQuery;
 	private $getUserCountQuery;
+	private $adminExistsQuery;
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
@@ -27,6 +28,12 @@ class NotificationGenerator{
 		$this->getUserCountQuery = $pdo->prepare('
 			SELECT COUNT(*) AS count
 			FROM `users`
+		');
+
+		$this->userExistsQuery = $pdo->prepare('
+			SELECT COUNT(*) AS count
+			FROM `users`
+			WHERE `id` = :user_id
 		');
 	}
 	
@@ -103,6 +110,19 @@ class NotificationGenerator{
 			return null;
 		}
 
+		$this->userExistsQuery->execute(
+			array(
+				'user_id' => $admin_id
+			)
+		);
+
+		$res = $this->userExistsQuery->fetch();
+		assert($res);
+
+		if(intval($res['count']) === 0){
+			return null;
+		}
+
 		return new DirectedOutgoingMessage(
 			intval($admin_id),
 			new OutgoingMessage($text)
@@ -142,21 +162,3 @@ class NotificationGenerator{
 	}
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
