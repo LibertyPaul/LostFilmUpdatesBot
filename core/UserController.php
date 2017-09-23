@@ -226,6 +226,8 @@ class UserController{
 			'/mute - Выключить уведомления'										.PHP_EOL.
 			'/cancel - Отменить команду'										.PHP_EOL.
 			'/help - Показать это сообщение'									.PHP_EOL.
+			'/donate - Задонатить пару баксов на доширак создателю'				.PHP_EOL.
+			'/share - Поделиться контактом бота'								.PHP_EOL.
 			'/stop - Удалиться из контакт-листа бота'							.PHP_EOL
 																				.PHP_EOL.
 			'Telegram создателя: @libertypaul'									.PHP_EOL.
