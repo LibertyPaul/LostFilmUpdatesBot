@@ -152,11 +152,11 @@ class OutgoingMessage{
 
 		$result  = '***********************************'							.PHP_EOL;
 		$result .= 'OutgoingMessage:'												.PHP_EOL;
-		$result .= sprintf("\tmarkupType:         [%s]",	$this->markupType())	.PHP_EOL;
-		$result .= sprintf("\tURLExpandEnabled:   [%s]",	$enableURLExpandYN)		.PHP_EOL;
-		$result .= sprintf("\tPushDisabled:       [%s]",	$pushDisabledYN)		.PHP_EOL;
-		$result .= sprintf("\tText: [%s]", 					$this->getText())		.PHP_EOL;
-		$result .= sprintf("\tResponse Options:   [%s]",	$responseOptionsStr)	.PHP_EOL;
+		$result .= sprintf("\tmarkupType:		[%s]",	$this->markupType())		.PHP_EOL;
+		$result .= sprintf("\tURLExpandEnabled:	[%s]",	$enableURLExpandYN)			.PHP_EOL;
+		$result .= sprintf("\tPushDisabled:		[%s]",	$pushDisabledYN)			.PHP_EOL;
+		$result .= sprintf("\tText:				[%s]", 	$this->getText())			.PHP_EOL;
+		$result .= sprintf("\tResponse Options:	[%s]",	$responseOptionsStr)		.PHP_EOL;
 		$result .= "\tInlineOptions:"												.PHP_EOL;
 		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
 		$result .= '***********************************';
