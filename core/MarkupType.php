@@ -1,5 +1,7 @@
 <?php
 
+namespace core;
+
 abstract class MarkupTypeEnum{
 	const NoMarkup	= 0;
 	const HTML		= 1;

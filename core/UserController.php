@@ -125,7 +125,7 @@ class UserController{
 				$this->user_id,
 				new OutgoingMessage(
 					'Ты уверен? Вся информация о тебе будет безвозвратно потеряна...',
-					MarkupTypeEnum::NoMarkup,
+					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array($ANSWER_YES, $ANSWER_NO)
 				)
@@ -195,7 +195,7 @@ class UserController{
 					$this->user_id,
 					new OutgoingMessage(
 						'Давай конкретнее, либо да, либо нет',
-						MarkupTypeEnum::NoMarkup,
+						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
 						array($ANSWER_YES, $ANSWER_NO)
 					)
@@ -482,7 +482,7 @@ class UserController{
 					$this->user_id,
 					new OutgoingMessage(
 						$text,
-						MarkupTypeEnum::NoMarkup,
+						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
 						$showTitles
 					)
@@ -654,7 +654,7 @@ class UserController{
 						$this->user_id,
 						new OutgoingMessage(
 							'Какой из этих ты имел ввиду:',
-							MarkupTypeEnum::NoMarkup,
+							new MarkupType(MarkupTypeEnum::NoMarkup),
 							false,
 							$showTitles
 						)
@@ -750,7 +750,7 @@ class UserController{
 			$this->user_id,
 			new OutgoingMessage(
 				'Вот тебе кнопочка:',
-				MarkupTypeEnum::NoMarkup,
+				new MarkupType(MarkupTypeEnum::NoMarkup),
 				false,
 				null,
 				array($donateButton)
@@ -819,7 +819,7 @@ class UserController{
 			$this->user_id,
 			new OutgoingMessage(
 				$phrase,
-				MarkupTypeEnum::NoMarkup,
+				new MarkupType(MarkupTypeEnum::NoMarkup),
 				false,
 				null,
 				$inlineOptions
@@ -851,15 +851,15 @@ class UserController{
 
 		switch($markup){
 			case 'HTML':
-				$markup = MarkupTypeEnum::HTML;
+				$markupType = MarkupTypeEnum::HTML;
 				break;
 			
 			case 'Telegram API Markup':
-				$markup = MarkupTypeEnum::Telegram;
+				$markupType = MarkupTypeEnum::Telegram;
 				break;			
 
 			case 'Без разметки':
-				$markup = MarkupTypeEnum::NoMarkup;
+				$markupType = MarkupTypeEnum::NoMarkup;
 				break;
 
 			default:
@@ -888,7 +888,7 @@ class UserController{
 
 		$message = new OutgoingMessage(
 			$text,
-			$markup,
+			new MarkupType($markupType),
 			$URLExpand,
 			null,
 			null,
@@ -897,7 +897,7 @@ class UserController{
 		
 		return array(
 			'success' => true,
-			'message' => $result
+			'message' => $message
 		);
 	}
 	
@@ -927,7 +927,7 @@ class UserController{
 				$this->user_id,
 				new OutgoingMessage(
 					'Пуш уведомление?',
-					MarkupTypeEnum::NoMarkup,
+					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет', '/cancel')
 				)
@@ -938,7 +938,7 @@ class UserController{
 				$this->user_id,
 				new OutgoingMessage(
 					'Будет ли разметка?',
-					MarkupTypeEnum::NoMarkup,
+					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('HTML', 'Telegram API Markup', 'Без разметки', '/cancel')
 				)
@@ -949,7 +949,7 @@ class UserController{
 				$this->user_id,
 				new OutgoingMessage(
 					'Превью ссылок?',
-					MarkupTypeEnum::NoMarkup,
+					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет', '/cancel')
 				)
@@ -963,7 +963,7 @@ class UserController{
 				$example->appendMessage($result['message']);
 				$confirm = new OutgoingMessage(
 					'Отправляем?',
-					MarkupTypeEnum::NoMarkup,
+					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет')
 				);
@@ -983,25 +983,25 @@ class UserController{
 			break;
 
 		case 6:
+			$result = $this->buildBroadcastMessage();
+			assert($result['success']);
 			$confirmation = $this->conversationStorage->getLastMessage()->getText();
+
+			$this->conversationStorage->deleteConversation();
+
 			if($confirmation !== 'Да'){
-				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
 					$this->user_id,
 					new OutgoingMessage('Рассылка отменена.')
 				);
 			}
 
-			$result = $this->buildBroadcastMessage();
-			$this->conversationStorage->deleteConversation();
-			assert($result['success']);
-			$message = $result['message'];
-
 			$broadcastChain = new DirectedOutgoingMessage(
 				$this->user_id,
 				new OutgoingMessage('Начал рассылку.')
 			);
 
+			$message = $result['message'];
 			$userIdsQuery = $this->pdo->prepare('SELECT `id` FROM `users`');
 			$userIdsQuery->execute();
 

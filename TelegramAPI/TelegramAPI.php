@@ -3,6 +3,7 @@
 namespace TelegramAPI;
 
 require_once(__DIR__.'/../core/InlineOption.php');
+require_once(__DIR__.'/../core/MarkupType.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/OutgoingMessage.php');
@@ -108,7 +109,7 @@ class TelegramAPI{
 	public function send(
 		$telegram_id,
 		$text,
-		$textContainsHTML,
+		\core\MarkupType $markupType,
 		$URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
@@ -121,8 +122,17 @@ class TelegramAPI{
 			'text'		=> $text
 		);
 
-		if($textContainsHTML){
-			$request['parse_mode'] = 'HTML';
+		switch($markupType->get()){
+			case \core\MarkupTypeEnum::NoMarkup:
+				break;
+
+			case \core\MarkupTypeEnum::HTML:
+				$request['parse_mode'] = 'HTML';
+				break;
+
+			case \core\MarkupTypeEnum::Telegram:
+				$request['parse_mode'] = 'Markdown';
+				break;
 		}
 
 		if($URLExpandEnabled === false){

@@ -17,11 +17,11 @@ class OutgoingMessage{
 
 	public function __construct(
 		$text,
-		MarkupType $markupType = MarkupTypeEnum::NoMarkup,
+		MarkupType $markupType = null,
 		$enableURLExpand = false,
 		array $responseOptions = null,
 		array $inlineOptions = null,
-		$pushDisabled = 'N'
+		$pushDisabled = false
 	){
 		# Text verification
 		if(is_string($text)){
@@ -35,6 +35,10 @@ class OutgoingMessage{
 		}
 
 		# Markup Flag verification
+		if($markupType === null){
+			$markupType = new MarkupType(MarkupTypeEnum::NoMarkup);
+		}
+
 		$this->markupType = $markupType;
 
 		# URL Expand Flag verification
@@ -104,7 +108,7 @@ class OutgoingMessage{
 			$this->nextMessage = $message;
 		}
 		else{
-			$this->nextMessage->append($message);
+			$this->nextMessage->appendMessage($message);
 		}
 	}
 

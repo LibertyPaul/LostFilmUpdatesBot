@@ -64,7 +64,7 @@ class MessageSender implements \core\MessageSenderInterface{
 			$result = $this->telegramAPI->send(
 				$telegram_id,
 				$message->getText(),
-				$message->textContainsMarkup(),
+				$message->markupType(),
 				$message->URLExpandEnabled(),
 				$message->getResponseOptions(),
 				$message->getInlineOptions()
