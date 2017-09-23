@@ -112,10 +112,11 @@ class UpdateHandler{
 	){
 		while($outgoingMessage !== null){
 			$text = substr($outgoingMessage->getOutgoingMessage()->getText(), 0, 5000);
+			$user_id = $outgoingMessage->getUserId();
 			try{
 				$this->logResponseQuery->execute(
 					array(
-						':user_id'		=> $outgoingMessage->getUserId(),
+						':user_id'		=> $user_id,
 						':text'			=> $text,
 						':inResponseTo'	=> $loggedRequestId,
 						':statusCode'	=> $statusCode
@@ -125,7 +126,10 @@ class UpdateHandler{
 			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError(
-					'[DB ERROR]', __FILE__, __LINE__,
+					'[DB ERROR]', __FILE__, __LINE__, 	 PHP_EOL.
+					"loggedRequestId=[$loggedRequestId]".PHP_EOL.
+					"statusCode=[$statusCode]"			.PHP_EOL.
+					"user_id=[$user_id]"				.PHP_EOL.
 					$outgoingMessage
 				);
 				

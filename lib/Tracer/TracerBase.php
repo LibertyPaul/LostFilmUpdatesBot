@@ -98,13 +98,17 @@ abstract class TracerBase{
 		assert(is_string($tag));
 		assert(is_string($file));
 		assert(is_int($line));
-		assert(is_string($message));
+		
+		# PHP can't into microseconds. Let's help him.
+		sscanf(microtime(), '0.%d %d', $microseconds, $seconds);
+		$microseconds /= 100;
+		$date = sprintf('%s.%06d', date('Y.m.d H:i:s'), $microseconds);
 
 		return sprintf(
-			"%s\t%s %s %s:%s\t%s",
+			'%s %s %s %s:%s %s',
 			$level,
 			$tag,
-			date('Y.m.d H:i:s'),
+			$date,
 			basename($file),
 			$line,
 			$message

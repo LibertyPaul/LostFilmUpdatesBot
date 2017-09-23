@@ -9,7 +9,12 @@ function error_handler($errno, $errstr, $errfile = null, $errline = null, $errco
 		$tracer = new \Tracer(__NAMESPACE__);
 	}
 
-	$tracer->logError('[PHP ERROR]', $errfile, $errline, "($errno)\t$errstr");
+	$tracer->logError(
+		'[PHP ERROR]', $errfile, $errline,
+		sprintf('Errno=[%d], Description: %s', $errno, $errstr)
+	);
+
+	$tracer->logError('[o]', $errfile, $errline, print_r(debug_backtrace(), true));
 
 	return true;
 }

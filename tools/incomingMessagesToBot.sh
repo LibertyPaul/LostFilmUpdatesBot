@@ -38,13 +38,16 @@ if [ -z $password ]; then
 fi
 
 current=''
+i=0
 
 cat "$incomingMessages" | while read line; do
 	if [[ "$line" =~ EVENT* ]]; then
 		if [ -n "$current" ]; then
+			echo "$i"
+			i=$(($i+1))
 			path=$(mktemp)
 			echo $current > $path
-			./messageToBot.sh $URL $password $path Y
+			"$selfPath/messageToBot.sh" $URL $password $path Y
 			rm $path
 			current=''
 		fi

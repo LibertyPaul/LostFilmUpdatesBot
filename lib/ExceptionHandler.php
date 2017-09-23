@@ -18,7 +18,10 @@ $res = set_exception_handler('ExceptionHandler\exception_handler');
 if($res === null){
 	$res = set_exception_handler('ExceptionHandler\exception_handler');
 	if($res === null){// yep, this is one proper way to check for success
-		TracerBase::syslogCritical('[EXCEPTION CATCHER]', __FILE__, __LINE__, 'Unable to set exception handler');
+		TracerBase::syslogCritical(
+			'[EXCEPTION CATCHER]', __FILE__, __LINE__,
+			'Unable to set exception handler'
+		);
 	}
 }
 
