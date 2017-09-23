@@ -470,8 +470,9 @@ class UserController{
 				);
 			}
 			else{
-				$text = 'Как называется сериал?'.PHP_EOL.
-						'Выбери из списка или введи пару слов из названия.';
+				$text = 'Как называется сериал?'								.PHP_EOL.
+						'Выбери из списка / введи пару слов из названия или '	.PHP_EOL.
+						'продиктуй в голосовом сообщении';
 				
 				array_unshift($showTitles, '/cancel');
 				array_push($showTitles, '/cancel');
