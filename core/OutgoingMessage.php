@@ -3,22 +3,25 @@
 namespace core;
 
 require_once(__DIR__.'/InlineOption.php');
+require_once(__DIR__.'/MarkupType.php');
 
 class OutgoingMessage{
 	private $text;
-	private $textContainsMarkup;
+	private $markupType;
 	private $enableURLExpand;
 	private $responseOptions;
 	private $inlineOptions;
+	private $pushDisabled;
 
 	private $nextMessage = null;
 
 	public function __construct(
 		$text,
-		$textContainsMarkup = false,
+		MarkupType $markupType = MarkupTypeEnum::NoMarkup,
 		$enableURLExpand = false,
 		array $responseOptions = null,
-		array $inlineOptions = null
+		array $inlineOptions = null,
+		$pushDisabled = 'N'
 	){
 		# Text verification
 		if(is_string($text)){
@@ -32,15 +35,7 @@ class OutgoingMessage{
 		}
 
 		# Markup Flag verification
-		if(is_bool($textContainsMarkup)){
-			$this->textContainsMarkup = $textContainsMarkup;
-		}
-		else{
-			throw new \InvalidArgumentException(
-				'Incorrect textContainsMarkup type (bool was expected): '.
-				gettype($textContainsMarkup)
-			);
-		}
+		$this->markupType = $markupType;
 
 		# URL Expand Flag verification
 		if(is_bool($enableURLExpand) === false){
@@ -93,6 +88,15 @@ class OutgoingMessage{
 
 			$this->inlineOptions = $inlineOptions;
 		}
+
+		if(is_bool($pushDisabled)){
+			$this->pushDisabled = $pushDisabled;
+		}
+		else{
+			throw new \InvalidArgumentException(
+				'Incorrect pushDisabled type (boolean was expected): '.gettype($pushDisabled)
+			);
+		}
 	}
 
 	public function appendMessage(self $message){
@@ -112,8 +116,8 @@ class OutgoingMessage{
 		return $this->text;
 	}
 
-	public function textContainsMarkup(){
-		return $this->textContainsMarkup;
+	public function markupType(){
+		return $this->markupType;
 	}
 
 	public function URLExpandEnabled(){
@@ -128,9 +132,13 @@ class OutgoingMessage{
 		return $this->inlineOptions;
 	}
 
+	public function pushDisabled(){
+		return $this->pushDisabled;
+	}
+
 	public function __toString(){
-		$containsMarkupYN = $this->textContainsMarkup() ? 'Y' : 'N';
 		$enableURLExpandYN = $this->URLExpandEnabled() ? 'Y' : 'N';
+		$pushDisabledYN = $this->pushDisabled() ? 'Y' : 'N';
 
 		$responseOptions = is_array($this->responseOptions) ? $this->responseOptions : array();
 		$responseOptionsStr = join(', ', $responseOptions);
@@ -140,10 +148,11 @@ class OutgoingMessage{
 
 		$result  = '***********************************'							.PHP_EOL;
 		$result .= 'OutgoingMessage:'												.PHP_EOL;
-		$result .= sprintf("\ttextContainsMarkup: [%s]", $containsMarkupYN)			.PHP_EOL;
-		$result .= sprintf("\tURLExpandEnabled:   [%s]", $enableURLExpandYN)		.PHP_EOL;
-		$result .= sprintf("\tText: [%s]", $this->getText())						.PHP_EOL;
-		$result .= sprintf("\tResponse Options:   [%s]", $responseOptionsStr)		.PHP_EOL;
+		$result .= sprintf("\tmarkupType:         [%s]",	$this->markupType())	.PHP_EOL;
+		$result .= sprintf("\tURLExpandEnabled:   [%s]",	$enableURLExpandYN)		.PHP_EOL;
+		$result .= sprintf("\tPushDisabled:       [%s]",	$pushDisabledYN)		.PHP_EOL;
+		$result .= sprintf("\tText: [%s]", 					$this->getText())		.PHP_EOL;
+		$result .= sprintf("\tResponse Options:   [%s]",	$responseOptionsStr)	.PHP_EOL;
 		$result .= "\tInlineOptions:"												.PHP_EOL;
 		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
 		$result .= '***********************************';
