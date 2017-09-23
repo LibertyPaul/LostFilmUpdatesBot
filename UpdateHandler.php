@@ -39,18 +39,6 @@ class UpdateHandler{
 		");
 	}
 
-	private function setLastUpdateId($value){
-		assert(is_int($value));
-
-		$current = $this->getLastUpdateId();
-		if($value <= $current){
-			$this->tracer->logError('[ERROR]', __FILE__, __LINE__, "New update_id($value) is less or equal with current($current)");
-			throw new RuntimeException("New update_id($value) is less than current($current)");
-		}
-
-		$this->memcache->set(MEMCACHE_LATEST_UPDATE_ID_KEY, $value);
-	}
-
 	private static function validateFields($update){
 		return
 			isset($update->update_id)			&&
