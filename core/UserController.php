@@ -827,6 +827,8 @@ class UserController{
 		$allowedUserId = $this->config->getValue('Broadcast', 'Allowed User Id');
 		$allowedUserIdInt = intval($allowedUserId);
 		if($allowedUserId === null || $this->user_id !== $allowedUserIdInt){
+			$this->conversationStorage->deleteConversation();
+
 			return new DirectedOutgoingMessage(
 				$this->user_id,
 				new OutgoingMessage('Z@TTР3LL|3Н0')
