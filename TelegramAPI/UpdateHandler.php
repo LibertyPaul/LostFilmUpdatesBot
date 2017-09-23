@@ -317,6 +317,9 @@ class UpdateHandler{
 			case '/donate':
 				$result = new \core\UserCommand(\core\UserCommandMap::Donate);
 				break;
+			case '/broadcast':
+				$result = new \core\UserCommand(\core\UserCommandMap::Broadcast);
+				break;
 		}
 
 		return $result;

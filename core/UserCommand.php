@@ -15,8 +15,9 @@ abstract class UserCommandMap{
 	const Stop				= 8;
 	const GetShareButton	= 9;
 	const Donate			= 10;
+	const Broadcast			= 11;
 
-	const MAX_COMMAND		= 10;
+	const MAX_COMMAND		= 11;
 }
 
 
@@ -78,6 +79,10 @@ class UserCommand{
 
 			case UserCommandMap::Donate:
 				$result = 'Command:Donate';
+				break;
+
+			case UserCommandMap::Broadcast:
+				$result = 'Command:Broadcast';
 				break;
 
 			default:

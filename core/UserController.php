@@ -6,6 +6,7 @@ require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 class UserController{
@@ -13,11 +14,13 @@ class UserController{
 	private $conversationStorage;
 	private $messageDestination;
 	private $pdo;
+	private $config;
 	private $tracer;
 
 	public function __construct($user_id, ConversationStorage $conversationStorage){
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
+		$this->config = new \Config($this->pdo);
 
 		if(is_int($user_id) === false){
 			$this->tracer->logError(
@@ -819,7 +822,60 @@ class UserController{
 			)
 		);
 	}
-		
+	
+	private function broadcast(){
+		$allowedUserId = $this->config->getValue('Broadcast', 'Allowed User Id');
+		$allowedUserIdInt = intval($allowedUserId);
+		if($allowedUserId === null || $this->user_id !== $allowedUserIdInt){
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Z@TTР3LL|3Н0')
+			);
+		}
+
+		switch($this->conversationStorage->getConversationSize()){
+		case 1:
+			return new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Окей, что раcсылать?')
+			);
+
+			break;
+
+		case 2:
+			$broadcastText = $this->conversationStorage->getLastMessage()->getText();
+			$this->conversationStorage->deleteConversation();
+
+			$message = new OutgoingMessage($broadcastText);
+			$broadcastChain = new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage('Начал рассылку.')
+			);
+
+			$userIdsQuery = $this->pdo->prepare('SELECT `id` FROM `users`');
+			$userIdsQuery->execute();
+
+			$count = 0;
+
+			while($user = $userIdsQuery->fetch()){
+				$user_id = intval($user['id']);
+				$current = new DirectedOutgoingMessage($user_id, $message);
+				$broadcastChain->appendMessage($current);
+				++$count;
+			}
+
+			$confirmMessage = new DirectedOutgoingMessage(
+				$this->user_id,
+				new OutgoingMessage(sprintf('Отправил %d сообщений(е/я).', $count))
+			);
+
+			$broadcastChain->appendMessage($confirmMessage);
+
+			return $broadcastChain;
+			
+			break;
+		}
+	}
 
 /*
 Commands:
@@ -904,6 +960,10 @@ stop - Удалиться из контакт-листа бота
 
 				case UserCommandMap::Donate:
 					$response = $this->getDonateOptions();
+					break;
+
+				case UserCommandMap::Broadcast:
+					$response = $this->broadcast();
 					break;
 			}
 		}
