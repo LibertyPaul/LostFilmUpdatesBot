@@ -1,5 +1,6 @@
 #!/bin/bash
 
+readonly selfDir="$(dirname "$0")"
 readonly coloredEchoPath="$selfDir/../tools/ColoredEcho.sh"
 
 if [ -r "$coloredEchoPath" ]; then
@@ -20,10 +21,10 @@ patch="$1"
 
 if [ -f "./.my.cnf" ]; then
 	readonly myCnfPath="./.my.cnf"
-elif [ -f "$selfPath/../DBCredentials/Owner.ini" ]; then
-	readonly myCnfPath="$selfPath/../DBCredentials/Owner.ini"
+elif [ -f "$selfDir/../DBCredentials/Owner.ini" ]; then
+	readonly myCnfPath="$selfDir/../DBCredentials/Owner.ini"
 else
-	echo_red ".my.cnf wasn't found in patch directory ($path) nor near this script ($selfPath)."
+	echo_red ".my.cnf wasn't found in patch directory nor near this script ($selfDir)."
 	exit 1
 fi
 
