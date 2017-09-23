@@ -124,7 +124,7 @@ class SeriesParserExecutor{
 						$this->tracer->logDebug(
 							'[o]', __FILE__, __LINE__,
 							sprintf(
-								"%s S%02dE%02d %s(%s) seems not to be ready yet [%d]",
+								'%s S%02dE%02d seems not to be ready yet (%s)',
 								$series['alias'],
 								$series['seasonNumber'],
 								$series['seriesNumber'],	
