@@ -1,76 +1,42 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-	echo "Usage: $0 <patch_directory>"
+readonly coloredEchoPath="$selfDir/../tools/ColoredEcho.sh"
+
+if [ -r "$coloredEchoPath" ]; then
+	source "$coloredEchoPath"
+else
+	echo "[WARNING] $coloredEchoPath doesn't exist. Will use regular echo then."
+	alias echo_red='echo'
+	alias echo_yellow='echo'
+	alias echo_green='echo'
+fi
+
+if [ ! -f "$1" ]; then
+	echo "Usage: $0 <Compiled Patch>"
 	exit 1
 fi
 
-readonly selfPath=$(pwd)
-readonly path=$(readlink -m "$1")
-
-if [ ! -z "$path" ]; then
-
-	if [ ! -d "$path" ]; then
-		echo 'Invalid schema directory path'
-		exit 1
-	fi
-
-	cd "$path"
-fi
+patch="$1"
 
 if [ -f "./.my.cnf" ]; then
 	readonly myCnfPath="./.my.cnf"
-elif [ -f "$selfPath/.my.cnf" ]; then
-	readonly myCnfPath="$selfPath/.my.cnf"
+elif [ -f "$selfPath/../DBCredentials/Owner.ini" ]; then
+	readonly myCnfPath="$selfPath/../DBCredentials/Owner.ini"
 else
-	echo ".my.cnf wasn't found in patch directory ($path) or near this script ($selfPath)."
+	echo_red ".my.cnf wasn't found in patch directory ($path) nor near this script ($selfPath)."
 	exit 1
 fi
 
-echo "Using $myCnfPath as MySQL config"
-
-tmpFile="$(mktemp --suffix=.sql)"
-
-declare -a elementsOrder=(
-	database
-	data_before
-	constraints_drop
-	indexes_drop
-	tables
-	indexes_create
-	constraints_create
-	triggers
-	procedures
-	users
-	permissions
-	data_after
-	database_after
-)
-
-for element in "${elementsOrder[@]}"; do
-	if [[ -d "./$element" && $(find "./$element/" -type f -name "*.sql" | wc -l) > 0 ]]; then
-		echo "Copying $element: "
-		printf "/*    $element definition:    */\n\n" >> "$tmpFile"
-		for f in $(find "./$element/" -type f -name "*.sql"); do
-			echo "$f "
-			cat "$f" >> "$tmpFile"
-			printf "\n" >> "$tmpFile"
-		done
-		printf "\n\n" >> "$tmpFile"
-		echo "done."
-	fi
-done
+echo "Using $myCnfPath as MySQL config."
 
 
-
-echo "Uploading schema on MySQL server..."
-res=$(mysql --defaults-file="$myCnfPath" < "$tmpFile" 2>&1)
+printf "Uploading schema on MySQL server ... "
+res=$(mysql --defaults-file="$myCnfPath" < "$patch" 2>&1)
 if [[ -z "$res" ]]; then
-	rm $tmpFile
-	echo "Success."
+	echo_green "Success."
 else
-	echo "Mysql server has returned a message: '$res'"
-	echo "Please review file $tmpFile"
+	echo_red "Mysql server has returned a message:"
+	echo "$res"
 	exit 1
 fi
 

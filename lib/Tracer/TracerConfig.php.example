@@ -1,0 +1,4 @@
+<?php
+const TRACER_STANDALONE_SIZE = 5000;
+const TRACER_LEVEL = 'DEBUG';
+const LOG_STARTED_FINISHED = false;

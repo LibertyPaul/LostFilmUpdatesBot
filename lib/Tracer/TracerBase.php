@@ -1,0 +1,184 @@
+<?php
+
+require_once(__DIR__.'/TracerConfig.php');
+
+abstract class TracerLevel{
+	const Critical		= 0;
+	const Error			= 1;
+	const Warning		= 4;
+	const Notice		= 6;
+	const Event			= 8;
+	const Debug			= 9;
+
+	private static $levelMap = array(
+		'CRITICAL'	=> self::Critical,
+		'ERROR'		=> self::Error,
+		'WARNING'	=> self::Warning,
+		'NOTICE'	=> self::Notice,
+		'EVENT'		=> self::Event,
+		'DEBUG'		=> self::Debug
+	);
+
+//	private static $codeMap = array_flip(self::$levelMap);
+	private static $codeMap = array(
+		self::Critical	=> 'CRITICAL',
+		self::Error		=> 'ERROR',
+		self::Warning	=> 'WARNING',
+		self::Notice	=> 'NOTICE',
+		self::Event		=> 'EVENT',
+		self::Debug		=> 'DEBUG'
+	);
+
+	public static function logEverythingLevel(){
+		return self::Event;
+	}
+
+	public static function getLevelByName($name){
+		if(array_key_exists($name, self::$levelMap)){
+			return self::$levelMap[$name];
+		}
+		else{
+			throw new \OutOfBoundsException("Invalid trace level name: '$name'");
+		}
+	}
+
+	public static function getNameByLevel($level){
+		if(array_key_exists($level, self::$codeMap)){
+			return self::$codeMap[$level];
+		}
+		else{
+			throw new \OutOfBoundsException("Invalid trace level: '$level'");
+		}
+	}
+}
+
+abstract class TracerBase{
+	protected $traceName;
+	private $maxLevel;
+	private $secondTracer;
+
+	protected function __construct($traceName, TracerBase $secondTracer = null){
+		assert(is_string($traceName));
+		if($traceName[0] === '-'){
+			$traceName = substr($traceName, 1);
+		}
+
+		$traceName = str_replace('\\', '.', $traceName);
+
+		$this->traceName = $traceName;
+		$this->secondTracer = $secondTracer;
+			
+		if(defined('TRACER_LEVEL')){
+			$this->maxLevel = TracerLevel::getLevelByName(TRACER_LEVEL);
+		}
+		else{
+			$this->maxLevel = TracerLevel::logEverythingLevel();
+			$this->logWarning(
+				'[TRACER]', __FILE__, __LINE__,
+				'TRACER_LEVEL is not set. Logging everything.'
+			);
+		}
+
+		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
+		}
+
+	}
+
+	public function __destruct(){
+		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
+		}
+	}
+
+	abstract protected function write($text);
+	abstract protected function storeStandalone($text);
+
+	private static function compileRecord($level, $tag, $file, $line, $message){
+		assert(is_string($tag));
+		assert(is_string($file));
+		assert(is_int($line));
+		assert(is_string($message));
+
+		return sprintf(
+			"%s\t%s %s %s:%s\t%s",
+			$level,
+			$tag,
+			date('Y.m.d H:i:s'),
+			basename($file),
+			$line,
+			$message
+		);
+	}
+
+	private function log($level, $tag, $file, $line, $message = null){
+		$messageLevel = TracerLevel::getLevelByName($level);
+
+		if($messageLevel <= $this->maxLevel){
+			$record = self::compileRecord($level, $tag, $file, $line, $message);
+			
+			if(defined('TRACER_STANDALONE_SIZE') && strlen($record) > TRACER_STANDALONE_SIZE){
+				try{
+					$this->storeStandalone($record);
+				}
+				catch(\RuntimeException $ex){
+					$this->logException('[TRACER]', $ex);
+					$this->write($record);
+				}	
+			}
+			else{
+				$this->write($record);
+			}
+		}
+
+		if($this->secondTracer !== null){
+			$this->secondTracer->log($level, $tag, $file, $line, $message);
+		}
+	}
+
+	public function logCritical($tag, $file, $line, $message = null){
+		$this->log('CRITICAL', $tag, $file, $line, $message);
+	}
+
+	public function logError($tag, $file, $line, $message = null){
+		$this->log('ERROR', $tag, $file, $line, $message);
+	}
+
+	public function logWarning($tag, $file, $line, $message = null){
+		$this->log('WARNING', $tag, $file, $line, $message);
+	}
+
+	public function logEvent($tag, $file, $line, $message = null){
+		$this->log('EVENT', $tag, $file, $line, $message);
+	}
+
+	public function logNotice($tag, $file, $line, $message = null){
+		$this->log('NOTICE', $tag, $file, $line, $message);
+	}
+
+	public function logDebug($tag, $file, $line, $message = null){
+		$this->log('DEBUG', $tag, $file, $line, $message);
+	}
+
+	public function logException($tag, $file, $line, \Exception $exception){
+		if($exception !== null){
+			$description = sprintf(
+				'%s, raised from %s:%s, reason: "%s"',
+				get_class($exception),
+				basename($exception->getFile()),
+				$exception->getLine(),
+				$exception->getMessage()
+			);
+		}
+		else{
+			$description = 'NULL EXCEPTION WAS PASSED TO logException';
+		}
+
+		$this->logError($tag, $file, $line, $description);
+	}
+
+	public static function syslogCritical($tag, $file, $line, $message = null){
+		$record = self::compileRecord('CRITICAL', $tag, $file, $line, $message);
+		assert(syslog(LOG_CRIT, $record));
+	}
+}

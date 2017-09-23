@@ -10,18 +10,6 @@ if [ ! -d "$logsDir" ]; then
 	exit 1
 fi
 
-readonly nameFormat="%y.%m.%d_%T.tar.gz"
-archiveName=$(date "+$nameFormat")
-
-while [ -f "$logsBackupDir/$archiveName" ]; do
-	echo "WARNING '$archiveName' already exists"
-	
-	rand=$RANDOM
-	let "rand %= 5"
-	sleep $rand
-	archiveName=$(date "+$nameFormat")
-done
-
 if [ ! -d "$logsBackupDir" ]; then
 	if [ -f "$logsBackupDir" ]; then
 		echo "$logsBackupDir exists and is not a directory. Aboring."
@@ -35,7 +23,15 @@ if [ ! -d "$logsBackupDir" ]; then
 	fi
 fi
 
-tar -c -vf "$logsBackupDir/$archiveName" --remove-files "$logsDir"
+tmpDir=$(mktemp -d --suffix='_LFUB_LOGS' 2>&1)
+mv $logsDir/* $tmpDir
+
+readonly nameFormat="%y.%m.%d_%T.tar.gz"
+archiveName=$(date "+$nameFormat")
+
+export GZIP=-9
+tar cvzf "$logsBackupDir/$archiveName" --remove-files "$tmpDir"
 if [ "$?" != 0 ]; then
+	echo "Tar has failed. Old logs are preserved in $tmpDir"
 	exit 1
 fi
