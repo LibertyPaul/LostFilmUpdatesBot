@@ -77,7 +77,7 @@ class MessageSender implements \core\MessageSenderInterface{
 
 			$attempt = 0;
 			
-			do{
+			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
 					$telegram_id,
 					$message->getText(),
@@ -90,18 +90,13 @@ class MessageSender implements \core\MessageSenderInterface{
 				if($result['code'] === 429){
 					$this->tracer->logWarning(
 						'[TELEGRAM API]', __FILE__, __LINE__,
-						'Got 429 HTTP Code. Nap for '.$this->sleepOn429CodeMs.' ms.'
+						"Got 429 HTTP Response. Nap for ${this->sleepOn429CodeMs} ms."
 					);
 					usleep($this->sleepOn429CodeMs);
-				}					
-
-			}while($result['code'] === 429 && $attempt++ < $this->maxSendAttempts);
-
-			if($result['code'] === 429){
-				$this->tracer->logError(
-					'[TELEGRAM API]', __FILE__, __LINE__,
-					"After $attempt attempts, still got 429 code"
-				);
+				}
+				else{
+					break;
+				}
 			}
 
 			$this->outgoingMessagesTracer->logEvent(
@@ -119,4 +114,4 @@ class MessageSender implements \core\MessageSenderInterface{
 		return $sendResult;
 	}
 }
-		
+	
