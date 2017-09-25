@@ -50,12 +50,14 @@ class UpdateHandler{
 
 			if($botanEnabled === 'Y'){
 				$botanAPIKey = $config->getValue('Botan', 'API Key');
-				$this->tracer->logWarning(
-					'[o]', __FILE__, __LINE__, 
-					'Botan is enabled but no API key was found.'
-				);
-				
-				if($botanAPIKey !== null){
+
+				if($botanAPIKey === null){
+					$this->tracer->logWarning(
+						'[o]', __FILE__, __LINE__, 
+						'Botan is enabled but no API key was found.'
+					);
+				}
+				else{
 					$this->botan = new \Botan($botanAPIKey);
 				}
 			}
