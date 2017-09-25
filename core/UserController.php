@@ -996,7 +996,7 @@ class UserController{
 				);
 			}
 
-			$broadcastChain = new DirectedOutgoingMessage(
+			$started = new DirectedOutgoingMessage(
 				$this->user_id,
 				new OutgoingMessage('Начал рассылку.')
 			);
@@ -1007,10 +1007,16 @@ class UserController{
 
 			$count = 0;
 
+			echo "case 6. start users fetching\n";
+
+			$broadcastChain = null;
+
 			while($user = $userIdsQuery->fetch()){
 				$user_id = intval($user['id']);
+				echo "$count:\t user_id=[$user_id]\n";
 				$current = new DirectedOutgoingMessage($user_id, $message);
-				$broadcastChain->appendMessage($current);
+				$current->appendMessage($broadcastChain);
+				$broadcastChain = $current;
 				++$count;
 			}
 
@@ -1020,6 +1026,8 @@ class UserController{
 			);
 
 			$broadcastChain->appendMessage($confirmMessage);
+
+			echo "returning $count messages \n";
 
 			return $broadcastChain;
 			
