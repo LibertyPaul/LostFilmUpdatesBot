@@ -56,14 +56,14 @@ class Botan {
 			$this->template_uri
 		);
 		$result = $this->request($url, $message);
-		if ($result['error'] || $result['response']['status'] !== 'accepted') {
+		if ($result['error']) {
 			throw new Exception('Error Processing Request', 1);
 		}
 		
 	}
 
 	protected function request($url, $body) {
-		$res = $this->HTTPRequester->sendJSONRequest($url, $body);
+		$res = $this->HTTPRequester->sendJSONRequest($url, json_encode($body));
 
 		return [
 			'error' => $res['code'] >= 400,
