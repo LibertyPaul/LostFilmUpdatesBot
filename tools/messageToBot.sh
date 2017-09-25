@@ -7,6 +7,11 @@ if [ -z "$URL" ]; then
 	exit 1
 fi
 
+if [ $(pwd | grep "prod" | wc -l) > 1 ]; then
+	echo "On Prod? Really? No way!"
+	exit 1
+fi
+
 readonly password=$2
 if [ -z $3 ]; then
 	echo "No file provided"
