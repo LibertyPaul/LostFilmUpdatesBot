@@ -1,5 +1,9 @@
 <?php
 
+require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/Config.php');
+require_once(__DIR__.'/HTTPRequester/HTTPRequesterFactory.php');
+
 /**
  * Class Botan
  * @package YourProject
@@ -30,11 +34,18 @@ class Botan {
 	 */
 	protected $token;
 
+	private $HTTPRequester;
+
 	function __construct($token) {
 		if (empty($token) || !is_string($token)) {
-			throw new Exception('Token should be a string', 2);
+			throw new \Exception('Token should be a string', 2);
 		}
 		$this->token = $token;
+
+		$pdo = \BotPDO::getInstance();
+		$config = new \Config($pdo);
+		$HTTPRequesterFactory = new \HTTPRequesterFactory($config);
+		$this->HTTPRequester = $HTTPRequesterFactory->getInstance();
 	}
 
 	public function track($message, $event_name = 'Message') {
@@ -52,20 +63,11 @@ class Botan {
 	}
 
 	protected function request($url, $body) {
-		$curlInstalled = function_exists('curl_version');
-		$response = null;
-		if ($curlInstalled) {
-			$response = $this->curlRequest($url, $body);
-		} else {
-			$response = $this->streamContextRequest($url, $body);
-		}
-		
-		$error = empty($response);
-		$responseData = json_decode($response, true);
+		$res = $this->HTTPRequester->sendJSONRequest($url, $body);
 
 		return [
-			'error' => $error,
-			'response' => $responseData
+			'error' => $res['code'] >= 400,
+			'response' => $json_decode($res['value'], true)
 		];
 	}
 
