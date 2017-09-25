@@ -67,7 +67,7 @@ class Botan {
 
 		return [
 			'error' => $res['code'] >= 400,
-			'response' => $json_decode($res['value'], true)
+			'response' => json_decode($res['value'], true)
 		];
 	}
 

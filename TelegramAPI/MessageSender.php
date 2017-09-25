@@ -90,7 +90,7 @@ class MessageSender implements \core\MessageSenderInterface{
 				if($result['code'] === 429){
 					$this->tracer->logWarning(
 						'[TELEGRAM API]', __FILE__, __LINE__,
-						"Got 429 HTTP Response. Nap for ${this->sleepOn429CodeMs} ms."
+						"Got 429 HTTP Response. Nap for {$this->sleepOn429CodeMs} ms."
 					);
 					usleep($this->sleepOn429CodeMs);
 				}
