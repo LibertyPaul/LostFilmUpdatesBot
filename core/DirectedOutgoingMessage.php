@@ -17,7 +17,7 @@ class DirectedOutgoingMessage{
 		$this->outgoingMessage = $outgoingMessage;
 	}
 
-	private static function findLoop(DirectedOutgoingMessage $lhs, DirectedOutgoingMessage $rhs){
+	private static function findLoop(self $lhs, self $rhs){
 		$current = $rhs;
 		while($current !== null){
 			if($current === $lhs){
@@ -38,7 +38,7 @@ class DirectedOutgoingMessage{
 		# Not sure if this check is redundant. It might be possible to optimize it.
 	}
 
-	public function appendMessage(self $message){
+	public function appendMessage(self $message = null){
 		if(self::findLoop($this, $message)){
 			throw new \LogicException(
 				'Loop was found in message chains:'.PHP_EOL.
