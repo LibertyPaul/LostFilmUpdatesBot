@@ -2,6 +2,7 @@
 
 namespace core;
 
+require_once(__DIR__.'/User.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
@@ -10,40 +11,19 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 class UserController{
-	private $user_id; # TODO: load full users record
+	private $user;
 	private $conversationStorage;
 	private $messageDestination;
 	private $pdo;
 	private $config;
 	private $tracer;
 
-	public function __construct($user_id, ConversationStorage $conversationStorage){
+	public function __construct(User $user, ConversationStorage $conversationStorage){
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
 		$this->config = new \Config($this->pdo);
-
-		if(is_int($user_id) === false){
-			$this->tracer->logError(
-				'[INVALID TYPE]', __FILE__, __LINE__,
-				"Invalid user_id type ($user_id)"
-			);
-
-			throw new \InvalidArgumentException("Invalid user_id type ($user_id)");
-		}
-
-		$this->user_id = $user_id;
-
-		if($conversationStorage === null){
-			$this->tracer->logError(
-				'[INVALID ARGUMENT]', __FILE__, __LINE__,
-				'Provided ConversationStorage is null'
-			);
-
-			throw new \InvalidArgumentException('Provided ConversationStorage is null');
-		}
-
+		$this->user = $user;
 		$this->conversationStorage = $conversationStorage;
-
 	}
 
 	private function repeatQuestion(){
@@ -61,7 +41,7 @@ class UserController{
 		try{
 			$getMessagesHistorySize->execute(
 				array(
-					':user_id' => $this->user_id
+					':user_id' => $this->user->getId()
 				)
 			);
 
@@ -70,7 +50,7 @@ class UserController{
 
 			if($count > 1){
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Мы ведь уже знакомы, правда?')
 				);
 			}
@@ -88,13 +68,13 @@ class UserController{
 			'Чтобы узнать что я умею - введи /help или выбери эту команду в списке';
 		
 		$response = new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage($welcomingText)
 		);
 
 		try{
 			$notificationGenerator = new NotificationGenerator();
-			$adminNotification = $notificationGenerator->newUserEvent($this->user_id);
+			$adminNotification = $notificationGenerator->newUserEvent($this->user->getId());
 
 			if($adminNotification !== null){
 				$response->appendMessage($adminNotification);
@@ -110,21 +90,31 @@ class UserController{
 	private function cancelRequest(){
 		$this->conversationStorage->deleteConversation();
 		return new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage('Действие отменено.')
 		);
 	}
 
 	private function deleteUser(){
-		$ANSWER_YES = 'да';
-		$ANSWER_NO = 'нет';
-		
+		$ANSWER_YES = 'Да';
+		$ANSWER_NO = 'Нет';
+
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
+			$lastChance = 'Точно? Вся информация о тебе будет безвозвратно потеряна...';
+			$options = array($ANSWER_YES, $ANSWER_NO);
+			
+			if($this->user->muted() === false){
+				$lastChance .= 
+					PHP_EOL.PHP_EOL.
+					'Если тебя раздражают уведомления, '.
+					'может лучше воспользуешься командой /mute?';
+			}
+
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage(
-					'Ты уверен? Вся информация о тебе будет безвозвратно потеряна...',
+					$lastChance,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array($ANSWER_YES, $ANSWER_NO)
@@ -136,14 +126,16 @@ class UserController{
 		case 2:
 			$response = $this->conversationStorage->getLastMessage()->getText();
 			switch(strtolower($response)){
-			case $ANSWER_YES:
+			case strtolower($ANSWER_YES):
 				$this->conversationStorage->deleteConversation();
 
 				$adminNotification = null;
 				
 				try{
 					$notificationGenerator = new NotificationGenerator();
-					$adminNotification = $notificationGenerator->userLeftEvent($this->user_id);
+					$adminNotification = $notificationGenerator->userLeftEvent(
+						$this->user->getId()
+					);
 				}
 				catch(\Throwable $ex){
 					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
@@ -158,7 +150,7 @@ class UserController{
 				try{
 					$deleteUserQuery->execute(
 						array(
-							':user_id' => $this->user_id
+							':user_id' => $this->user->getId()
 						)
 					);
 				}
@@ -166,13 +158,13 @@ class UserController{
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					$this->conversationStorage->deleteConversation();
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage('Возникла ошибка. Записал, починят.')
 					);
 				}
 				
 				$userResponse = new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Прощай...')
 				);
 
@@ -182,19 +174,25 @@ class UserController{
 
 				return $userResponse;
 				
-			case $ANSWER_NO:
+			case strtolower($ANSWER_NO):
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Фух, а то я уже испугался')
 				);
+
+			case '/mute':
+				if($this->user->muted() === false){
+					return $this->toggleMute();
+				}
+				# Otherwise we will go to the default block as we did not propose to use /mute
 			
 			default:
 				$this->repeatQuestion();
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage(
-						'Давай конкретнее, либо да, либо нет',
+						"Давай конкретнее, либо $ANSWER_YES, либо $ANSWER_NO",
 						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
 						array($ANSWER_YES, $ANSWER_NO)
@@ -237,7 +235,7 @@ class UserController{
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot';
 		
 		return new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage($helpText)
 		);
 	}
@@ -261,7 +259,7 @@ class UserController{
 
 		$getUserShowsQuery->execute(
 			array(
-				':user_id' => $this->user_id
+				':user_id' => $this->user->getId()
 			)
 		);
 		
@@ -269,47 +267,58 @@ class UserController{
 		
 		if(count($userShows) === 0){
 			return new DirectedOutgoingMessage(
-				$this->user_id,
-				new OutgoingMessage('Вы пока не выбрали ни одного сериала')
+				$this->user->getId(),
+				new OutgoingMessage('Пока тут пусто. Добавь парочку командой /add_show')
 			);
 		}
 
-		$parts = array();
+		$hasOutdated = false;
 
-		$text = 'Ваши сериалы:'.PHP_EOL.PHP_EOL;
-		
+		$rows = array();
+		$rows[] = 'Твои сериалы:'.PHP_EOL.PHP_EOL;
+
 		foreach($userShows as $show){
 			$icon = '•';
 			if($show['onAir'] === 'N'){
 				$icon = '✕';
+				$hasOutdated = true;
 			}
 
-			$showRow = str_replace(
-				array('#ICON', '#TITLE'),
-				array($icon, $show['title']),
-				'#ICON #TITLE'.PHP_EOL.PHP_EOL
-			);
+			$rows[] = sprintf('%s %s', $icon, $show['title']).PHP_EOL.PHP_EOL;
+		}
 
-			if(strlen($text) + strlen($showRow) > 4000){
-				$parts[] = $text;
-				$text = '';
+		if($hasOutdated){
+			$rows[] = '<i>✕ - сериал закончен</i>';
+		}
+
+		$messageParts = array();
+		$currentPart = '';
+
+		foreach($rows as $row){
+			if(strlen($currentPart) + strlen($row) > 4000){
+				$messageParts[] = $currentPart;
+				$currentPart = '';
 			}
 
-			$text .= $showRow;
+			$currentPart .= $row;
+		}
+		
+		if(strlen($currentPart) > 0){
+			$messageParts[] = $currentPart;
 		}
 		
 		$text .= PHP_EOL."• - сериал выходит";
 		$text .= PHP_EOL."✕ - сериал закончен";
 
-		$parts[] = $text;
+		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
-		$outgoingMessage = new OutgoingMessage($parts[0]);
-		for($i = 1; $i < count($parts); ++$i){
-			$nextMessage = new OutgoingMessage($parts[$i]);
+		$outgoingMessage = new OutgoingMessage($messageParts[0], $markupType);
+		for($i = 1; $i < count($messageParts); ++$i){
+			$nextMessage = new OutgoingMessage($messageParts[$i], $markupType);
 			$outgoingMessage->appendMessage($nextMessage);
 		}
 
-		return new DirectedOutgoingMessage($this->user_id, $outgoingMessage);
+		return new DirectedOutgoingMessage($this->user->getId(), $outgoingMessage);
 	}
 	
 	private function toggleMute(){
@@ -323,14 +332,14 @@ class UserController{
 		try{
 			$isMutedQuery->execute(
 				array(
-					':user_id' => $this->user_id
+					':user_id' => $this->user->getId()
 				)
 			);
 		}
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__,$ex);
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
 			);
 		}
@@ -339,15 +348,12 @@ class UserController{
 		if($res === false){
 			$this->tracer->logError(
 				'[ERROR]', __FILE__, __LINE__,
-				'User was not found '.$this->user_id
+				'User was not found '.$this->user->getId()
 			);
 
 			return new DirectedOutgoingMessage(
-				$this->user_id,
-				new OutgoingMessage(
-					'Не могу найти тебя в списке пользователей.'.PHP_EOL.
-					'Попробуй выполнить команду /start'
-				)
+				$this->user->getId(),
+				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
 			);
 		}
 
@@ -373,20 +379,20 @@ class UserController{
 			$toggleMuteQuery->execute(
 				array(
 					':mute' 	=> $newMode,
-					':user_id'	=> $this->user_id
+					':user_id'	=> $this->user->getId()
 				)
 			);
 		}
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
 			);
 		}
 		
 		return new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage("$action все уведомления")
 		);
 	}
@@ -437,7 +443,7 @@ class UserController{
 			try{
 				$query->execute(
 					array(
-						':user_id'		=> $this->user_id,
+						':user_id'		=> $this->user->getId(),
 						':in_out_flag'	=> $in_out_flag
 					)
 				);
@@ -446,7 +452,7 @@ class UserController{
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 				); 
 			}
@@ -459,28 +465,29 @@ class UserController{
 				$text = null;
 				if($in_out_flag){
 					$text =
-						'Ты уже добавил все (!) сериалы из списка.'.PHP_EOL.
-						'И как ты успеваешь их смотреть??';
+						'Не осталось ни одного сериала, '.
+						'который можно было бы добавить.'.PHP_EOL.
+						'И как ты успеваешь их все смотреть??';
 				}
 				else{
-					$text = 'Нечего удалять';
+					$text = 'Нечего удалять. Добавь парочку командой /add_show.';
 				}
 				
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage($text)
 				);
 			}
 			else{
-				$text = 'Как называется сериал?'								.PHP_EOL.
-						'Выбери из списка / введи пару слов из названия или '	.PHP_EOL.
+				$text = 'Как называется сериал?'.PHP_EOL.
+						'Выбери из списка / введи пару слов из названия или '.
 						'продиктуй их в голосовом сообщении';
 				
 				array_unshift($showTitles, '/cancel');
 				array_push($showTitles, '/cancel');
 				
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage(
 						$text,
 						new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -519,7 +526,7 @@ class UserController{
 				$getShowId->execute(
 					array(
 						':title'		=> $messageText,
-						':user_id'		=> $this->user_id,
+						':user_id'		=> $this->user->getId(),
 						':in_out_flag'	=> $in_out_flag
 					)
 				);
@@ -528,7 +535,7 @@ class UserController{
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 				); 
 			}
@@ -546,20 +553,20 @@ class UserController{
 					$action->execute(
 						array(
 							':show_id' => $show_id,
-							':user_id' => $this->user_id
+							':user_id' => $this->user->getId()
 						)
 					);
 				}
 				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 					); 
 				}
 				
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage("$title_all $successText")
 				);
 			}
@@ -594,7 +601,7 @@ class UserController{
 					$messageText = $this->conversationStorage->getLastMessage()->getText();
 					$query->execute(
 						array(
-							':user_id' 		=> $this->user_id,
+							':user_id' 		=> $this->user->getId(),
 							':show_name'	=> $messageText,
 							':in_out_flag'	=> $in_out_flag
 						)
@@ -604,7 +611,7 @@ class UserController{
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					$this->conversationStorage->deleteConversation();
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 					); 
 				}
@@ -615,7 +622,7 @@ class UserController{
 				case 0://не найдено ни одного похожего названия
 					$this->conversationStorage->deleteConversation();
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage('Не найдено подходящих названий')
 					);
 					break;
@@ -627,7 +634,7 @@ class UserController{
 						$action->execute(
 							array(
 								':show_id' => $show['id'],
-								':user_id' => $this->user_id
+								':user_id' => $this->user->getId()
 							)
 						);
 					}
@@ -635,13 +642,13 @@ class UserController{
 						$this->tracer->logException(
 							'[DB ERROR]', __FILE__, __LINE__, $ex);
 						return new DirectedOutgoingMessage(
-							$this->user_id,
+							$this->user->getId(),
 							new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 						); 
 					}
 					
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage("$show[title_all] $successText")
 					);
 					break;
@@ -652,9 +659,9 @@ class UserController{
 					array_push($showTitles, '/cancel');
 					
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage(
-							'Какой из этих ты имел ввиду:',
+							'Какой из этих ты имеешь в виду:',
 							new MarkupType(MarkupTypeEnum::NoMarkup),
 							false,
 							$showTitles
@@ -693,7 +700,7 @@ class UserController{
 			try{
 				$query->execute(
 					array(
-						':user_id' 			=> $this->user_id,
+						':user_id' 			=> $this->user->getId(),
 						':in_out_flag'		=> $in_out_flag,
 						':exactShowName'	=> $messageText
 					)
@@ -702,7 +709,7 @@ class UserController{
 			catch(\PDOException $ex){
 				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 				return new DirectedOutgoingMessage(
-					$this->user_id, 
+					$this->user->getId(), 
 					new OurgoingMessage('Ошибка в базе. Записал. Починят.')
 				); 
 			}
@@ -711,7 +718,7 @@ class UserController{
 			
 			if(count($res) === 0){
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Не могу найти такое название.')
 				);
 			}
@@ -720,7 +727,7 @@ class UserController{
 				try{
 					$action->execute(
 						array(
-							':user_id' => $this->user_id,
+							':user_id' => $this->user->getId(),
 							':show_id' => $show['id']
 						)
 					);
@@ -728,13 +735,13 @@ class UserController{
 				catch(\PDOException $ex){
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					return new DirectedOutgoingMessage(
-						$this->user_id,
+						$this->user->getId(),
 						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
 					); 
 				}
 				
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage("$show[title_all] $successText")
 				);
 			}
@@ -745,16 +752,16 @@ class UserController{
 	private function getShareButton(){
 		$this->conversationStorage->deleteConversation();
 
-		$donateButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, '');
+		$shareButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, '');
 
 		return new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage(
-				'Вот тебе кнопочка:',
+				'Вот тебе кнопочка. Нажми и выбери чат в который отправить мой контакт.',
 				new MarkupType(MarkupTypeEnum::NoMarkup),
 				false,
 				null,
-				array($donateButton)
+				array($shareButton)
 			)
 		);
 	}
@@ -817,7 +824,7 @@ class UserController{
 		}
 
 		return new DirectedOutgoingMessage(
-			$this->user_id,
+			$this->user->getId(),
 			new OutgoingMessage(
 				$phrase,
 				new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -905,11 +912,11 @@ class UserController{
 	private function broadcast(){
 		$allowedUserId = $this->config->getValue('Broadcast', 'Allowed User Id');
 		$allowedUserIdInt = intval($allowedUserId);
-		if($allowedUserId === null || $this->user_id !== $allowedUserIdInt){
+		if($allowedUserId === null || $this->user->getId() !== $allowedUserIdInt){
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Z@TTР3LL|3Н0')
 			);
 		}
@@ -917,7 +924,7 @@ class UserController{
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
@@ -925,7 +932,7 @@ class UserController{
 
 		case 2:
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage(
 					'Пуш уведомление?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -936,7 +943,7 @@ class UserController{
 
 		case 3:
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage(
 					'Будет ли разметка?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -947,7 +954,7 @@ class UserController{
 
 		case 4:
 			return new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage(
 					'Превью ссылок?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -970,13 +977,13 @@ class UserController{
 				);
 				$example->appendMessage($confirm);
 
-				$response = new DirectedOutgoingMessage($this->user_id,	$example);
+				$response = new DirectedOutgoingMessage($this->user->getId(),	$example);
 				return $response;
 			}
 			else{
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Ты накосячил!. '.$result['why'])
 				);
 			}
@@ -992,13 +999,13 @@ class UserController{
 
 			if($confirmation !== 'Да'){
 				return new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage('Рассылка отменена.')
 				);
 			}
 
 			$started = new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Начал рассылку.')
 			);
 
@@ -1019,7 +1026,7 @@ class UserController{
 			}
 
 			$confirmMessage = new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage(sprintf('Отправил %d сообщений(е/я).', $count))
 			);
 
@@ -1064,7 +1071,7 @@ stop - Удалиться из контакт-листа бота
 				$initialText = $initialMessage->getText();
 
 				$response = new DirectedOutgoingMessage(
-					$this->user_id,
+					$this->user->getId(),
 					new OutgoingMessage(
 						sprintf('Я хз чё "%s" значит.', $initialText).PHP_EOL.
 						'Нажми на /help чтобы увидеть список команд.'
@@ -1123,7 +1130,7 @@ stop - Удалиться из контакт-листа бота
 		}
 		catch(\Throwable $ex){
 			$response = new DirectedOutgoingMessage(
-				$this->user_id,
+				$this->user->getId(),
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
 			);
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
