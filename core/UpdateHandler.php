@@ -159,29 +159,10 @@ class UpdateHandler{
 			$conversationStorage = new ConversationStorage($incomingMessage->getUserId());
 			$conversationStorage->insertMessage($incomingMessage);
 			$initialCommand = $conversationStorage->getFirstMessage()->getUserCommand();
+			$user = User::getUser($this->pdo, $incomingMessage->getUserId());
+			$userController = new UserController($user,	$conversationStorage);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'Conversation Storage Error'
-			);
-
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
-
-		try{
-			$userController = new UserController(
-				$incomingMessage->getUserId(),
-				$conversationStorage
-			);
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'UserController creation error'
-			);
-
 			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
