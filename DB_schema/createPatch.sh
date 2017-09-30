@@ -32,8 +32,8 @@ echo "Creating new patch with id=[$newPatchId] ($newPatchDir) ..."
 
 mkdir "$newPatchDir"
 mkdir "$newPatchDir/database"
-touch "$newPatchDir/database/DB.sql_t"
-echo "USE &&db_name;" > "$newPatchDir/database/DB.sql_t"
+touch "$newPatchDir/database/DB.sql"
+echo "USE &&db_name;" > "$newPatchDir/database/DB.sql"
 
 echo "Finished:"
 ls -R "$newPatchDir"
