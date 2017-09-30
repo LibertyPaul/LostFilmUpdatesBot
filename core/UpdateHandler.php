@@ -110,38 +110,33 @@ class UpdateHandler{
 		$loggedRequestId,
 		$statusCode
 	){
-		while($outgoingMessage !== null){
-			$text = substr($outgoingMessage->getOutgoingMessage()->getText(), 0, 5000);
-			$user_id = $outgoingMessage->getUserId();
-			try{
-				$this->logResponseQuery->execute(
-					array(
-						':user_id'		=> $user_id,
-						':text'			=> $text,
-						':inResponseTo'	=> $loggedRequestId,
-						':statusCode'	=> $statusCode
-					)
-				);
+		$text = substr($outgoingMessage->getOutgoingMessage()->getText(), 0, 5000);
+		$user_id = $outgoingMessage->getUserId();
+		try{
+			$this->logResponseQuery->execute(
+				array(
+					':user_id'		=> $user_id,
+					':text'			=> $text,
+					':inResponseTo'	=> $loggedRequestId,
+					':statusCode'	=> $statusCode
+				)
+			);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logError(
+				'[DB ERROR]', __FILE__, __LINE__, 	 PHP_EOL.
+				"loggedRequestId=[$loggedRequestId]".PHP_EOL.
+				"statusCode=[$statusCode]"			.PHP_EOL.
+				"user_id=[$user_id]"				.PHP_EOL.
+				$outgoingMessage
+			);
+			
+			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
+				throw new DuplicateUpdateException();
 			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError(
-					'[DB ERROR]', __FILE__, __LINE__, 	 PHP_EOL.
-					"loggedRequestId=[$loggedRequestId]".PHP_EOL.
-					"statusCode=[$statusCode]"			.PHP_EOL.
-					"user_id=[$user_id]"				.PHP_EOL.
-					$outgoingMessage
-				);
-				
-				if($ex->errorInfo[1] === 1062){# Duplicate entry error code
-					throw new DuplicateUpdateException();
-				}
-				else{
-					throw new \RuntimeException('logRequestQuery call has failed');
-				}
-			}
-			finally{
-				$outgoingMessage = $outgoingMessage->nextMessage();
+			else{
+				throw new \RuntimeException('logRequestQuery call has failed');
 			}
 		}
 	}
