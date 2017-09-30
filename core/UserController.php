@@ -18,12 +18,12 @@ class UserController{
 	private $config;
 	private $tracer;
 
-	public function __construct(User $user, ConversationStorage $conversationStorage){
+	public function __construct(User $user){
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
 		$this->config = new \Config($this->pdo);
 		$this->user = $user;
-		$this->conversationStorage = $conversationStorage;
+		$this->conversationStorage = new ConversationStorage($user->getId());
 	}
 
 	private function repeatQuestion(){
@@ -125,6 +125,7 @@ class UserController{
 		
 		case 2:
 			$response = $this->conversationStorage->getLastMessage()->getText();
+
 			switch(strtolower($response)){
 			case strtolower($ANSWER_YES):
 				$this->conversationStorage->deleteConversation();
@@ -180,15 +181,19 @@ class UserController{
 					$this->user->getId(),
 					new OutgoingMessage('Фух, а то я уже испугался')
 				);
-
-			case '/mute':
-				if($this->user->muted() === false){
-					return $this->toggleMute();
-				}
-				# Otherwise we will go to the default block as we did not propose to use /mute
 			
 			default:
+				$command = $this->conversationStorage->getLastMessage()->getUserCommand();
+				if(
+					$this->user->muted() === false						&&
+					$command !== null									&&
+					$command->getCommandId() === UserCommandMap::Mute
+				){
+					return $this->toggleMute();
+				}
+
 				$this->repeatQuestion();
+
 				return new DirectedOutgoingMessage(
 					$this->user->getId(),
 					new OutgoingMessage(
@@ -323,62 +328,21 @@ class UserController{
 	
 	private function toggleMute(){
 		$this->conversationStorage->deleteConversation();
-		$isMutedQuery = $this->pdo->prepare('
-			SELECT `mute`
-			FROM `users`
-			WHERE `id` = :user_id
-		');
 
-		try{
-			$isMutedQuery->execute(
-				array(
-					':user_id' => $this->user->getId()
-				)
-			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__,$ex);
-			return new DirectedOutgoingMessage(
-				$this->user->getId(),
-				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
-			);
-		}
-		
-		$res = $isMutedQuery->fetch();
-		if($res === false){
-			$this->tracer->logError(
-				'[ERROR]', __FILE__, __LINE__,
-				'User was not found '.$this->user->getId()
-			);
-
-			return new DirectedOutgoingMessage(
-				$this->user->getId(),
-				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
-			);
-		}
-
-		$action = null;
-		$newMode = null;
-		if($res['mute'] === 'N'){
-			$newMode = 'Y';
-			$action = 'Выключил';
-		}
-		else{
-			assert($res['mute'] === 'Y');
-			$newMode = 'N';
-			$action = 'Включил';
-		}
-		
-		$toggleMuteQuery = $this->pdo->prepare('
+		$toggleMuteQuery = $this->pdo->prepare("
 			UPDATE `users`
-			SET `mute` = :mute
+			SET `mute` = (
+				CASE `mute`
+					WHEN 'Y' THEN 'N'
+					WHEN 'N' THEN 'Y'
+				END
+			)
 			WHERE `id` = :user_id
-		');
+		");
 		
 		try{
 			$toggleMuteQuery->execute(
 				array(
-					':mute' 	=> $newMode,
 					':user_id'	=> $this->user->getId()
 				)
 			);
@@ -389,6 +353,13 @@ class UserController{
 				$this->user->getId(),
 				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
 			);
+		}
+		
+		if($this->user->muted()){
+			$action = 'Включил';
+		}
+		else{
+			$action = 'Выключил';
 		}
 		
 		return new DirectedOutgoingMessage(
@@ -1038,26 +1009,11 @@ class UserController{
 		}
 	}
 
-/*
-Commands:
-help - Показать инфо о боте
-add_show - Добавить уведомления о сериале
-get_my_shows - Показать выбранные сериалы
-remove_show - Удалить уведомления о сериале
-mute - Выключить уведомления на время
-cancel - Отменить команду
-stop - Удалиться из контакт-листа бота
-*/
-	public function processLastUpdate(){
+	public function processMessage(IncomingMessage $incomingMessage){
 		try{
-			if($this->conversationStorage->getConversationSize() < 1){
-				throw new \LogicException('Empty Conversation Storage');
-			}
-			
-			$response = null;
+			$this->conversationStorage->insertMessage($incomingMessage);
 
-			$currentMessage = $this->conversationStorage->getLastMessage();
-			$currentCommand = $currentMessage->getUserCommand();
+			$currentCommand = $incomingMessage->getUserCommand();
 			
 			if($currentCommand !== null){
 				if($currentCommand->getCommandId() === UserCommandMap::Cancel){
@@ -1084,60 +1040,55 @@ stop - Удалиться из контакт-листа бота
 
 			switch($initialCommand->getCommandId()){
 				case UserCommandMap::Start:
-					$response = $this->welcomeUser();
-					break;
+					return $this->welcomeUser();
 
 				case UserCommandMap::Cancel:
-					$response = $this->cancelRequest();
-					break;
+					return $this->cancelRequest();
 
 				case UserCommandMap::Stop:
-					$response = $this->deleteUser();
-					break;
+					return $this->deleteUser();
 				
 				case UserCommandMap::Help:
-					$response = $this->showHelp();
-					break;
+					return $this->showHelp();
 				
 				case UserCommandMap::Mute:
-					$response = $this->toggleMute();
-					break;
+					return $this->toggleMute();
 				
 				case UserCommandMap::GetMyShows:
-					$response = $this->showUserShows();
-					break;
+					return $this->showUserShows();
 					
 				case UserCommandMap::AddShow:
-					$response = $this->insertOrDeleteShow(true);
-					break;
+					return $this->insertOrDeleteShow(true);
 				
 				case UserCommandMap::RemoveShow:
-					$response = $this->insertOrDeleteShow(false);
-					break;
+					return $this->insertOrDeleteShow(false);
 
 				case UserCommandMap::GetShareButton:
-					$response = $this->getShareButton();
-					break;
+					return $this->getShareButton();
 
 				case UserCommandMap::Donate:
-					$response = $this->getDonateOptions();
-					break;
+					return $this->getDonateOptions();
 
 				case UserCommandMap::Broadcast:
-					$response = $this->broadcast();
-					break;
+					return $this->broadcast();
+
+				default:
+					$this->tracer->logError(
+						'[COMMAND]', __FILE__, __LINE__,
+						'Unknown command:'.PHP_EOL.
+						print_r($initialCommand, true)
+					);
+					throw \LogicException('Unknown command');
 			}
 		}
-		catch(\Throwable $ex){
-			$response = new DirectedOutgoingMessage(
+			return new DirectedOutgoingMessage(
 				$this->user->getId(),
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
 			);
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
 		}
-		
-		return $response;
 	}
+
 }
 		
 		
