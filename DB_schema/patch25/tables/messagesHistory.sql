@@ -1,0 +1,6 @@
+ALTER TABLE `messagesHistory`
+	CHANGE `time`
+	`time` DATETIME(6)
+	NOT NULL
+	DEFAULT CURRENT_TIMESTAMP(6)
+	AFTER `id`;
