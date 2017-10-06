@@ -31,16 +31,26 @@ class Config{
 	}
 
 	public function getValue($section, $item, $defaultValue = null){
-		$this->tracer->logDebug('[CONFIG GET]', __FILE__, __LINE__, "section=[$section], item=[$item]");
+		$this->tracer->logDebug(
+			'[CONFIG GET]', __FILE__, __LINE__,
+			"Config::getValue(section=[$section], item=[$item])"
+		);
+
 		if(array_key_exists($section, $this->cachedValues)){
 			if(array_key_exists($item, $this->cachedValues[$section])){
 				$value = $this->cachedValues[$section][$item];
-				$this->tracer->logDebug('[CONFIG GET]', __FILE__, __LINE__, "value=[$value] was found in cache");
+				$this->tracer->logDebug(
+					'[CONFIG GET]', __FILE__, __LINE__,
+					"Value=[$value] was found in cache"
+				);
 				return $value;
 			}
 		}
 
-		$this->tracer->logDebug('[CONFIG GET]', __FILE__, __LINE__, 'Cache miss, selecting from DB');
+		$this->tracer->logDebug(
+			'[CONFIG GET]', __FILE__, __LINE__,
+			'Cache miss, selecting from DB...'
+		);
 
 		$this->getValueQuery->execute(
 			array(
@@ -51,13 +61,19 @@ class Config{
 
 		$result = $this->getValueQuery->fetch();
 		if($result === false){
-			$this->tracer->logNotice('[CONFIG GET]', __FILE__, __LINE__, "Requested value [$section][$item] does not exist");
+			$this->tracer->logNotice(
+				'[CONFIG GET]', __FILE__, __LINE__,
+				"Requested value [$section][$item] does not exist"
+			);
 			return $defaultValue;
 		}
 
 		$value = $result['value'];
 
-		$this->tracer->logDebug('[CONFIG GET]', __FILE__, __LINE__, "Value was selected [$value]");
+		$this->tracer->logDebug(
+			'[CONFIG GET]', __FILE__, __LINE__,
+			"Value was selected [$value]"
+		);
 
 		$this->cacheValue($section, $item, $value);
 
