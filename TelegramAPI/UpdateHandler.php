@@ -70,6 +70,14 @@ class UpdateHandler{
 		}
 	}
 
+	private static function validateUpdate($update){
+		return
+			$update !== null				&&
+			isset($update->message) 		&&
+			isset($update->message->chat)	&&
+			isset($update->message->from);
+	}
+
 	private static function normalizeUpdateFields($update){
 		$result = clone $update;
 	
@@ -328,6 +336,16 @@ class UpdateHandler{
 	}
 
 	public function handleUpdate($update){
+		if(self::validateUpdate($update) === false){
+			$this->tracer->logError(
+				'[INVALID UPDATE]', __FILE__, __LINE__,
+				'Update is invalid:'.PHP_EOL.
+				print_r($update, true)
+			);
+
+			throw new \RuntimeException('Invalid update');
+		}
+
 		$update = self::normalizeUpdateFields($update);
 
 		$user_id = $this->createOrUpdateUser($update->message->chat);
