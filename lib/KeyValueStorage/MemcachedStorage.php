@@ -21,6 +21,7 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 	}
 
 	private function createGlobalKey($localKey){
+		assert(is_string($localKey));
 		return sprintf('%s/%s/%s', self::DOMAIN, $this->keyPrefix, $localKey);
 	}
 
@@ -35,7 +36,9 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 			case Memcached::RES_NOTFOUND:
 				return null;
 			default:
-				throw new \RuntimeException("Memcached::get error: [$resultCode]");
+				throw new \RuntimeException(
+					"Memcached::get error: [$resultCode], globalKey=[$globalKey]"
+				);
 		}
 	}
 
