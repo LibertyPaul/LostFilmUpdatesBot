@@ -17,7 +17,6 @@ class MessageSender implements \core\MessageSenderInterface{
 	private $sleepOn429CodeMs;
 
 	public function __construct(TelegramAPI $telegramAPI){
-		assert($telegramAPI !== null);
 		$this->telegramAPI = $telegramAPI;
 
 		$this->tracer = new \Tracer(__CLASS__);
@@ -60,11 +59,6 @@ class MessageSender implements \core\MessageSenderInterface{
 	}
 
 	public function send($user_id, \core\OutgoingMessage $message){
-		if($message === null){
-			$this->tracer->logError('[o]', __FILE__, __LINE__, 'OutgoingMessage is null');
-			throw new \InvalidArgumentException('OutgoingMessage is null');
-		}
-
 		$telegram_id = $this->getTelegramId($user_id);
 
 		$sendResult = \core\SendResult::Success;
