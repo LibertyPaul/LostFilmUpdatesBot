@@ -114,40 +114,48 @@ class Webhook{
 	private function respondFinal($reason){
 		switch($reason){
 			case WebhookReasons::OK:
-				http_response_code(200);
-				echo 'Accepted. Processed.'.PHP_EOL;
+				$HTTPCode = 200;
+				$text = 'Accepted. Processed.';
 				break;
 
 			case WebhookReasons::invalidPassword:
-				http_response_code(401);
-				echo 'Invalid password. Try 123456.'.PHP_EOL;
+				$HTTPCode = 401;
+				$text = 'Invalid password. Try 123456.';
 				break;
 
 			case WebhookReasons::formatError:
-				http_response_code(400);
-				echo 'Format error.'.PHP_EOL;
+				$HTTPCode = 400;
+				$text = 'Format error.';
 				break;
 
 			case WebhookReasons::failed:
-				http_response_code(200);
-				echo 'Failed for some reason.'.PHP_EOL;
+				$HTTPCode = 200;
+				$text = 'Failed for some reason.';
 				break;
 
 			case WebhookReasons::duplicateUpdate:
-				http_response_code(208);
-				echo 'It is a duplicate. Piss off.'.PHP_EOL;
+				$HTTPCode = 208;
+				$text = 'It is a duplicate. Piss off.';
 				break;
 
 			case WebhookReasons::correctButIgnored:
-				http_response_code(200);
-				echo 'Correct but ignored.'.PHP_EOL;
+				$HTTPCode = 200;
+				$text = 'Correct but ignored.';
 				break;
 
 			default:
 				$this->tracer->logError('[UNKNOWN REASON]', __FILE__, __LINE__, $reason);
-				echo 'hmm...'.PHP_EOL;
-				http_response_code(200);
+				$text = 'hmm...';
+				$HTTPCode = 200;
 		}
+
+		http_response_code($HTTPCode);
+		echo $text.PHP_EOL;
+
+		$this->tracer->logEvent(
+			'[RESPONSE]', __FILE__, __LINE__,
+			"HTTPCode=[$HTTPCode] Text=[$text]"
+		);
 	}
 
 	private function logUpdate($update){
@@ -173,6 +181,7 @@ class Webhook{
 
 	private static function validateFields($update){
 		return
+			
 			isset($update->message)				&&
 			isset($update->message->from)		&&
 			isset($update->message->from->id)	&&
@@ -272,29 +281,6 @@ class Webhook{
 		catch(\Throwable $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
-		}
-				
-		if($this->messageResendEnabled === 'Y'){
-			try{
-				$this->resendUpdate($postData, $this->messageResendURL);
-			}
-			catch(\Throwable $ex){
-				$this->tracer->logError(
-					'[MESSAGE STREAM]', __FILE__, __LINE__,
-					'Message resend has failed: URL=['.$this->messageResendURL.']'.PHP_EOL.
-					'postData:'.PHP_EOL.print_r($postData, true)
-				);
-				$this->tracer->logException('[MESSAGE STREAM]', __FILE__, __LINE__, $ex);
-			}
-		}
-	}
-
-	private function resendUpdate($postData, $URL){
-		$testStream = new HTTPRequester();
-
-		$res = $testStream->sendJSONRequest($URL, $postData);
-		if($res['code'] >= 400){
-			throw new \RuntimeException('Message resend has failed with code '.$res['code']);
 		}
 	}
 }
