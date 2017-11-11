@@ -1,5 +1,7 @@
 <?php
 
+namespace HTTPRequester;
+
 require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/FakeHTTPRequester.php');

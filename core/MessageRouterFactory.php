@@ -20,7 +20,7 @@ class MessageRouterFactory{
 			throw new \RuntimeException('[TelegramAPI][token] value does not exist');
 		}
 
-		$requesterFactory = new \HTTPRequesterFactory($config);
+		$requesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 		$requester = $requesterFactory->getInstance();
 
 		$telegramAPI = new \TelegramAPI\TelegramAPI($botToken, $requester);
@@ -35,7 +35,6 @@ class MessageRouterFactory{
 
 		return $telegramAPISender;
 	}
-
 
 	public static function getInstance(){
 		if(isset($instance) === false){

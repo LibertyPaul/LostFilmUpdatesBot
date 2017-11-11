@@ -82,7 +82,7 @@ class MessageSender implements \core\MessageSenderInterface{
 					$message->getInlineOptions()
 				);
 
-				if($result['code'] === 429){
+				if($result->getCode() === 429){
 					$this->tracer->logWarning(
 						'[TELEGRAM API]', __FILE__, __LINE__,
 						"Got 429 HTTP Response. Nap for {$this->sleepOn429CodeMs} ms."
@@ -96,10 +96,10 @@ class MessageSender implements \core\MessageSenderInterface{
 
 			$this->outgoingMessagesTracer->logEvent(
 				'[o]', __FILE__, __LINE__,
-				"Returned code: $result[code]"
+				'Returned code: '.$result->getCode()
 			);
 
-			if($result['code'] >= 400){
+			if($result->getCode() >= 400){
 				$sendResult = \core\SendResult::Fail;
 			}
 

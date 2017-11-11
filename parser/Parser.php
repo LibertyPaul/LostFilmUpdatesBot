@@ -9,26 +9,36 @@ abstract class Parser{
 	protected $srcEncoding;
 	private $requester;
 
-	public function __construct(\HTTPRequesterInterface $requester, $srcEncoding = null){
-		assert($requester !== null);
-		
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		$srcEncoding = null
+	){
 		$this->requester = $requester;
 		$this->srcEncoding = $srcEncoding;
 		$this->pageSrc = null;
 	}
 	
 	public function loadSrc($url){
-		$result = $this->requester->sendGETRequest($url);
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Get,
+			\HTTPRequester\ContentType::TextHTML,
+			$url
+		);
 		
-		if($result['code'] !== 200){
-			throw new \HTTPException("sendGETRequest($url) has failed with code $result[code]");
+
+		$result = $this->requester->request($requestProperties);
+		
+		if($result->getCode() !== 200){
+			throw new \RuntimeException(
+				"HTTP call has failed:".PHP_EOL.
+				$result
+			);
 		}
 				
-		if($this->srcEncoding === null){
-			$this->pageSrc = $result['value'];
-		}
-		else{
-			$this->pageSrc = mb_convert_encoding($result['value'], 'UTF-8', $this->srcEncoding);
+		$this->pageSrc = $result->getBody();
+		
+		if($this->srcEncoding !== null){
+			$this->pageSrc = mb_convert_encoding($this->pageSrc, 'UTF-8', $this->srcEncoding);
 		}
 	}
 

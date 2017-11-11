@@ -12,7 +12,6 @@ require_once(__DIR__.'/UserController.php');
 
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
-require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 class DuplicateUpdateException extends \RuntimeException{}
 

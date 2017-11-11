@@ -34,7 +34,7 @@ class UpdateHandler{
 
 		try{
 			$config = new \Config($this->pdo);
-			$HTTPrequesterFactory = new \HTTPRequesterFactory($config);
+			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 
 			$this->speechRecognizer = new \SpeechRecognizer\SpeechRecognizer(

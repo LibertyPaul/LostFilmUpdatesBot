@@ -21,13 +21,11 @@ class TelegramAPI{
 	public function __construct($botToken, \HTTPRequesterInterface $HTTPRequester){
 		assert(is_string($botToken));
 		$this->botToken = $botToken;
-
-		assert($HTTPRequester !== null);
 		$this->HTTPRequester = $HTTPRequester;
-	
 		$this->tracer = new \Tracer(__CLASS__);
-
-		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(__CLASS__);
+		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(
+			__CLASS__
+		);
 	}
 
 	private function getBaseMethodURL($method){
@@ -155,7 +153,7 @@ class TelegramAPI{
 			);
 		}
 
-		$requestJSON = json_encode($request, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+		$requestJSON = json_encode($request, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
 		if($requestJSON === false){
 			$this->tracer->logError(
 				'[JSON]', __FILE__, __LINE__,
@@ -164,14 +162,20 @@ class TelegramAPI{
 			);
 
 			throw new \RuntimeException('json_encode has failed on:'.print_r($request, true));
-		}				
+		}
+
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Post,
+			\HTTPRequester\ContentType::JSON,
+			$this->getBaseMethodURL('sendMessage'),
+			$requestJSON
+		);
 		
-		$URL = $this->getBaseMethodURL('sendMessage');
 		try{
 			$this->waitForVelocity($telegram_id);
-			$result = $this->HTTPRequester->sendJSONRequest($URL, $requestJSON);
+			$result = $this->HTTPRequester->request($requestProperties);
 		}
-		catch(\HTTPException $HTTPException){
+		catch(\HTTPRequester\HTTPException $HTTPException){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
 			throw $HTTPException;
 		}
@@ -180,38 +184,49 @@ class TelegramAPI{
 	}
 
 	public function forwardMessage($chat_id, $source_chat_id, $message_id, $silent = false){
-		$URL = $this->getBaseMethodURL('forwardMessage');
-		$args = array(
+		$payload = array(
 			'chat_id'				=> $chat_id,
 			'from_chat_id'			=> $source_chat_id,
 			'message_id'			=> $message_id,
 			'disable_notification'	=> $silent
 		);
 
-		$this->HTTPRequester->sendGETRequest($URL, $args);
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Get,
+			\HTTPRequester\ContentType::TextHTML,
+			$this->getBaseMethodURL('forwardMessage'),
+			$payload
+		);
+
+		$this->HTTPRequester->request($requestProperties);
 	}
 
 	public function downloadFile($file_id){
-		$getFileURL = $this->getBaseMethodURL('getFile');
-		$args = array('file_id' => $file_id);
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Get,
+			\HTTPRequester\ContentType::TextHTML,
+			$this->getBaseMethodURL('getFile'),
+			array('file_id' => $file_id)
+		);
 
-		$result = $this->HTTPRequester->sendGETRequest($getFileURL, $args);
+		$result = $this->HTTPRequester->request($requestProperties);
 
-		if($result['code'] >= 400){
+		if($result->getCode() >= 400){
 			$this->tracer->logError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				"getFile call has failed with code=[$result[code]]. Response text:".PHP_EOL.
-				$result['value']
+				'getFile call has failed. Response:'.PHP_EOL.
+				$result
 			);
 
 			throw new \RuntimeException('Failed to get file info');
 		}
 
-		$File = json_decode($result['value']);
+		$File = json_decode($result->getBody());
 		if($File === false){
 			$this->tracer->logError(
 				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse Telegram getFile response. Raw text: '$result[value]'"
+				"Unable to parse Telegram getFile response:".PHP_EOL.
+				$result
 			);
 
 			throw new \RuntimeException('Failed to parse getFile response');
@@ -232,20 +247,27 @@ class TelegramAPI{
 		assert(isset($File->result->file_path));
 		
 		$downloadURL = $this->getDownloadFileURL($File->result->file_path);
-		$result =$this->HTTPRequester->sendGETRequest($downloadURL);
 
-		if($result['code'] >= 400){
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Get,
+			\HTTPRequester\ContentType::TextHTML,
+			$downloadURL
+		);
+
+		$result = $this->HTTPRequester->request($requestProperties);
+
+		if($result->getCode() >= 400){
 			$this->tracer->logError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				"File download has failed with code=[$result[code]]. File id=[$file_id]".PHP_EOL.
-				"Download URL=[$downloadURL], response:".PHP_EOL.
-				$result['value']
+				"File download has failed. File id=[$file_id]".PHP_EOL.
+				$payload.PHP_EOL.
+				$result
 			);
 
 			throw new \RuntimeException('Failed to download file');
 		}
 
-		return $result['value'];
+		return $result->getBody();
 	}
 }
 

@@ -84,7 +84,7 @@ class Webhook{
 
 		$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
 		try{
-			$HTTPrequesterFactory = new \HTTPRequesterFactory($config);
+			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
 		}
@@ -181,7 +181,7 @@ class Webhook{
 
 	private static function validateFields($update){
 		return
-			
+			isset($update)						&&
 			isset($update->message)				&&
 			isset($update->message->from)		&&
 			isset($update->message->from->id)	&&

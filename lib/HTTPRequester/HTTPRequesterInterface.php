@@ -1,8 +1,12 @@
 <?php
 
-class HTTPException extends Exception{}
+namespace HTTPRequester;
+
+require_once(__DIR__.'/HTTPRequestProperties.php');
+
+class HTTPException extends \Exception{}
 
 interface HTTPRequesterInterface{
-	public function sendJSONRequest($destination, $content_json);
-	public function sendGETRequest($destination, array $args = null);
+	public function request(HTTPRequestProperties $requestProperties);
+	public function multiRequest(array $requestsProperties);
 }

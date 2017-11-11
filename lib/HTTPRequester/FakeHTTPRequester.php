@@ -1,4 +1,7 @@
 <?php
+
+namespace HTTPRequester;
+
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../Tracer/Tracer.php');
 
@@ -82,13 +85,21 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $this->randomResponse();
 	}
 
-	public function sendGETRequest($destination, array $args = null){
+	public function sendGETRequest($destination, $payload = null){
 		assert(is_string($destination));
 
 		$request = $destination;
-		if($args !== null){
+		if($payload !== null){
 			assert(strpos($destination, '?') === false);
-			$request .= '?'.http_build_query($args);
+			if(is_array($payload)){
+				$request .= '?'.http_build_query($payload);
+			}
+			elseif(is_string($payload)){
+				$request .= '?'.$payload;
+			}
+			else{
+				throw new \LogicException('Incorrect payload type: '.gettype($payload));
+			}
 		}
 
 		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $request);
@@ -96,4 +107,8 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $this->randomResponse();
 	}
 
+	public function sendPOSTRequest($URL, $payload = null){}
+
+	public function request(HTTPRequestProperties $requestProperties){}
+	public function multiRequest(array $requestsProperties){}
 }		
