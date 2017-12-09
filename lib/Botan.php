@@ -57,7 +57,7 @@ class Botan {
 		);
 		$result = $this->request($url, $message);
 		if ($result['error']) {
-			throw new Exception('Error Processing Request', 1);
+			throw new Exception('Error Processing Request: '.$result['error'], 1);
 		}
 		
 	}
