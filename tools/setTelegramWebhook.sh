@@ -98,7 +98,23 @@ if [ "$yn" != "y" ] && [ "$yn" != "Y" ]; then
 	exit
 fi
 
-# Sending request
+# Deleting old Webhook (if exists)
+
+echo "Deleting old Webhook (if exists)..."
+
+http_code=$(\
+	curl												\
+	--write-out %{http_code}							\
+	--silent											\
+	--output /tmp/deleteWebhook.json					\
+	"https://api.telegram.org/bot$token/deleteWebhook"	\
+)
+
+cat /tmp/deleteWebhook.json
+echo ""
+
+
+echo "Creating new Webhook"
 
 http_code=$(\
 	curl											\
