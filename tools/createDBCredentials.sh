@@ -88,6 +88,11 @@ declare -a roles=(
 	Parser
 )
 
+read -p "DB Hostname [localhost]: " -e DBHostname
+if [ -z "$DBHostname" ]; then
+	DBHostname='localhost'
+fi
+
 read -p "DB Name: " -e DBName
 
 for role in "${roles[@]}"; do
