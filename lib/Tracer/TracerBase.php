@@ -168,14 +168,19 @@ abstract class TracerBase{
 		$this->log('DEBUG', $tag, $file, $line, $message);
 	}
 
-	public function logException($tag, $file, $line, \Throwable $exception){
-		$description = sprintf(
-			'%s, raised from %s:%s, reason: "%s"',
-			get_class($exception),
-			basename($exception->getFile()),
-			$exception->getLine(),
-			$exception->getMessage()
-		);
+	public function logException($tag, $file, $line, \Throwable $exception = null){
+		if($exception !== null){
+			$description = sprintf(
+				'%s, raised from %s:%s, reason: "%s"',
+				get_class($exception),
+				basename($exception->getFile()),
+				$exception->getLine(),
+				$exception->getMessage()
+			);
+		}
+		else{
+			$description = 'NULL EXCEPTION WAS PASSED TO logException';
+		}
 
 		$this->logError($tag, $file, $line, $description);
 	}
