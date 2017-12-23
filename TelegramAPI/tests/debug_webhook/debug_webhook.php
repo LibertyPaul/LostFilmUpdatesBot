@@ -2,6 +2,9 @@
 
 namespace TelegramAPI;
 
+ini_set('display_errors', 'On');
+error_reporting(E_ALL);
+
 require_once(__DIR__.'/../../../lib/ErrorHandler.php');
 require_once(__DIR__.'/../../../lib/ExceptionHandler.php');
 
@@ -14,6 +17,7 @@ require_once(__DIR__.'/../../../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/input_debug_webhook.php');
 
 $tracer = new \Tracer('DebugWebhook');
+$tracer->logEvent('[DEBUG]', __FILE__, __LINE__, 'Debug Webhook was started');
 
 $updateJSON = $update_json;
 assert($updateJSON !== false);
