@@ -10,8 +10,9 @@ if [ "$?" != "0" ]; then
 fi
 
 function createCredential(){
-	local role="$1"
+	local DBHost="$1"
 	local DBName="$2"
+	local role="$3"
 
 	case "$role" in
 		"Owner")	;;
@@ -55,6 +56,7 @@ function createCredential(){
 	echo "database=\"$DBName\""		>> "$fName"
 	echo "user=\"$DBUser\""			>> "$fName"
 	echo "password=\"$DBPassword\""	>> "$fName"
+	echo "host=\"$DBHost\""			>> "$fName"
 	
 	if [ "$?" == "0" ]; then
 		echo_green "$role credential saved in [$fName]"
@@ -96,7 +98,7 @@ fi
 read -p "DB Name: " -e DBName
 
 for role in "${roles[@]}"; do
-	createCredential "$role" "$DBName"
+	createCredential "$DBHost" "$DBName" "$role"
 	if [ "$?" != "0" ]; then
 		echo_red "createCredential $role has failed."
 	fi
