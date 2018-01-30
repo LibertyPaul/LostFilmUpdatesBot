@@ -25,16 +25,18 @@ class NotificationGenerator{
 		");
 		#TODO: do common way for different APIs
 		
-		$this->getUserCountQuery = $pdo->prepare('
+		$this->getUserCountQuery = $pdo->prepare("
 			SELECT COUNT(*) AS count
 			FROM `users`
-		');
+			WHERE `deleted` = 'N'
+		");
 
-		$this->userExistsQuery = $pdo->prepare('
+		$this->userExistsQuery = $pdo->prepare("
 			SELECT COUNT(*) AS count
 			FROM `users`
 			WHERE `id` = :user_id
-		');
+			AND `deleted` = 'N'
+		");
 	}
 	
 	private static function generateNewSeriesNotificationText(
