@@ -63,7 +63,7 @@ class Botan {
 	}
 
 	protected function request($url, $body) {
-		$requestProperties = new \HTTPRequester\HTTPRequesterProperties(
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
 			\HTTPRequester\RequestType::Get,
 			\HTTPRequester\ContentType::JSON,
 			$url,

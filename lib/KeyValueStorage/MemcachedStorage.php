@@ -21,7 +21,7 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 	}
 
 	private function createGlobalKey($localKey){
-		assert(is_string($localKey));
+		assert(empty(strval($localKey)) === false);
 		return sprintf('%s/%s/%s', self::DOMAIN, $this->keyPrefix, $localKey);
 	}
 
@@ -31,9 +31,9 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 
 		$resultCode = $this->memcached->getResultCode();
 		switch($resultCode){
-			case Memcached::RES_SUCCESS:
+			case \Memcached::RES_SUCCESS:
 				return $value;
-			case Memcached::RES_NOTFOUND:
+			case \Memcached::RES_NOTFOUND:
 				return null;
 			default:
 				throw new \RuntimeException(
@@ -47,7 +47,7 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 		$this->memcached->set($globalKey, $value, $this->expirationSeconds);
 	
 		$resultCode = $this->memcached->getResultCode();
-		if($resultCode !== Memcached::RES_SUCCESS){
+		if($resultCode !== \Memcached::RES_SUCCESS){
 			throw new \RuntimeException("Memcached::set error: [$resultCode]");
 		}
 	}
@@ -58,7 +58,7 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 		$this->memcached->increment($globalKey);
 
 		$resultCode = $this->memcached->getResultCode();
-		if($resultCode !== Memcached::RES_SUCCESS){
+		if($resultCode !== \Memcached::RES_SUCCESS){
 			throw new \RuntimeException("Memcached::increment error: [$resultCode]");
 		}
 	}
@@ -69,8 +69,8 @@ class MemcachedStorage implements \KeyValueStorageInterface{
 
 		$resultCode = $this->memcached->getResultCode();
 		switch($resultCode){
-			case Memcached::RES_SUCCESS:
-			case Memcached::RES_NOTFOUND:
+			case \Memcached::RES_SUCCESS:
+			case \Memcached::RES_NOTFOUND:
 				return;
 			default:
 				throw new \RuntimeException("Memcached::delete error: [$resultCode]");
