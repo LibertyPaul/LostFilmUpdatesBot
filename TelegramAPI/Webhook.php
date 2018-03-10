@@ -225,8 +225,9 @@ class Webhook{
 		$this->logUpdate($update);
 
 		if(
-			$this->attachmentForwardingChat !== null &&
-			self::shouldBeForwarded($update->message) &&
+			$this->attachmentForwardingChat !== null	&&
+			isset($update->message)						&& # HotFix
+			self::shouldBeForwarded($update->message)	&&
 			$this->telegramAPI !== null
 		){
 			$this->tracer->logDebug(
