@@ -72,6 +72,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		while($message !== null){
 			$this->outgoingMessagesTracer->logEvent(
 				'[o]', __FILE__, __LINE__,
+				"Message to user_id=[$user_id], telegram_id=[$telegram_id]".
 				PHP_EOL.$message
 			);
 
