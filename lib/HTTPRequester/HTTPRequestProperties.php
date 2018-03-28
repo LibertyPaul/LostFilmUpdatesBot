@@ -18,8 +18,15 @@ class HTTPRequestProperties{
 	private $contentType;
 	private $URL;
 	private $payload;
+	private $headers;
 
-	public function __construct($requestType, $contentType, $URL, $payload = ''){
+	public function __construct(
+		$requestType,
+		$contentType,
+		$URL,
+		$payload = '',
+		array $headers = array()
+	){
 		if(
 			$requestType !== RequestType::Get &&
 			$requestType !== RequestType::Post
@@ -47,6 +54,15 @@ class HTTPRequestProperties{
 		$this->contentType = $contentType;
 		$this->URL = $URL;
 		$this->payload = $payload;
+		$this->headers = array();
+		
+		foreach($headers as $header){	
+			if(is_string($header) === false){
+				throw new \LogicException('Incorrect Header Type: '.gettype($header));
+			}
+
+			$this->headers[] = $header;
+		}
 	}
 
 	public function getRequestType(){
@@ -63,6 +79,10 @@ class HTTPRequestProperties{
 
 	public function getPayload(){
 		return $this->payload;
+	}
+
+	public function getHeaders(){
+		return $this->headers;
 	}
 
 	public function __toString(){
@@ -106,10 +126,12 @@ class HTTPRequestProperties{
 		}
 
 		$result  = '/************[HTTP Request Properties ]************/'	.PHP_EOL;
-		$result .= sprintf('URL:          [%s]', $this->getURL())			.PHP_EOL;
-		$result .= sprintf('Request Type: [%s]', $requestTypeStr)			.PHP_EOL;
-		$result .= sprintf('Content Type: [%s]', $contentTypeStr)			.PHP_EOL;
-		$result .= sprintf('Payload:      [%s]', $payloadStr)				.PHP_EOL;
+		$result .= sprintf('URL:          [%s]'	, $this->getURL())			.PHP_EOL;
+		$result .= sprintf('Request Type: [%s]'	, $requestTypeStr)			.PHP_EOL;
+		$result .= sprintf('Content Type: [%s]'	, $contentTypeStr)			.PHP_EOL;
+		$result .= sprintf('Payload:      [%s]'	, $payloadStr)				.PHP_EOL;
+		$result .= sprintf('Headers (%d):'		, count($this->headers))	.PHP_EOL;
+		$result .= join(PHP_EOL, $this->headers)							.PHP_EOL;
 		$result .= '/**************************************************/';
 
 		return $result;
