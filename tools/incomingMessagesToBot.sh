@@ -14,11 +14,12 @@ if [ ! -r $incomingMessages ]; then
 fi
 
 readonly selfPath=$(dirname $0)
-readonly URL=$("$selfPath/getConfigValue.sh" 'TelegramAPI' 'Webhook URL')
+readonly address=$("$selfPath/getConfigValue.sh" 'TelegramAPI' 'Webhook URL')
 readonly password=$("$selfPath/getConfigValue.sh" 'TelegramAPI' 'Webhook Password')
 
-if [ -z $URL ]; then
-	echo "ERROR: URL is not set. Aborting."
+
+if [ -z $address ]; then
+	echo "ERROR: [TelegramAPI|Webhook URL] is not set. Aborting."
 	exit 1
 fi
 
@@ -37,18 +38,22 @@ if [ -z $password ]; then
 	esac
 fi
 
+readonly URL="$address?password=$password"
+
 current=''
 i=0
+
+readonly messagesTmpDir=$(mktemp -d)
+readonly batchSize=8
+
+printf "Extracting messages to [$messagesTmpDir]... "
 
 cat "$incomingMessages" | while read line; do
 	if [[ "$line" =~ EVENT* ]]; then
 		if [ -n "$current" ]; then
-			echo "$i"
 			i=$(($i+1))
-			path=$(mktemp)
-			echo $current > $path
-			"$selfPath/messageToBot.sh" $URL $password $path Y
-			rm $path
+			messagePath="$messagesTmpDir/$i.txt"
+			echo "$current" > "$messagePath"
 			current=''
 		fi
 		continue
@@ -57,4 +62,14 @@ cat "$incomingMessages" | while read line; do
 	current="$current$line";
 done;
 
-sem --semaphorename=$$ --wait
+printf "Done. %d messages extracted.\n" $i
+
+echo "Sending all the messages... "
+date
+
+find "$messagesTmpDir" -type f | xargs -n 1 -P 32 "$selfPath/messageToBot.sh" $URL
+
+printf "Done."
+date
+
+rm -r "$messagesTmpDir"
