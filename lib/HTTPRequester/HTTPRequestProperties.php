@@ -18,14 +18,14 @@ class HTTPRequestProperties{
 	private $contentType;
 	private $URL;
 	private $payload;
-	private $headers;
+	private $customHeaders;
 
 	public function __construct(
 		$requestType,
 		$contentType,
 		$URL,
 		$payload = '',
-		array $headers = array()
+		array $customHeaders = array()
 	){
 		if(
 			$requestType !== RequestType::Get &&
@@ -54,14 +54,14 @@ class HTTPRequestProperties{
 		$this->contentType = $contentType;
 		$this->URL = $URL;
 		$this->payload = $payload;
-		$this->headers = array();
+		$this->customHeaders = array();
 		
-		foreach($headers as $header){	
+		foreach($customHeaders as $header){	
 			if(is_string($header) === false){
 				throw new \LogicException('Incorrect Header Type: '.gettype($header));
 			}
 
-			$this->headers[] = $header;
+			$this->customHeaders[] = $header;
 		}
 	}
 
@@ -81,8 +81,8 @@ class HTTPRequestProperties{
 		return $this->payload;
 	}
 
-	public function getHeaders(){
-		return $this->headers;
+	public function getCustomHeaders(){
+		return $this->customHeaders;
 	}
 
 	public function __toString(){
@@ -125,13 +125,13 @@ class HTTPRequestProperties{
 			$payloadStr = print_r($this->getPayload(), true);
 		}
 
-		$result  = '/************[HTTP Request Properties ]************/'	.PHP_EOL;
-		$result .= sprintf('URL:          [%s]'	, $this->getURL())			.PHP_EOL;
-		$result .= sprintf('Request Type: [%s]'	, $requestTypeStr)			.PHP_EOL;
-		$result .= sprintf('Content Type: [%s]'	, $contentTypeStr)			.PHP_EOL;
-		$result .= sprintf('Payload:      [%s]'	, $payloadStr)				.PHP_EOL;
-		$result .= sprintf('Headers (%d):'		, count($this->headers))	.PHP_EOL;
-		$result .= join(PHP_EOL, $this->headers)							.PHP_EOL;
+		$result  = '/************[HTTP Request Properties ]************/'			.PHP_EOL;
+		$result .= sprintf('URL:          [%s]'		, $this->getURL())				.PHP_EOL;
+		$result .= sprintf('Request Type: [%s]'		, $requestTypeStr)				.PHP_EOL;
+		$result .= sprintf('Content Type: [%s]'		, $contentTypeStr)				.PHP_EOL;
+		$result .= sprintf('Payload:      [%s]'		, $payloadStr)					.PHP_EOL;
+		$result .= sprintf('Custom Headers (%d):'	, count($this->customHeaders))	.PHP_EOL;
+		$result .= join(PHP_EOL, $this->customHeaders)								.PHP_EOL;
 		$result .= '/**************************************************/';
 
 		return $result;

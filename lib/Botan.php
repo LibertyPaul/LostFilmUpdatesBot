@@ -3,6 +3,7 @@
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/Config.php');
 require_once(__DIR__.'/HTTPRequester/HTTPRequesterFactory.php');
+require_once(__DIR__.'/HTTPRequester/HTTPRequestProperties.php');
 
 /**
  * Class Botan

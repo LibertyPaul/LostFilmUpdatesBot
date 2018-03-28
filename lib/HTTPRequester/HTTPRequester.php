@@ -141,7 +141,10 @@ class HTTPRequester implements HTTPRequesterInterface{
 				);
 		}
 
-		assert(curl_setopt($curl, \CURLOPT_HTTPHEADER, array($contentTypeHeader)));
+		$headers = $requestProperties->getCustomHeaders();
+		$headers[] = $contentTypeHeader;
+
+		assert(curl_setopt($curl, \CURLOPT_HTTPHEADER, $headers));
 	}
 
 	public function request(HTTPRequestProperties $requestProperties){
