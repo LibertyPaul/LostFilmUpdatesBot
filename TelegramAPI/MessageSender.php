@@ -20,7 +20,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		$this->telegramAPI = $telegramAPI;
 
 		$this->tracer = new \Tracer(__CLASS__);
-		$this->outgoingMessagesTracer = new \Tracer('OutgoingMessages');
+		$this->outgoingMessagesTracer = new \Tracer(__NAMESPACE__.'.OutgoingMessages');
 
 		$pdo = \BotPDO::getInstance();
 
