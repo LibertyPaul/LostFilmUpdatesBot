@@ -50,11 +50,18 @@ i=0
 readonly messagesTmpDir=$(mktemp -d)
 readonly batchSize=8
 
+declare -a messageIdPresence=()
+
 printf "Extracting messages to [$messagesTmpDir]... "
 
 cat "$incomingMessages" | while read line; do
 	if [[ "$line" =~ EVENT* ]]; then
 		if [ -n "$current" ]; then
+			update_id="$(echo "$current" | grep -oP '"update_id": \K(\d+)(?=,)')"
+			if [ ! -z ${messageIdPresence[$update_id]} ]; then
+				continue;
+			fi
+			messageIdPresence[$update_id]=1
 			i=$(($i+1))
 			messagePath="$messagesTmpDir/$i.txt"
 			echo "$current" > "$messagePath"
