@@ -1,63 +1,21 @@
 <?php
 
+require_once(__DIR__.'/TracerLevel.php');
 require_once(__DIR__.'/TracerConfig.php');
 
-abstract class TracerLevel{
-	const Critical		= 0;
-	const Error			= 1;
-	const Warning		= 4;
-	const Notice		= 6;
-	const Event			= 8;
-	const Debug			= 9;
 
-	private static $levelMap = array(
-		'CRITICAL'	=> self::Critical,
-		'ERROR'		=> self::Error,
-		'WARNING'	=> self::Warning,
-		'NOTICE'	=> self::Notice,
-		'EVENT'		=> self::Event,
-		'DEBUG'		=> self::Debug
-	);
-
-//	private static $codeMap = array_flip(self::$levelMap);
-	private static $codeMap = array(
-		self::Critical	=> 'CRITICAL',
-		self::Error		=> 'ERROR',
-		self::Warning	=> 'WARNING',
-		self::Notice	=> 'NOTICE',
-		self::Event		=> 'EVENT',
-		self::Debug		=> 'DEBUG'
-	);
-
-	public static function logEverythingLevel(){
-		return self::Event;
-	}
-
-	public static function getLevelByName($name){
-		if(array_key_exists($name, self::$levelMap)){
-			return self::$levelMap[$name];
-		}
-		else{
-			throw new \OutOfBoundsException("Invalid trace level name: '$name'");
-		}
-	}
-
-	public static function getNameByLevel($level){
-		if(array_key_exists($level, self::$codeMap)){
-			return self::$codeMap[$level];
-		}
-		else{
-			throw new \OutOfBoundsException("Invalid trace level: '$level'");
-		}
-	}
-}
 
 abstract class TracerBase{
+	const CONFIG_INI_PATH = __DIR__.'/TracerConfig.ini';
+	private $config;
 	protected $traceName;
-	private $maxLevel;
 	private $secondTracer;
 
-	protected function __construct($traceName, TracerBase $secondTracer = null){
+	protected function __construct(
+		$traceName,
+		TracerBase $secondTracer = null,
+		TracerConfig $config = null
+	){
 		assert(is_string($traceName));
 		if($traceName[0] === '-'){
 			$traceName = substr($traceName, 1);
@@ -67,26 +25,21 @@ abstract class TracerBase{
 
 		$this->traceName = $traceName;
 		$this->secondTracer = $secondTracer;
-			
-		if(defined('TRACER_LEVEL')){
-			$this->maxLevel = TracerLevel::getLevelByName(TRACER_LEVEL);
+		if($config === null){
+			$this->config = new TracerConfig(self::CONFIG_INI_PATH, $traceName);
 		}
 		else{
-			$this->maxLevel = TracerLevel::logEverythingLevel();
-			$this->logWarning(
-				'[TRACER]', __FILE__, __LINE__,
-				'TRACER_LEVEL is not set. Logging everything.'
-			);
+			$this->config = $config;
 		}
-
-		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			
+		if($this->config->getLogStartedFinished()){
 			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
 		}
 
 	}
 
 	public function __destruct(){
-		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+		if($this->config->getLogStartedFinished()){
 			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
 		}
 	}
@@ -122,10 +75,10 @@ abstract class TracerBase{
 			$message = 'No message provided.';
 		}
 
-		if($messageLevel <= $this->maxLevel){
+		if($messageLevel <= $this->config->getLoggingLevel()){
 			$record = self::compileRecord($level, $tag, $file, $line, $message);
 			
-			if(defined('TRACER_STANDALONE_SIZE') && strlen($record) > TRACER_STANDALONE_SIZE){
+			if(strlen($record) > $this->config->getStandaloneIfLargerThan()){
 				try{
 					$this->storeStandalone($record);
 				}
