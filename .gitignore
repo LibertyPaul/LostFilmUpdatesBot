@@ -4,6 +4,6 @@ TelegramAPI/tests/debug_webhook/update.json
 DBCredentials/*.ini
 DBCredentials/*
 tools/data/
-lib/Tracer/TracerConfig.php
+lib/Tracer/TracerConfig.ini
 
 *.swp
