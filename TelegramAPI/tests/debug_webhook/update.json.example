@@ -1,0 +1,19 @@
+{
+    "update_id": 100,
+    "message": {
+        "message_id": 10,
+        "from": {
+            "id": 42,
+            "first_name": "User 42",
+            "username": "User 42"
+        },
+        "chat": {
+            "id": 42,
+            "first_name": "User 42",
+            "username": "User 42"
+            "type": "private"
+        },
+        "date": 0,
+        "text": "/mute"
+    }
+}

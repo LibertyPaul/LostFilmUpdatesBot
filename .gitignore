@@ -7,4 +7,3 @@ tools/data/
 lib/Tracer/TracerConfig.php
 
 *.swp
-*.sql_t.sql
