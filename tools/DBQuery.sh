@@ -1,11 +1,13 @@
 #!/bin/bash
 
-if [ -z "$1" ] || [ -z "$2" ]; then
-	echo "Usage: $0 <DB Credentials Path> <query>"
+if [ $# -lt 2 ]; then
+	echo "Usage: $0 <Bot|Parser|Owner> <query>"
 	exit 1
 fi
 
-readonly DBCredentials="$1"
+readonly selfDir="$(dirname "$0")"
+readonly role="$1"
+readonly DBCredentials="$selfDir/../DBCredentials/$role.ini"
 readonly query="$2"
 
 mysql									\
