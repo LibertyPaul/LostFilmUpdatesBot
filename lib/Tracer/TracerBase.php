@@ -7,7 +7,7 @@ require_once(__DIR__.'/TracerConfig.php');
 
 abstract class TracerBase{
 	const CONFIG_INI_PATH = __DIR__.'/TracerConfig.ini';
-	private $config;
+	protected $config;
 	protected $traceName;
 	private $secondTracer;
 
@@ -47,21 +47,23 @@ abstract class TracerBase{
 	abstract protected function write($text);
 	abstract protected function storeStandalone($text);
 
+	private static function getDateMicro(){
+		# PHP can't into microseconds. Let's help him.
+		sscanf(microtime(), '0.%d %d', $microseconds, $seconds);
+		$microseconds /= 100;
+		return sprintf('%s.%06d', date('Y.m.d H:i:s'), $microseconds);
+	}		
+
 	private static function compileRecord($level, $tag, $file, $line, $message){
 		assert(is_string($tag));
 		assert(is_string($file));
 		assert(is_int($line));
 		
-		# PHP can't into microseconds. Let's help him.
-		sscanf(microtime(), '0.%d %d', $microseconds, $seconds);
-		$microseconds /= 100;
-		$date = sprintf('%s.%06d', date('Y.m.d H:i:s'), $microseconds);
-
 		return sprintf(
 			'%s %s %s %s:%s %s',
 			$level,
 			$tag,
-			$date,
+			self::getDateMicro(),
 			basename($file),
 			$line,
 			$message
@@ -69,13 +71,12 @@ abstract class TracerBase{
 	}
 
 	private function log($level, $tag, $file, $line, $message){
-		$messageLevel = TracerLevel::getLevelByName($level);
-
 		if(empty($message)){
 			$message = 'No message provided.';
 		}
 
-		if($messageLevel <= $this->config->getLoggingLevel()){
+		if($level <= $this->config->getLoggingLevel()){
+			$messageLevel = TracerLevel::getNameByLevel($level);
 			$record = self::compileRecord($level, $tag, $file, $line, $message);
 			
 			if(strlen($record) > $this->config->getStandaloneIfLargerThan()){
@@ -98,27 +99,27 @@ abstract class TracerBase{
 	}
 
 	public function logCritical($tag, $file, $line, $message = null){
-		$this->log('CRITICAL', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Critical, $tag, $file, $line, $message);
 	}
 
 	public function logError($tag, $file, $line, $message = null){
-		$this->log('ERROR', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Error, $tag, $file, $line, $message);
 	}
 
 	public function logWarning($tag, $file, $line, $message = null){
-		$this->log('WARNING', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Warning, $tag, $file, $line, $message);
 	}
 
 	public function logEvent($tag, $file, $line, $message = null){
-		$this->log('EVENT', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Notice, $tag, $file, $line, $message);
 	}
 
 	public function logNotice($tag, $file, $line, $message = null){
-		$this->log('NOTICE', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Event, $tag, $file, $line, $message);
 	}
 
 	public function logDebug($tag, $file, $line, $message = null){
-		$this->log('DEBUG', $tag, $file, $line, $message);
+		$this->log(TracerLevel::Debug, $tag, $file, $line, $message);
 	}
 
 	public function logException($tag, $file, $line, \Throwable $exception = null){
@@ -143,7 +144,7 @@ abstract class TracerBase{
 			$message = 'No message provided.';
 		}
 
-		$record = self::compileRecord('CRITICAL', $tag, $file, $line, $message);
+		$record = self::compileRecord(TracerLevel::Critical, $tag, $file, $line, $message);
 		assert(syslog(LOG_CRIT, $record));
 	}
 }

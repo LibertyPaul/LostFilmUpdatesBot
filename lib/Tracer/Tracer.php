@@ -96,10 +96,8 @@ class Tracer extends TracerBase{
 		assert(fwrite($this->hFile, $text));
 		assert(flock($this->hFile, LOCK_UN));
 
-		if(defined('CLI_STDOUT_TRACE') && CLI_STDOUT_TRACE === true){
-			if(strpos(php_sapi_name(), 'cli') !== false){
-				echo $text;
-			}
+		if($this->config->getCLIStdOutTrace() && strpos(php_sapi_name(), 'cli') !== false){
+			echo $text;
 		}
 
 	}

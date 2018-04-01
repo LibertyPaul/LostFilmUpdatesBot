@@ -6,17 +6,30 @@ class TracerConfig{
 	private $standaloneIfLargerThan = 5000;
 	private $loggingLevel = TracerLevel::Debug;
 	private $logStartedFinished = false;
+	private $CLIStdOutTrace = false;
 
 	public function __construct($configIniPath, $traceName){
 		if(file_exists($configIniPath)){
 			$configIni = $this->parseIniFile($configIniPath);
-			$this->fetchSectionValues($configIni, 'Common');
-			$this->fetchSectionValues($configIni, $traceName);
+
+			if(
+				isset($configIni['Default']) &&
+				is_array($configIni['Default'])
+			){
+				$this->fetchSectionValues($configIni['Default']);
+			}
+
+			if(
+				isset($configIni["Custom.$traceName"]) &&
+				is_array($configIni["Custom.$traceName"])
+			){
+				$this->fetchSectionValues($configIni["Custom.$traceName"]);
+			}
 		}
 	}
 
 	private function parseIniFile($configIniPath){
-		$data = parse_ini_string($configIniPath, true, INI_SCANNER_RAW);
+		$data = parse_ini_file($configIniPath, true, INI_SCANNER_RAW);
 		if($data === false){	
 			throw new \RuntimeException("Unable to parse ini file [$configIniPath]");
 		}
@@ -24,20 +37,12 @@ class TracerConfig{
 		return $data;
 	}		
 
-	private function fetchSectionValues(array $configIni, $section = 'Common'){
-		if(isset($configIni[$section]) === false){
-			return;
-		}
-
-		if(is_array($configIni[$section]) === false){
-			throw new \RuntimeException("[$section] is not a section");
-		}
-
-		if(isset($configIni[$section]['StandaloneIfLargerThan'])){
-			$standaloneIfLargerThan = $configIni[$section]['StandaloneIfLargerThan'];
+	private function fetchSectionValues(array $configIniSection){
+		if(isset($configIniSection['StandaloneIfLargerThan'])){
+			$standaloneIfLargerThan = $configIniSection['StandaloneIfLargerThan'];
 			if(is_numeric($standaloneIfLargerThan) === false){
 				throw new \RuntimeException(
-					"Incorrect [$section][StandaloneIfLargerThan] type: ".
+					"Incorrect [StandaloneIfLargerThan] type: ".
 					gettype($standaloneIfLargerThan)
 				);
 			}
@@ -45,20 +50,20 @@ class TracerConfig{
 			$this->standaloneIfLargerThan = intval($standaloneIfLargerThan);
 		}
 
-		if(isset($configIni[$section]['LoggingLevel'])){
-			$loggingLevel = $configIni[$section]['LoggingLevel'];
+		if(isset($configIniSection['LoggingLevel'])){
+			$loggingLevel = $configIniSection['LoggingLevel'];
 			if(is_string($loggingLevel) === false){
 				throw new \RuntimeException(
-					"Incorrect [$section][LoggingLevel] type: ".
+					"Incorrect [LoggingLevel] type: ".
 					gettype($loggingLevel)
 				);
 			}
 
-			$this->loggingLevel = \TraceLevel::getLevelByName($loggingLevel);
+			$this->loggingLevel = \TracerLevel::getLevelByName($loggingLevel);
 		}
 
-		if(isset($configIni[$section]['LogStartedFinished'])){
-			$logStartedFinished = $configIni[$section]['LogStartedFinished'];
+		if(isset($configIniSection['LogStartedFinished'])){
+			$logStartedFinished = $configIniSection['LogStartedFinished'];
 			switch($logStartedFinished){
 				case 'true':
 					$this->logStartedFinished = true;
@@ -70,7 +75,24 @@ class TracerConfig{
 
 				default:
 					throw new \RuntimeException(
-						"Incorrect [$section][LogStartedFinished] value: [$logStartedFinished]"
+						"Incorrect [LogStartedFinished] value: [$logStartedFinished]"
+					);
+			}
+		}
+
+		if(isset($configIniSection['CLIStdOutTrace'])){
+			switch($configIniSection['CLIStdOutTrace']){
+				case 'true':
+					$this->CLIStdOutTrace = true;
+					break;
+
+				case 'false':
+					$this->CLIStdOutTrace = false;
+					break;
+
+				default:
+					throw new \RuntimeException(
+						"Incorrect [CLIStdOutTrace] value: [$CLIStdOutTrace]"
 					);
 			}
 		}
@@ -88,16 +110,22 @@ class TracerConfig{
 		return $this->logStartedFinished;
 	}
 
+	public function getCLIStdOutTrace(){
+		return $this->CLIStdOutTrace;
+	}
+
 	public function __toString(){
 		$standaloneIfLargerThanStr = $this->standaloneIfLargerThan;
 		$loggingLevelStr = \TracerLevel::getNameByLevel($this->loggingLevel);
 		$logStartedFinishedStr = $this->logStartedFinished ? 'Y' : 'N';
+		$CLIStdOutTraceStr = $this->CLIStdOutTrace ? 'Y' : 'N';
 
-		$res  = '|----------[Tracer Config]----------|'						.PHP_EOL;
+		$res  = '|------------[Tracer Config]------------|'					.PHP_EOL;
 		$res .= "Standalone If Larger Than:  [$standaloneIfLargerThanStr]"	.PHP_EOL;
 		$res .= "Logging Level:              [$loggingLevelStr]"			.PHP_EOL;
 		$res .= "LogStarted Finished:        [$logStartedFinishedStr]"		.PHP_EOL;
-		$res .= '|-----------------------------------|';
+		$res .= "CLI StdOut Trace:           [$CLIStdOutTraceStr]"			.PHP_EOL;
+		$res .= '|---------------------------------------|';
 
 		return $res;
 	}

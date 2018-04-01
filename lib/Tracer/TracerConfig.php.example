@@ -1,4 +1,8 @@
-[Tracer]
-StandaloneIfLargerThan=5000
+[Default]
+StandaloneIfLargerThan=500000
 LoggingLevel=DEBUG
-LogStartedFinished=N
+LogStartedFinished=false
+CLIStdOutTrace=true
+
+[Custom.Config]
+LoggingLevel=EVENT
