@@ -1,15 +1,14 @@
 #!/bin/bash
 
-
-readonly incomingMessages=$1
-
-if [ -z "$incomingMessages" ]; then
-	echo "Usage: $0 <Incoming Messages Trace Path>"
+if [ $# -lt 1 ]; then
+	echo "Usage: $0 <Incoming Messages Directory>"
 	exit 1
 fi
 
-if [ ! -r $incomingMessages ]; then
-	echo "Unable to access file $incomingMessages"
+readonly incomingMessagesDir="$1"
+
+if [ ! -d "$incomingMessagesDir" ]; then
+	echo "Unable to access directory $incomingMessagesDir"
 	exit 1
 fi
 
@@ -31,52 +30,13 @@ if [ -z $password ]; then
 	fi
 
 	case $yn in
-		Yy) ;;
+		Yy) URL="$address";;
 		nN) exit 0;;
 		*) 	echo 'Unknown input. Aborting'
 			exit 1;;
 	esac
+else
+	URL="$address?password=$password"
 fi
 
-readonly URL="$address?password=$password"
-
-current=''
-i=0
-
-readonly messagesTmpDir=$(mktemp -d)
-readonly batchSize=8
-
-declare -a messageIdPresence=()
-
-printf "Extracting messages to [$messagesTmpDir]... "
-
-cat "$incomingMessages" | while read line; do
-	if [[ "$line" =~ EVENT* ]]; then
-		if [ -n "$current" ]; then
-			update_id="$(echo "$current" | grep -oP '"update_id": \K(\d+)(?=,)')"
-			if [ ! -z ${messageIdPresence[$update_id]} ]; then
-				continue;
-			fi
-			messageIdPresence[$update_id]=1
-			i=$(($i+1))
-			messagePath="$messagesTmpDir/$i.txt"
-			echo "$current" > "$messagePath"
-			current=''
-		fi
-		continue
-	fi
-
-	current="$current$line";
-done;
-
-printf "Done. %d messages extracted.\n" $i
-
-echo "Sending all the messages... "
-date
-
-find "$messagesTmpDir" -type f | xargs -n 1 -P 32 "$selfPath/messageToBot.sh" $URL
-
-printf "Done."
-date
-
-rm -r "$messagesTmpDir"
+find "$incomingMessagesDir" -type f | xargs -n 1 -P 32 "$selfPath/messageToBot.sh" "$URL"
