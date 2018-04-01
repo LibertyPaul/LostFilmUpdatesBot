@@ -39,49 +39,4 @@ else
 	URL="$address?password=$password"
 fi
 
-<<<<<<< HEAD
 find "$incomingMessagesDir" -type f | xargs -n 1 -P 32 "$selfDir/messageToBot.sh" "$URL"
-=======
-readonly URL="$address?password=$password"
-
-current=''
-i=0
-
-readonly messagesTmpDir=$(mktemp -d)
-readonly batchSize=8
-
-declare -a messageIdPresence=()
-
-printf "Extracting messages to [$messagesTmpDir]... "
-
-cat "$incomingMessages" | while read line; do
-	if [[ "$line" =~ EVENT* ]]; then
-		if [ -n "$current" ]; then
-			update_id="$(echo "$current" | grep -oP '"update_id": \K(\d+)(?=,)')"
-			if [ ! -z ${messageIdPresence[$update_id]} ]; then
-				continue;
-			fi
-			messageIdPresence[$update_id]=1
-			i=$(($i+1))
-			messagePath="$messagesTmpDir/$i.txt"
-			echo "$current" > "$messagePath"
-			current=''
-		fi
-		continue
-	fi
-
-	current="$current$line";
-done;
-
-printf "Done. %d messages extracted.\n" $i
-
-echo "Sending all the messages... "
-date
-
-find "$messagesTmpDir" -type f | xargs -n 1 -P 32 "$selfDir/messageToBot.sh" $URL
-
-printf "Done."
-date
-
-rm -r "$messagesTmpDir"
->>>>>>> 808d8f3... Multi-threaded message flooding
