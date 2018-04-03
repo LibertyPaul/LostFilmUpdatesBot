@@ -31,7 +31,7 @@ abstract class TracerLevel{
 	}
 
 	public static function getNameByLevel($level){
-		$key = array_keys($levelMap, $level, true);
+		$key = array_keys(self::$levelMap, $level, true);
 		switch(count($key)){
 			case 0:
 				throw new \OutOfBoundsException("Invalid trace level: '$level'");

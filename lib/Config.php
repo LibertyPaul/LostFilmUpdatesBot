@@ -86,7 +86,7 @@ class Config{
 					return $value;
 				}
 				else{
-					$this->tracer->logNotice(
+					$this->tracer->logDebug(
 						'[CONFIG GET]', __FILE__, __LINE__,
 						"Absence of [$section][$item] is already cached"
 					);
@@ -114,7 +114,7 @@ class Config{
 
 		$result = $this->getValueQuery->fetch();
 		if($result === false){
-			$this->tracer->logNotice(
+			$this->tracer->logDebug(
 				'[CONFIG GET]', __FILE__, __LINE__,
 				"Requested value [$section][$item] does not exist"
 			);

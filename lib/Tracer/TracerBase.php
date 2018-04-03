@@ -60,10 +60,11 @@ abstract class TracerBase{
 		assert(is_int($line));
 		
 		return sprintf(
-			'%s %s %s %s:%s %s',
+			"%s %s %s [%' 5d] %s:%s %s",
 			$level,
 			$tag,
 			self::getDateMicro(),
+			getmypid(),
 			basename($file),
 			$line,
 			$message
@@ -77,7 +78,7 @@ abstract class TracerBase{
 
 		if($level <= $this->config->getLoggingLevel()){
 			$messageLevel = TracerLevel::getNameByLevel($level);
-			$record = self::compileRecord($level, $tag, $file, $line, $message);
+			$record = self::compileRecord($messageLevel, $tag, $file, $line, $message);
 			
 			if(strlen($record) > $this->config->getStandaloneIfLargerThan()){
 				try{
@@ -110,11 +111,11 @@ abstract class TracerBase{
 		$this->log(TracerLevel::Warning, $tag, $file, $line, $message);
 	}
 
-	public function logEvent($tag, $file, $line, $message = null){
+	public function logNotice($tag, $file, $line, $message = null){
 		$this->log(TracerLevel::Notice, $tag, $file, $line, $message);
 	}
 
-	public function logNotice($tag, $file, $line, $message = null){
+	public function logEvent($tag, $file, $line, $message = null){
 		$this->log(TracerLevel::Event, $tag, $file, $line, $message);
 	}
 
