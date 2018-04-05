@@ -18,9 +18,24 @@ readonly patch="$1"
 
 declare -A values=()
 
+readonly defaultsPath="$selfDir/patchDefaults.ini"
+if [ -f "$defaultsPath" ]; then
+	for line in $(cat "$defaultsPath"); do
+		key="${line%%=*}"
+		value="${line#*=}"
+
+		if [ ! -z "$key" ] && [ ! -z "$value" ]; then
+			echo "Default Replacement [$key] --> [$value]"
+			values[$key]=$value
+		fi
+	done
+fi
+
 for key in $(grep -oP '&&\K\w+' "$patch" | sort -u); do
-	read -p "$key: " -e value
-	values[$key]=$value
+	if [ -z "${values["$key"]}" ]; then
+		read -p "$key: " -e value
+		values[$key]=$value
+	fi
 done
 
 echo 'Starting replacement.'

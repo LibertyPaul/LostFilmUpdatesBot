@@ -9,6 +9,7 @@ require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 class UserController{
 	private $user;
@@ -17,6 +18,7 @@ class UserController{
 	private $pdo;
 	private $config;
 	private $tracer;
+	private $coreCommands;
 
 	public function __construct(User $user){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -24,6 +26,9 @@ class UserController{
 		$this->config = new \Config($this->pdo);
 		$this->user = $user;
 		$this->conversationStorage = new ConversationStorage($user->getId());
+
+		$commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
+		$this->coreCommands = $commandSubstitutor->getCoreCommandsAssociative();
 	}
 
 	private function repeatQuestion(){
@@ -60,12 +65,14 @@ class UserController{
 			$username = '';
 		}
 
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+
 		$welcomingText =
 			'Привет, %username%'.PHP_EOL.	#TODO: pass real username
 			'Я - бот LostFilm updates.'.PHP_EOL.
 			'Моя задача - оповестить тебя о выходе новых серий '.
 			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
-			'Чтобы узнать что я умею - введи /help или выбери эту команду в списке';
+			"Чтобы узнать что я умею - введи $helpCoreCommand или выбери эту команду в списке";
 		
 		$response = new DirectedOutgoingMessage(
 			$this->user->getId(),
@@ -103,12 +110,13 @@ class UserController{
 		case 1:
 			$lastChance = 'Точно? Вся информация о тебе будет безвозвратно потеряна...';
 			$options = array($ANSWER_YES, $ANSWER_NO);
+			$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
 			
 			if($this->user->muted() === false){
 				$lastChance .= 
 					PHP_EOL.PHP_EOL.
 					'Если тебя раздражают уведомления, '.
-					'может лучше воспользуешься командой /mute?';
+					"может лучше воспользуешься командой $muteCoreCommand?";
 			}
 
 			return new DirectedOutgoingMessage(
@@ -183,11 +191,11 @@ class UserController{
 				);
 			
 			default:
-				$command = $this->conversationStorage->getLastMessage()->getUserCommand();
+				$command = $this->conversationStorage->getLastMessage()->getCoreCommand();
 				if(
 					$this->user->muted() === false						&&
 					$command !== null									&&
-					$command->getCommandId() === UserCommandMap::Mute
+					$command->getId() === \CommandSubstitutor\CoreCommandMap::Mute
 				){
 					return $this->toggleMute();
 				}
@@ -218,26 +226,38 @@ class UserController{
 	
 	private function showHelp(){
 		$this->conversationStorage->deleteConversation();
+
+		$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+		$removeShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::RemoveShow];
+		$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
+		$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
+		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+		$stopCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Stop];
+		$getShareButtonCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
+		$donateCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
 		
 		$helpText =
-			'LostFilm updates - бот, который оповещает '								.
-			'о новых сериях на https://lostfilm.tv/'							.PHP_EOL
-																				.PHP_EOL.
-			'Список команд:'													.PHP_EOL.
-			'/add_show - Включить уведомления о сериале'						.PHP_EOL.
-			'/remove_show - Выключить уведомления о сериале'					.PHP_EOL.
-			'/get_my_shows - Показать включенные уведомления'					.PHP_EOL.
-			'/mute - Приостановить рассылку уведомлений'						.PHP_EOL.
-			'/cancel - Отменить команду'										.PHP_EOL.
-			'/help - Показать это сообщение'									.PHP_EOL.
-			'/donate - Задонатить пару баксов'									.PHP_EOL.
-			'/share - Поделиться ботом с другом'								.PHP_EOL.
-			'/stop - Удалиться из контакт-листа бота'							.PHP_EOL
-																				.PHP_EOL.
-			'Telegram создателя: @libertypaul'									.PHP_EOL.
-			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'		.PHP_EOL.
-			'Исходники бота есть на GitHub: '									.PHP_EOL.
-			'https://github.com/LibertyPaul/LostFilmUpdatesBot';
+			'LostFilm updates - бот, который оповещает '									.
+			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
+																					.PHP_EOL.
+			'Список команд:'														.PHP_EOL.
+			"'$addShowCoreCommand' - Добавить уведомления о сериале"				.PHP_EOL.
+			"'$removeShowCoreCommand' - Удалить уведомления о сериале"				.PHP_EOL.
+			"'$getMyShowsCoreCommand' - Показать, на что ты подписан"				.PHP_EOL.
+			"'$muteCoreCommand' - Выключить уведомления"							.PHP_EOL.
+			"'$cancelCoreCommand' - Отменить команду"								.PHP_EOL.
+			"'$helpCoreCommand' - Показать это сообщение"							.PHP_EOL.
+			"'$donateCoreCommand' - Задонатить пару баксов на доширак создателю"	.PHP_EOL.
+			"'$getShareButtonCoreCommand' - Поделиться контактом бота"				.PHP_EOL.
+			"'$stopCoreCommand' - Удалиться из контакт-листа бота"					.PHP_EOL
+																					.PHP_EOL.
+			'Telegram/VK создателя: @libertypaul'									.PHP_EOL.
+			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'			.PHP_EOL.
+			'Исходники бота есть на GitHub: '											.
+			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
+																					.PHP_EOL.
+			'Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.';
 		
 		return new DirectedOutgoingMessage(
 			$this->user->getId(),
@@ -271,9 +291,10 @@ class UserController{
 		$userShows = $getUserShowsQuery->fetchAll();
 		
 		if(count($userShows) === 0){
+			$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 			return new DirectedOutgoingMessage(
 				$this->user->getId(),
-				new OutgoingMessage('Пока тут пусто. Добавь парочку командой /add_show')
+				new OutgoingMessage("Пока тут пусто. Добавь парочку командой $addShowCoreCommand")
 			);
 		}
 
@@ -441,7 +462,8 @@ class UserController{
 						'И как ты успеваешь их все смотреть??';
 				}
 				else{
-					$text = 'Нечего удалять. Добавь парочку командой /add_show.';
+					$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+					$text = "Нечего удалять. Добавь парочку командой $addShowCoreCommand.";
 				}
 				
 				return new DirectedOutgoingMessage(
@@ -1013,24 +1035,25 @@ class UserController{
 		try{
 			$this->conversationStorage->insertMessage($incomingMessage);
 
-			$currentCommand = $incomingMessage->getUserCommand();
+			$currentCommand = $incomingMessage->getCoreCommand();
 			
 			if($currentCommand !== null){
-				if($currentCommand->getCommandId() === UserCommandMap::Cancel){
+				if($currentCommand->getId() === \CommandSubstitutor\CoreCommandMap::Cancel){
 					return $this->cancelRequest();
 				}
 			}
 
 			$initialMessage = $this->conversationStorage->getFirstMessage();
-			$initialCommand = $initialMessage->getUserCommand();
+			$initialCommand = $initialMessage->getCoreCommand();
 			if($initialCommand === null){
 				$initialText = $initialMessage->getText();
 
+				$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 				$response = new DirectedOutgoingMessage(
 					$this->user->getId(),
 					new OutgoingMessage(
 						sprintf('Я хз чё "%s" значит.', $initialText).PHP_EOL.
-						'Нажми на /help чтобы увидеть список команд.'
+						"Нажми на $helpCoreCommand чтобы увидеть список команд."
 					)
 				);
 
@@ -1038,38 +1061,38 @@ class UserController{
 				return $response;
 			}
 
-			switch($initialCommand->getCommandId()){
-				case UserCommandMap::Start:
+			switch($initialCommand->getId()){
+				case \CommandSubstitutor\CoreCommandMap::Start:
 					return $this->welcomeUser();
 
-				case UserCommandMap::Cancel:
+				case \CommandSubstitutor\CoreCommandMap::Cancel:
 					return $this->cancelRequest();
 
-				case UserCommandMap::Stop:
+				case \CommandSubstitutor\CoreCommandMap::Stop:
 					return $this->deleteUser();
 				
-				case UserCommandMap::Help:
+				case \CommandSubstitutor\CoreCommandMap::Help:
 					return $this->showHelp();
 				
-				case UserCommandMap::Mute:
+				case \CommandSubstitutor\CoreCommandMap::Mute:
 					return $this->toggleMute();
 				
-				case UserCommandMap::GetMyShows:
+				case \CommandSubstitutor\CoreCommandMap::GetMyShows:
 					return $this->showUserShows();
 					
-				case UserCommandMap::AddShow:
+				case \CommandSubstitutor\CoreCommandMap::AddShow:
 					return $this->insertOrDeleteShow(true);
 				
-				case UserCommandMap::RemoveShow:
+				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
 					return $this->insertOrDeleteShow(false);
 
-				case UserCommandMap::GetShareButton:
+				case \CommandSubstitutor\CoreCommandMap::GetShareButton:
 					return $this->getShareButton();
 
-				case UserCommandMap::Donate:
+				case \CommandSubstitutor\CoreCommandMap::Donate:
 					return $this->getDonateOptions();
 
-				case UserCommandMap::Broadcast:
+				case \CommandSubstitutor\CoreCommandMap::Broadcast:
 					return $this->broadcast();
 
 				default:

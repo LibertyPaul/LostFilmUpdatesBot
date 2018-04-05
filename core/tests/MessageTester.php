@@ -3,7 +3,7 @@
 namespace core;
 
 require_once(__DIR__.'/../UpdateHandler.php');
-require_once(__DIR__.'/../UserCommand.php');
+require_once(__DIR__.'/../../lib/CommandSubstitutor/CoreCommand.php');
 require_once(__DIR__.'/../IncomingMessage.php');
 require_once(__DIR__.'/../BotPDO.php');
 
@@ -27,10 +27,14 @@ class MessageTester{
 		');
 	}
 
-	public function send($text, UserCommand $userCommand = null, $update_id = null){
+	public function send(
+		$text,
+		\CommandSubstitutor\CoreCommand $coreCommand = null,
+		$update_id = null
+	){
 		$message = new IncomingMessage(
 			$user_id,
-			$userCommand,
+			$coreCommand,
 			$text,
 			null,
 			$update_id

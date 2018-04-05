@@ -8,11 +8,13 @@ require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../core/BotPDO.php');
+require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 class MessageSender implements \core\MessageSenderInterface{
 	private $tracer;
 	private $outgoingMessagesTracer;
 	private $telegramAPI;
+	private $commandSubstitutor;
 	private $getTelegramIdQuery;
 	private $sleepOn429CodeMs;
 
@@ -23,6 +25,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		$this->outgoingMessagesTracer = new \Tracer(__NAMESPACE__.'.OutgoingMessages');
 
 		$pdo = \BotPDO::getInstance();
+		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 
 		$config = new \Config($pdo);
 		$this->sleepOn429CodeMs = $config->getValue(
@@ -70,12 +73,17 @@ class MessageSender implements \core\MessageSenderInterface{
 				PHP_EOL.$message
 			);
 
+			$messageText = $this->commandSubstitutor->replaceCoreCommandsInText(
+				'TelegramAPI',
+				$message->getText()
+			);
+
 			$attempt = 0;
 			
 			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
 					$telegram_id,
-					$message->getText(),
+					$messageText,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
 					$message->getResponseOptions(),

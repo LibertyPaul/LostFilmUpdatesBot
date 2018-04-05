@@ -1,25 +1,27 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-	echo "Usage: $0 <patch_directory>"
-	exit 1
-elif [ ! -d "$1" ]; then
-	echo "$1 is not a directory. Aborting."
+readonly selfDir="$(dirname "$0")"
+readonly coloredEchoPath="$selfDir/../tools/ColoredEcho.sh"
+source "$coloredEchoPath"
+if [ "$?" != "0" ]; then
+	echo "Unable to load [$coloredEchoPath]. Aborting."
 	exit 1
 fi
 
-readonly selfPath="$(dirname "$0")"
-readonly path="$(readlink -m "$1")"
-
-if [ ! -z "$path" ]; then
-
-	if [ ! -d "$path" ]; then
-		echo 'Invalid schema directory path'
-		exit 1
-	fi
-
-	cd "$path"
+if [ $# -lt 1 ]; then
+	echo "Usage: $0 [patch]xx [destination]"
+	exit 1
 fi
+
+if [ -d "$1" ]; then
+	path="$1"
+elif [ -d "$selfDir/patch$1" ]; then
+	path="$selfDir/patch$1"
+else
+	echo "Neither $1 nor $selfDir/patch$1 is not a directory. Aborting."
+	exit 1
+fi
+
 
 if [ ! -z "$2" ]; then
 	patch="$2"
@@ -44,17 +46,20 @@ declare -a elementsOrder=(
 )
 
 for element in "${elementsOrder[@]}"; do
-	if [[ -d "./$element" && $(find "./$element/" -type f -name '*.sql' | wc -l) > 0 ]]; then
-		echo "Copying $element: "
-		printf "/*    $element definition:    */\n\n" >> "$patch"
-		for f in $(find "./$element/" -type f -name '*.sql'); do
-			echo "$f "
-			cat "$f" >> "$patch"
-			printf "\n" >> "$patch"
-		done
-		printf "\n\n" >> "$patch"
-		echo "done."
+	elementPath="./$path/$element"
+	if [ ! -d "$elementPath" ]; then
+		continue;
 	fi
+
+	echo "Copying $element..."
+	printf "/*    $element definition:    */\n\n" >> "$patch"
+	for f in $(find "$elementPath" -type f -name '*.sql' | sort); do
+		echo "$f "
+		cat "$f" >> "$patch"
+		printf "\n" >> "$patch"
+	done
+	printf "\n\n" >> "$patch"
+	echo_green "Done."
 done
 
 echo "Compiled. Stored in $patch"

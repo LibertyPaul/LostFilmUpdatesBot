@@ -101,13 +101,13 @@ class User{
 		$regTime = $this->registration_time->format('Y-m-d H:i:s');
 
 		$result =
-			'++++++++++++[USER]+++++++++++'.PHP_EOL.
+			'+++++++++++++++[USER]++++++++++++++'				.PHP_EOL.
 			sprintf('Id:                [%d]', $this->getId())	.PHP_EOL.
 			sprintf('API:               [%s]', $this->getAPI())	.PHP_EOL.
 			sprintf('Is Deleted?:       [%s]', $isDeletedYN)	.PHP_EOL.
 			sprintf('Muted?:            [%s]', $mutedYN)		.PHP_EOL.
 			sprintf('Registration Date: [%s]', $regTime)		.PHP_EOL.
-			'+++++++++++++++++++++++++++++';
+			'+++++++++++++++++++++++++++++++++++';
 
 		return $result;
 	}

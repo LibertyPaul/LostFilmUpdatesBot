@@ -2,8 +2,11 @@
 
 namespace core;
 
+require_once(__DIR__.'/../BotPDO.php');
 require_once(__DIR__.'/../ConversationStorage.php');
 require_once(__DIR__.'/../IncomingMessage.php');
+require_once(__DIR__.'/../../lib/CommandSubstitutor/CommandSubstitutor.php');
+require_once(__DIR__.'/../../lib/CommandSubstitutor/CoreCommand.php');
 
 class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 
@@ -11,6 +14,7 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 		$user_id = rand(0, 999999999999999);
 		
 		$storage = new ConversationStorage($user_id);
+		$substitutor = new \CommandSubstitutor\CommandSubstitutor(\BotPDO::getInstance());
 		$this->assertEquals(array(), $storage->getConversation());
 
 		$text1 = '
@@ -38,10 +42,12 @@ class ConversationStorageTest extends \PHPUnit_Framework_TestCase{
 		$text3 = '/BA DUM TSS/';
 		$text4 = '/TSS DUM BA/';
 
-		$command1 = new UserCommand(UserCommandMap::Donate);
-		$command2 = new UserCommand(UserCommandMap::GetMyShows);
-		$command3 = new UserCommand(UserCommandMap::GetShareButton);
-		$command4 = new UserCommand(UserCommandMap::Broadcast);
+		$command1 = $substitutor->getCoreCommand(\CommandSubstitutor\CoreCommandMap::Donate);
+		$command2 = $substitutor->getCoreCommand(\CommandSubstitutor\CoreCommandMap::GetMyShows);
+		$command3 = $substitutor->getCoreCommand(
+			\CommandSubstitutor\CoreCommandMap::GetShareButton
+		);
+		$command4 = $substitutor->getCoreCommand(\CommandSubstitutor\CoreCommandMap::Broadcast);
 
 		$testMessage1 = new IncomingMessage($user_id, $command1, $text1, 10001);
 		$testMessage2 = new IncomingMessage($user_id, $command2, $text2, 10002);
