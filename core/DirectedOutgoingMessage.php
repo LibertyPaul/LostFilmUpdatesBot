@@ -17,31 +17,23 @@ class DirectedOutgoingMessage{
 		$this->outgoingMessage = $outgoingMessage;
 	}
 
-	private static function findLoop(self $lhs = null, self $rhs = null){
-		$current = $rhs;
-		while($current !== null){
+	private function findLoop(self $newNode = null){
+		$current = $this;
+		do{
 			if($current === $lhs){
 				return true;
 			}
-			$current = $current->nextMessage();
-		}
 
-		$current = $lhs;
-		while($current !== null){
-			if($current === $rhs){
-				return true;
-			}
 			$current = $current->nextMessage();
-		}
+		}while($current !== null);
 
 		return false; 
-		# Not sure if this check is redundant. It might be possible to optimize it.
 	}
 
 	public function appendMessage(self $message = null){
-		if(self::findLoop($this, $message)){
+		if($this->findLoop($message)){
 			throw new \LogicException(
-				'Loop was found in message chains:'.PHP_EOL.
+				'Loop was detected:'.PHP_EOL.
 				'#1:'.PHP_EOL.
 				print_r($this, true).PHP_EOL.
 				'#2:'.PHP_EOL.
@@ -50,10 +42,11 @@ class DirectedOutgoingMessage{
 		}
 
 		if($this->nextMessage !== null){
-			$this->nextMessage->appendMessage($message);
+			return $this->nextMessage->appendMessage($message);
 		}
 		else{
 			$this->nextMessage = $message;
+			return $this;
 		}
 	}
 
