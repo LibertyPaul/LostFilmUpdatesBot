@@ -17,7 +17,7 @@ class DirectedOutgoingMessage{
 		$this->outgoingMessage = $outgoingMessage;
 	}
 
-	private static function findLoop(self $lhs, self $rhs){
+	private static function findLoop(self $lhs = null, self $rhs = null){
 		$current = $rhs;
 		while($current !== null){
 			if($current === $lhs){
