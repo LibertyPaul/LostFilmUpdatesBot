@@ -20,7 +20,7 @@ abstract class WebhookReasons{
 }
 
 class Webhook{
-	private $incomingLog;
+	private $incomingMessagesTracer;
 	private $tracer;
 	private $updateHandler;
 
@@ -40,7 +40,7 @@ class Webhook{
 
 		try{
 			$this->tracer = new \Tracer(__CLASS__);
-			$this->incomingLog = new \Tracer('incomingMessages');
+			$this->incomingMessagesTracer = new \Tracer(__NAMESPACE__.'.IncomingData');
 		}
 		catch(\Throwable $ex){
 			TracerBase::syslogCritical(
@@ -165,7 +165,7 @@ class Webhook{
 			return;
 		}
 
-		$this->incomingLog->logEvent(
+		$this->incomingMessagesTracer->logEvent(
 			'[INCOMING MESSAGE]', __FILE__, __LINE__,
 			PHP_EOL.$prettyJSON
 		);
