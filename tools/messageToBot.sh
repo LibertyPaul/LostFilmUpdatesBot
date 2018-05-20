@@ -7,7 +7,7 @@ if [ -z "$URL" ]; then
 	exit 1
 fi
 
-if [ $(pwd | grep "prod" | wc -l) > 1 ]; then
+if [ $(pwd | grep "prod" | wc -l) -gt 0 ]; then
 	echo "On Prod? Really? No way!"
 	exit 1
 fi
