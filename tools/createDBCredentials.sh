@@ -53,10 +53,10 @@ function createCredential(){
 	done
 
 	echo "[mysql]"					 > "$fName"
+	echo "host=\"$DBHost\""			>> "$fName"
 	echo "database=\"$DBName\""		>> "$fName"
 	echo "user=\"$DBUser\""			>> "$fName"
 	echo "password=\"$DBPassword\""	>> "$fName"
-	echo "host=\"$DBHost\""			>> "$fName"
 	
 	if [ "$?" == "0" ]; then
 		echo_green "$role credential saved in [$fName]"
