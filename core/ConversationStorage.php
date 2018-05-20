@@ -40,7 +40,7 @@ class ConversationStorage{
 				self::MEMCACHE_STORE_TIME
 			);
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}

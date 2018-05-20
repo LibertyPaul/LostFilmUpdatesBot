@@ -23,7 +23,7 @@ class SeriesParser extends Parser{
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
@@ -53,7 +53,7 @@ class SeriesParser extends Parser{
 				"Link: '$link'"
 			);
 
-			throw new \Exception('preg_match has failed');
+			throw new \Throwable('preg_match has failed');
 		}
 
 		if($matchesRes === 0){
@@ -62,7 +62,7 @@ class SeriesParser extends Parser{
 				"Link '$link' doesn't match pattern"
 			);
 
-			throw new \Exception("Link doesn't match pattern");
+			throw new \Throwable("Link doesn't match pattern");
 		}
 
 		assert($matchesRes === 1);
@@ -91,7 +91,7 @@ class SeriesParser extends Parser{
 			catch(FullSeasonWasFoundException $ex){
 				// mmmk, skipping
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
 				$this->tracer->logError(
 					'[PARSE ERROR]', __FILE__, __LINE__,

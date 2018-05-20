@@ -27,7 +27,7 @@ class UpdateHandler{
 		try{
 			$this->pdo = \BotPDO::getInstance();
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
@@ -63,7 +63,7 @@ class UpdateHandler{
 			}
 
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 			$this->speechRecognizer = null;
 			$this->telegramAPI = null;
@@ -348,7 +348,7 @@ class UpdateHandler{
 			try{
 				$text = $this->recognizeVoiceMessage($update->message->voice);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 				throw $ex;
 			}
@@ -384,7 +384,7 @@ class UpdateHandler{
 			try{
 				$this->sendToBotan($update->message, $rawCommand);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			}
 		}

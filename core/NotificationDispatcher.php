@@ -74,7 +74,7 @@ class NotificationDispatcher{
 		}
 
 		if($lastDeliveryAttemptTime === null){
-			throw new \Exception('lastDeliveryAttemptTime is null but responseCode is not');
+			throw new \Throwable('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
 		$waitTime = null;
@@ -133,7 +133,7 @@ class NotificationDispatcher{
 					$notification['lastDeliveryAttemptTime']
 				);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException(
 					'[ERROR]', __FILE__, __LINE__,
 					$ex.PHP_EOL.
@@ -179,7 +179,7 @@ class NotificationDispatcher{
 					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 					continue;
 				}
-				catch(\Exception $ex){
+				catch(\Throwable $ex){
 					$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
 					continue;
 				}

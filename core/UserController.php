@@ -100,7 +100,7 @@ class UserController{
 				$response->appendMessage($adminNotification);
 			}
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
 		}
 
@@ -145,7 +145,7 @@ class UserController{
 					$notificationGenerator = new NotificationGenerator();
 					$adminNotification = $notificationGenerator->userLeftEvent($this->user_id);
 				}
-				catch(\Exception $ex){
+				catch(\Throwable $ex){
 					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
 				}
 				
@@ -1120,7 +1120,7 @@ stop - Удалиться из контакт-листа бота
 					break;
 			}
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$response = new DirectedOutgoingMessage(
 				$this->user_id,
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')

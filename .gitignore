@@ -2,6 +2,7 @@ logs/*
 logsBackup/*
 locks/*
 TelegramAPI/tests/debug_webhook/update.json
+TelegramAPI/tests/debug_webhook/input_debug_webhook.php
 DBCredentials/*.ini
 DBCredentials/*
 tools/data/

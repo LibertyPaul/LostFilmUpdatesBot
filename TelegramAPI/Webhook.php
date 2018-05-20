@@ -42,7 +42,7 @@ class Webhook{
 			$this->tracer = new \Tracer(__CLASS__);
 			$this->incomingLog = new \Tracer('incomingMessages');
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			TracerBase::syslogCritical(
 				'[TRACER]', __FILE__, __LINE__,
 				'Unable to create Tracer instance'
@@ -88,7 +88,7 @@ class Webhook{
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logError(
 				'[o]', __FILE__, __LINE__,
 				'Unable to create Telegram API'
@@ -243,7 +243,7 @@ class Webhook{
 					$this->attachmentForwardingSilent
 				);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException(
 					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
 					$ex
@@ -269,7 +269,7 @@ class Webhook{
 		catch(\core\DuplicateUpdateException $ex){
 			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
-		catch(\Exception $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
@@ -278,7 +278,7 @@ class Webhook{
 			try{
 				$this->resendUpdate($postData, $this->messageResendURL);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logError(
 					'[MESSAGE STREAM]', __FILE__, __LINE__,
 					'Message resend has failed: URL=['.$this->messageResendURL.']'.PHP_EOL.

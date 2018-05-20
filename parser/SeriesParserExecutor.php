@@ -163,7 +163,7 @@ class SeriesParserExecutor{
 					PHP_EOL.print_r($series, true)
 				);
 			}
-			catch(\Exception $ex){
+			catch(\Throwable $ex){
 				$this->tracer->logException('[UNKNOWN ERROR]', __FILE__, __LINE__, $ex);
 			}
 		}
