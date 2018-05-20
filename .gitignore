@@ -1,7 +1,7 @@
 logs/*
 logsBackup/*
 locks/*
-TelegramAPI/tests/debug_webhook/input_debug_webhook.php
+TelegramAPI/tests/debug_webhook/update.json
 DBCredentials/*.ini
 DBCredentials/*
 tools/data/
