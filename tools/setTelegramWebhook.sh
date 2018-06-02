@@ -35,10 +35,10 @@ function getValueOrDie {
 readonly token=$(getValueOrDie 'TelegramAPI' 'token')
 echo "[DB] token=[$token]"
 
-webhookURL="$(getValueOrDie 'Webhook' 'URL')"
+webhookURL="$(getValueOrDie 'TelegramAPI' 'Webhook URL')"
 echo "[DB] webhookURL=[$webhookURL]"
 
-readonly webhookPassword="$(getValueOrDie 'Webhook' 'Password')"
+readonly webhookPassword="$(getValueOrDie 'TelegramAPI' 'Webhook Password')"
 echo "[DB] webhookPassword=[$webhookPassword]"
 
 if [ -n "$webhookPassword" ]; then
