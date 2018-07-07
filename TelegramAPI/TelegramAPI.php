@@ -105,15 +105,13 @@ class TelegramAPI{
 		
 	
 	public function send(
-		$telegram_id,
-		$text,
+		int $telegram_id,
+		string $text,
 		\core\MarkupType $markupType,
-		$URLExpandEnabled,
+		bool $URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
 	){
-		assert(is_int($telegram_id));
-		assert(is_string($text));
 
 		$request = array(
 			'chat_id'	=> $telegram_id,
@@ -183,10 +181,10 @@ class TelegramAPI{
 		return $result;
 	}
 
-	public function forwardMessage($chat_id, $source_chat_id, $message_id, $silent = false){
+	public function forwardMessage($chat_id, $from_chat_id, $message_id, $silent = false){
 		$payload = array(
 			'chat_id'				=> $chat_id,
-			'from_chat_id'			=> $source_chat_id,
+			'from_chat_id'			=> $from_chat_id,
 			'message_id'			=> $message_id,
 			'disable_notification'	=> $silent
 		);

@@ -349,9 +349,14 @@ class UpdateHandler{
 		$rawCommand = $this->extractUserCommand($text);
 		$command = $this->commandSubstitutor->convertAPIToCore('TelegramAPI', $rawCommand);
 
+		$commandText = $rawCommand;
+		if($command !== null){
+			$commandText = $command->getText();
+		}
+
 		$this->tracer->logDebug(
 			'[COMMAND]', __FILE__, __LINE__,
-			sprintf('User command [%s] was mapped to [%s]', $rawCommand, $command->getText())
+			sprintf('User command [%s] was mapped to [%s]', $rawCommand, $commandText)
 		);
 
 		$incomingMessage = new \core\IncomingMessage(

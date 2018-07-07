@@ -18,6 +18,10 @@ class MessageSender implements \core\MessageSenderInterface{
 	private $getTelegramIdQuery;
 	private $sleepOn429CodeMs;
 
+	private $forwardingChat;
+	private $forwardingSilent;
+	private $forwardEverything;
+
 	public function __construct(TelegramAPI $telegramAPI){
 		$this->telegramAPI = $telegramAPI;
 
@@ -41,6 +45,23 @@ class MessageSender implements \core\MessageSenderInterface{
 			FROM `telegramUserData`
 			WHERE `user_id` = :user_id
 		');
+
+		$this->forwardingChat = $config->getValue(
+			'TelegramAPI',
+			'Forwarding Chat'
+		);
+
+		$this->forwardingSilent = $config->getValue(
+			'TelegramAPI',
+			'Forwarding Silent',
+			'Y'
+		) === 'Y';
+
+		$this->forwardEverything = $config->getValue(
+			'TelegramAPI',
+			'Forward Everything',
+			'N'
+		) === 'Y';
 	}
 
 	private function getTelegramId($user_id){
@@ -111,10 +132,67 @@ class MessageSender implements \core\MessageSenderInterface{
 				$sendResult = \core\SendResult::Fail;
 			}
 
+			if($sendResult === \core\SendResult::Success){
+				$APIResponseJSON = $result->getBody();
+				$APIResponse = json_decode($APIResponseJSON);
+				if($APIResponse === null){
+					$this->tracer->logError(
+						'[o]', __FILE__, __LINE__,
+						'Failed to parse API response:'.PHP_EOL.
+						$APIResponseJSON
+					);
+				}
+				else{
+					$messageId = intval($APIResponse->result->message_id);
+					$this->forwardIfApplicable($telegram_id, $messageId);
+				}
+			}
+
+
 			$message = $message->nextMessage();
 		}
 
 		return $sendResult;
+	}
+
+	private function forwardIfApplicable(int $userChatId, int $messageId){
+		if($this->forwardEverything){
+			$this->tracer->logDebug(
+				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
+				'Message is eligible for forwarding.'
+			);
+
+			if(
+				$this->forwardingChat !== null	&&
+				$this->telegramAPI !== null
+			){
+				try{
+					$this->telegramAPI->forwardMessage(
+						$this->forwardingChat,
+						$userChatId,
+						$messageId,
+						$this->forwardingSilent
+					);
+				}
+				catch(\Throwable $ex){
+					$this->tracer->logException(
+						'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
+						$ex
+					);
+				}
+			}
+			else{
+				$this->tracer->logfWarning(
+					'[o]', __FILE__, __LINE__,
+					'Unable to forward due to:'					.PHP_EOL.
+					'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
+					'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
+					'	isset($update->message):		[%d]'	.PHP_EOL,
+					$this->forwardingChat !== null,
+					$this->telegramAPI !== null
+				);
+			}
+		}
 	}
 }
 	

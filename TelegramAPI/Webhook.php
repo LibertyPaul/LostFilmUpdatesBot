@@ -29,8 +29,9 @@ class Webhook{
 	private $messageResendEnabled = false;
 	private $messageResendURL = null;
 
-	private $attachmentForwardingChat;
-	private $attachmentForwardingSilent;
+	private $forwardingChat;
+	private $forwardingSilent;
+	private $forwardEverything;
 
 	private $telegramAPI;
 
@@ -65,22 +66,22 @@ class Webhook{
 			}
 		}
 
-		$this->attachmentForwardingChat = $config->getValue(
+		$this->forwardingChat = $config->getValue(
 			'TelegramAPI',
-			'Attachment Forwarding Chat'
+			'Forwarding Chat'
 		);
 
-		$res = $config->getValue(
+		$this->forwardingSilent = $config->getValue(
 			'TelegramAPI',
-			'Attachment Forwarding Silent'
-		);
+			'Forwarding Silent',
+			'Y'
+		) === 'Y';
 
-		if($res === 'Y'){
-			$this->attachmentForwardingSilent = true;
-		}
-		else{
-			$this->attachmentForwardingSilent = false;
-		}
+		$this->forwardEverything = $config->getValue(
+			'TelegramAPI',
+			'Forward Everything',
+			'N'
+		) === 'Y';
 
 		$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
 		try{
@@ -89,11 +90,7 @@ class Webhook{
 			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'Unable to create Telegram API'
-			);
-
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			$this->telegramAPI = null;
 		}
 	}
@@ -232,30 +229,43 @@ class Webhook{
 		}
 
 		$this->logUpdate($update);
-
-		if(
-			$this->attachmentForwardingChat !== null	&&
-			isset($update->message)						&& # HotFix
-			self::shouldBeForwarded($update->message)	&&
-			$this->telegramAPI !== null
-		){
+		
+		if($this->forwardEverything	|| self::shouldBeForwarded($update->message)){
 			$this->tracer->logDebug(
 				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
 				'Message is eligible for forwarding.'
 			);
 
-			try{
-				$this->telegramAPI->forwardMessage(
-					$this->attachmentForwardingChat,
-					$update->message->chat->id,
-					$update->message->message_id,
-					$this->attachmentForwardingSilent
-				);
+			if(
+				$this->forwardingChat !== null	&&
+				isset($update->message)			&& # HotFix
+				$this->telegramAPI !== null
+			){
+				try{
+					$this->telegramAPI->forwardMessage(
+						$this->forwardingChat,
+						$update->message->chat->id,
+						$update->message->message_id,
+						$this->forwardingSilent
+					);
+				}
+				catch(\Throwable $ex){
+					$this->tracer->logException(
+						'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
+						$ex
+					);
+				}
 			}
-			catch(\Throwable $ex){
-				$this->tracer->logException(
-					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
-					$ex
+			else{
+				$this->tracer->logfWarning(
+					'[o]', __FILE__, __LINE__,
+					'Unable to forward due to:'					.PHP_EOL.
+					'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
+					'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
+					'	isset($update->message):		[%d]'	.PHP_EOL,
+					$this->forwardingChat !== null,
+					$this->telegramAPI !== null,
+					isset($update->message)
 				);
 			}
 		}
