@@ -221,22 +221,20 @@ class UserController{
 			'о новых сериях на https://lostfilm.tv/'							.PHP_EOL
 																				.PHP_EOL.
 			'Список команд:'													.PHP_EOL.
-			'/add_show - Добавить уведомления о сериале'						.PHP_EOL.
-			'/remove_show - Удалить уведомления о сериале'						.PHP_EOL.
-			'/get_my_shows - Показать, на что ты подписан'						.PHP_EOL.
-			'/mute - Выключить уведомления'										.PHP_EOL.
+			'/add_show - Включить уведомления о сериале'						.PHP_EOL.
+			'/remove_show - Выключить уведомления о сериале'					.PHP_EOL.
+			'/get_my_shows - Показать включенные уведомления'					.PHP_EOL.
+			'/mute - Приостановить рассылку уведомлений'						.PHP_EOL.
 			'/cancel - Отменить команду'										.PHP_EOL.
 			'/help - Показать это сообщение'									.PHP_EOL.
-			'/donate - Задонатить пару баксов на доширак создателю'				.PHP_EOL.
-			'/share - Поделиться контактом бота'								.PHP_EOL.
+			'/donate - Задонатить пару баксов'									.PHP_EOL.
+			'/share - Поделиться ботом с другом'								.PHP_EOL.
 			'/stop - Удалиться из контакт-листа бота'							.PHP_EOL
 																				.PHP_EOL.
 			'Telegram создателя: @libertypaul'									.PHP_EOL.
 			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'		.PHP_EOL.
-			'Исходники бота есть на GitHub: '											.
-			'https://github.com/LibertyPaul/LostFilmUpdatesBot'					.PHP_EOL
-																				.PHP_EOL.
-			'Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.';
+			'Исходники бота есть на GitHub: '									.PHP_EOL.
+			'https://github.com/LibertyPaul/LostFilmUpdatesBot';
 		
 		return new DirectedOutgoingMessage(
 			$this->user_id,
@@ -278,7 +276,7 @@ class UserController{
 
 		$parts = array();
 
-		$text = 'Ваши сериалы:';
+		$text = 'Ваши сериалы:'.PHP_EOL.PHP_EOL;
 		
 		foreach($userShows as $show){
 			$icon = '•';
@@ -289,7 +287,7 @@ class UserController{
 			$showRow = str_replace(
 				array('#ICON', '#TITLE'),
 				array($icon, $show['title']),
-				PHP_EOL.PHP_EOL.'#ICON #TITLE'
+				'#ICON #TITLE'.PHP_EOL.PHP_EOL
 			);
 
 			if(strlen($text) + strlen($showRow) > 4000){
@@ -299,6 +297,9 @@ class UserController{
 
 			$text .= $showRow;
 		}
+		
+		$text .= PHP_EOL."• - сериал выходит";
+		$text .= PHP_EOL."✕ - сериал закончен";
 
 		$parts[] = $text;
 
