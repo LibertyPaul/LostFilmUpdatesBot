@@ -20,6 +20,7 @@ class SeriesParser extends Parser{
 
 	public function loadSrc($path){
 		parent::loadSrc($path);
+		$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
