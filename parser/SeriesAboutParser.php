@@ -70,8 +70,8 @@ class SeriesAboutParser extends Parser{
 			);
 		}
 
-		$title_ru = $title_ru_res[1];
-		$title_en = $title_en_res[1];
+		$title_ru = trim($title_ru_res[1]);
+		$title_en = trim($title_en_res[1]);
 
 		if($title_ru === $title_en){ 
 			// Either series wasn't published or title_ru is the same as tile_en
@@ -88,8 +88,8 @@ class SeriesAboutParser extends Parser{
 
 		return array(
 			'status'	=> SeriesStatus::Ready,
-			'title_ru'	=> $title_ru_res[1],
-			'title_en'	=> $title_en_res[1]
+			'title_ru'	=> $title_ru,
+			'title_en'	=> $title_en
 		);
 	}
 }
