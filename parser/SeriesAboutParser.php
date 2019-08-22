@@ -16,7 +16,7 @@ class SeriesAboutParser extends Parser{
 	
 	const discussion_tag = '/<a href="\/series\/\w+\/season_\d+\/episode_\d+\/comments" class="item last">Обсуждение серии<\/a>/';
 	const expected_tag_regex = '/<div class="expected">/';
-	const title_ru_regex = '/<div class="title-ru">([\s\S]*?)<\/div>/';
+	const title_ru_regex = '/<h1 class="title-ru">([\s\S]*?)<\/h1>/';
 	const title_en_regex = '/<div class="title-en">([\s\S]*?)<\/div>/';
 	
 
