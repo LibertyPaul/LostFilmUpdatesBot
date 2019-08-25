@@ -69,9 +69,9 @@ class SeriesParserExecutor{
 		try{
 			$this->seriesParser->loadSrc(self::rssURL);
 		}
-		catch(\HTTPRequester\HTTPException $ex){
-			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
-			return;
+		catch(\Throwable $ex){
+			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);
+			throw $ex;
 		}
 		
 		$latestSeriesList = $this->seriesParser->run();
