@@ -28,8 +28,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($curl, \CURLOPT_RETURNTRANSFER, true));
 		assert(curl_setopt($curl, \CURLOPT_FOLLOWLOCATION, true));
 		assert(curl_setopt($curl, \CURLOPT_PROTOCOLS, \CURLPROTO_HTTP | \CURLPROTO_HTTPS));
-		assert(curl_setopt($curl, \CURLOPT_CONNECTTIMEOUT, 5));
-		assert(curl_setopt($curl, \CURLOPT_TIMEOUT, 5));
+		assert(curl_setopt($curl, \CURLOPT_CONNECTTIMEOUT, 10));
+		assert(curl_setopt($curl, \CURLOPT_TIMEOUT, 10));
 	}
 
 	private static function createMultiCurl(){
