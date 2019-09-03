@@ -125,7 +125,7 @@ class HTTPRequestProperties{
 			$payloadStr = print_r($this->getPayload(), true);
 		}
 
-		$result  = '/************[HTTP Request Properties ]************/'			.PHP_EOL;
+		$result  = '/************[HTTP Request Properties]*************/'			.PHP_EOL;
 		$result .= sprintf('URL:          [%s]'		, $this->getURL())				.PHP_EOL;
 		$result .= sprintf('Request Type: [%s]'		, $requestTypeStr)				.PHP_EOL;
 		$result .= sprintf('Content Type: [%s]'		, $contentTypeStr)				.PHP_EOL;
