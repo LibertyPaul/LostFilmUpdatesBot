@@ -10,7 +10,7 @@ class SpeechRecognizerTest extends PHPUnit_Framework_TestCase{
 	public function testRecognizer(){
 		$pdo = \BotPDO::getInstance();
 		$config = new \Config($pdo);
-		$HTTPRequester = new \HTTPRequester();
+		$HTTPRequester = new \HTTPRequester\HTTPRequester();
 		$recognizer = new \SpeechRecognizer\SpeechRecognizer($config, $HTTPRequester);
 
 

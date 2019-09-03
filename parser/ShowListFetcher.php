@@ -11,7 +11,7 @@ class ShowListFetcher{
 	private $tracer;
 	private $config;
 	
-	public function __construct(\HTTPRequesterInterface $requester, \Config $config){
+	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester, \Config $config){
 		$this->requester = $requester;
 		$this->config = $congig;
 

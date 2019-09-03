@@ -12,7 +12,7 @@ class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
 	
-	public function __construct(\HTTPRequesterInterface $requester){
+	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
 		$this->tracer = new \Tracer(__CLASS__);

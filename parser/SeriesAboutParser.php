@@ -21,7 +21,7 @@ class SeriesAboutParser extends Parser{
 	
 
 
-	public function __construct(\HTTPRequesterInterface $requester){
+	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
 		parent::__construct($requester);
 
 		$this->tracer = new \Tracer(__CLASS__);

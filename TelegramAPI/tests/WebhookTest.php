@@ -21,7 +21,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase{
 
 		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 
-		$this->HTTPRequester = new \HTTPRequester();
+		$this->HTTPRequester = new \HTTPRequester\HTTPRequester();
 	}
 
 	private function send($password, $content){
