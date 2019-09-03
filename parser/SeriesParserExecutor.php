@@ -195,7 +195,7 @@ class SeriesParserExecutor{
 }
 
 
-$requester = new \HTTPRequester();
+$requester = new \HTTPRequester\HTTPRequester();
 $parser = new SeriesParser($requester);
 $seriesAboutParser = new SeriesAboutParser($requester);
 $seriesParserExecutor = new SeriesParserExecutor($parser, $seriesAboutParser);
