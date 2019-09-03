@@ -72,6 +72,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 	private function createGetRequest($URL, $payload = null){
 		$request = $URL;
+
 		if($payload !== null){
 			assert(strpos($request, '?') === false);
 			if(is_array($payload)){
@@ -88,6 +89,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 				throw new \LogicException('Incorrect payload type: '.gettype($payload));
 			}
 		}
+
+		return $request;
 	}
 
 	private function setRequestOptions($curl, HTTPRequestProperties $requestProperties){
