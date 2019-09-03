@@ -1104,6 +1104,7 @@ class UserController{
 					throw \LogicException('Unknown command');
 			}
 		}
+		catch(\Throwable $ex){
 			return new DirectedOutgoingMessage(
 				$this->user->getId(),
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
@@ -1111,7 +1112,6 @@ class UserController{
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
 		}
 	}
-
 }
 		
 		
