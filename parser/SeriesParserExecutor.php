@@ -68,7 +68,7 @@ class SeriesParserExecutor{
 		$rssURL = $this->config->getValue('Parser', 'RSS URL', 'https://www.lostfilm.tv/rss.xml');
 		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header', null);
 		$customHeaders = array();
-		if (is_null($customHeader) === false){
+		if ($customHeader !== null){
 			$customHeaders[] = $customHeader;
 		}	
 

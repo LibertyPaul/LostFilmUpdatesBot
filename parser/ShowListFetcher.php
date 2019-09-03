@@ -23,7 +23,7 @@ class ShowListFetcher{
 		
 		$customHeader = $config->getValue('Parser', 'ShowList Custom Header', null);
 		$customHeaders = array();
-		if (is_null($customHeader) === false){
+		if ($customHeader !== null){
 			$customHeaders[] = $customHeader;
 		}
 
