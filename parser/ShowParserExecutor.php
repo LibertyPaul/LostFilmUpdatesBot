@@ -101,6 +101,7 @@ class ShowParserExecutor{
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.$show);
+			throw $ex;
 		}
 	}
 
@@ -149,8 +150,21 @@ class ShowParserExecutor{
 				'[NEW SHOW]', __FILE__, __LINE__,
 				PHP_EOL.$parsedShowList[$newAlias]
 			);
-
-			$this->addShow($parsedShowList[$newAlias]);
+			try{
+				$this->addShow($parsedShowList[$newAlias]);
+			}
+			catch(\Throwable $ex){
+				$delimiter_pre = "[";
+				$delimiter_post = "]";
+				$delimiter = $delimiter_post.$delimiter_pre;
+				$this->tracer->logDebug(
+					'[NEW SHOW]', __FILE__, __LINE__,
+					"Falied to insert a show.".PHP_EOL.
+					"My records:"	.$delimiter_pre.join($delimiter, $currentAliasList)	.$delimiter_post.PHP_EOL.
+					"Site shows:"	.$delimiter_pre.join($delimiter, $parsedAliasList)	.$delimiter_post.PHP_EOL.
+					"Diff:"			.$delimiter_pre.join($delimiter, $newAliasList)		.$delimiter_post.PHP_EOL
+				);
+			}
 		}
 		
 		$sameAliasList = array_intersect($parsedAliasList, $currentAliasList);
