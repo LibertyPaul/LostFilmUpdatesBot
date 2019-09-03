@@ -4,20 +4,29 @@ namespace parser;
 
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
+require_once(__DIR__.'/../lib/Config.php');
 
 class ShowListFetcher{
-	const URL = 'https://www.lostfilm.tv/ajaxik.php';
-
 	private $requester;
 	private $tracer;
+	private $config;
 	
-	public function __construct(\HTTPRequesterInterface $requester, $pageEncoding = 'utf-8'){
-		assert($requester !== null);
+	public function __construct(\HTTPRequesterInterface $requester, \Config $config){
 		$this->requester = $requester;
+		$this->config = $congig;
+
 		$this->tracer = new \Tracer(__CLASS__);
 	}
 
 	public function fetchShowList(){
+		$URL = $config->getValue('Parser', 'ShowListURL', 'https://www.lostfilm.tv/ajaxik.php');
+		
+		$customHeader = $config->getValue('Parser', 'ShowList Custom Header', null);
+		$customHeaders = array();
+		if (is_null($customHeader) === false){
+			$customHeaders[] = $customHeader;
+		}
+
 		$showInfoList = array();
 
 		$args = array(
@@ -37,15 +46,16 @@ class ShowListFetcher{
 				$requestProperties = new \HTTPRequester\HTTPRequestProperties(
 					\HTTPRequester\RequestType::Get,
 					\HTTPRequester\ContentType::TextHTML,
-					self::URL,
-					$args
+					$URL,
+					$args,
+					$customHeaders
 				);
 
 				$res = $this->requester->request($requestProperties);
 				$showsJSON = $res->getBody();
 			}
-			catch(\HTTPRequester\HTTPException $ex){
-				$this->tracer->logException('[HTTP]', __FILE__, __LINE__, $ex);
+			catch(\Throwable $ex){
+				$this->tracer->logException('[HTTP LIB]', __FILE__, __LINE__, $ex);
 				throw $ex;
 			}
 
@@ -71,6 +81,8 @@ class ShowListFetcher{
 			}
 
 			foreach($shows['data'] as $show){
+				$show['alias'] = trim($show['alias']);
+
 				if(empty($show['alias'])){
 					$this->tracer->logWarning(
 						'[DATA WARNING]', __FILE__, __LINE__,

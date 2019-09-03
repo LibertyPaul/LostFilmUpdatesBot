@@ -5,6 +5,7 @@ namespace parser;
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/SeriesParser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
@@ -12,8 +13,8 @@ require_once(__DIR__.'/SeriesAboutParser.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 class SeriesParserExecutor{
-	const rssURL = 'https://www.lostfilm.tv/rss.xml'; // TODO: move URL to `config`
 	private $pdo;
+	private $config;
 	private $seriesParser;
 	private $seriesAboutsParser;
 	private $getShowIdByAlias;
@@ -21,15 +22,13 @@ class SeriesParserExecutor{
 	private $tracer;
 	
 	public function __construct(Parser $seriesParser, Parser $seriesAboutParser){
-		assert($seriesParser !== null);
 		$this->seriesParser = $seriesParser;
-
-		assert($seriesAboutParser !== null);
 		$this->seriesAboutParser = $seriesAboutParser;
 
 		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = ParserPDO::getInstance();
+		$this->config = new \Config($this->pdo);
 
 		$this->getShowIdByAlias = $this->pdo->prepare('
 			SELECT `id` FROM `shows` WHERE `alias` = :alias
@@ -66,8 +65,15 @@ class SeriesParserExecutor{
 	}
 
 	public function run(){
+		$rssURL = $this->config->getValue('Parser', 'RSS URL', 'https://www.lostfilm.tv/rss.xml');
+		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header', null);
+		$customHeaders = array();
+		if (is_null($customHeader) === false){
+			$customHeaders[] = $customHeader;
+		}	
+
 		try{
-			$this->seriesParser->loadSrc(self::rssURL);
+			$this->seriesParser->loadSrc($rssURL, $customHeaders);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);
