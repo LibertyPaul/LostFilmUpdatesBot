@@ -13,7 +13,7 @@ class ShowListFetcher{
 	
 	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester, \Config $config){
 		$this->requester = $requester;
-		$this->config = $congig;
+		$this->config = $config;
 
 		$this->tracer = new \Tracer(__CLASS__);
 	}
