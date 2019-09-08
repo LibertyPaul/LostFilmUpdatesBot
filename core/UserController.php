@@ -242,15 +242,15 @@ class UserController{
 			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
 																					.PHP_EOL.
 			'Список команд:'														.PHP_EOL.
-			"'$addShowCoreCommand' - Добавить уведомления о сериале"				.PHP_EOL.
-			"'$removeShowCoreCommand' - Удалить уведомления о сериале"				.PHP_EOL.
-			"'$getMyShowsCoreCommand' - Показать, на что ты подписан"				.PHP_EOL.
-			"'$muteCoreCommand' - Выключить уведомления"							.PHP_EOL.
-			"'$cancelCoreCommand' - Отменить команду"								.PHP_EOL.
-			"'$helpCoreCommand' - Показать это сообщение"							.PHP_EOL.
-			"'$donateCoreCommand' - Задонатить пару баксов на доширак создателю"	.PHP_EOL.
-			"'$getShareButtonCoreCommand' - Поделиться контактом бота"				.PHP_EOL.
-			"'$stopCoreCommand' - Удалиться из контакт-листа бота"					.PHP_EOL
+			"$addShowCoreCommand - Добавить уведомления о сериале"					.PHP_EOL.
+			"$removeShowCoreCommand - Удалить уведомления о сериале"				.PHP_EOL.
+			"$getMyShowsCoreCommand - Показать, на что ты подписан"					.PHP_EOL.
+			"$muteCoreCommand - Выключить уведомления"								.PHP_EOL.
+			"$cancelCoreCommand - Отменить команду"									.PHP_EOL.
+			"$helpCoreCommand - Показать это сообщение"								.PHP_EOL.
+			"$donateCoreCommand - Задонатить пару баксов на доширак создателю"		.PHP_EOL.
+			"$getShareButtonCoreCommand - Поделиться контактом бота"				.PHP_EOL.
+			"$stopCoreCommand - Удалиться из контакт-листа бота"					.PHP_EOL
 																					.PHP_EOL.
 			'Telegram/VK создателя: @libertypaul'									.PHP_EOL.
 			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'			.PHP_EOL.
