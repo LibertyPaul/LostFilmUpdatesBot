@@ -103,16 +103,14 @@ class SeriesParserExecutor{
 
 				switch($about['status']){
 					case SeriesStatus::Ready:
-						$this->tracer->logEvent(
+						$this->tracer->logfEvent(
 							'[o]', __FILE__, __LINE__,
-							sprintf(
-								"New series: %s S%02dE%02d %s(%s)",
-								$series['alias'],
-								$series['seasonNumber'],
-								$series['seriesNumber'],	
-                                $about['title_ru'],
-                                $about['title_en']
-							)
+							"New series: %s S%02dE%02d %s(%s)",
+							$series['alias'],
+							$series['seasonNumber'],
+							$series['seriesNumber'],
+							$about['title_ru'],
+							$about['title_en']
 						);
 
 						try{
