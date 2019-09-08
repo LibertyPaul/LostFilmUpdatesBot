@@ -301,7 +301,6 @@ class UserController{
 		$hasOutdated = false;
 
 		$rows = array();
-		$rows[] = 'Твои сериалы:'.PHP_EOL.PHP_EOL;
 
 		foreach($userShows as $show){
 			$icon = '•';
@@ -314,6 +313,7 @@ class UserController{
 		}
 
 		if($hasOutdated){
+			$rows[] = '<i>• - сериал выходит</i>';
 			$rows[] = '<i>✕ - сериал закончен</i>';
 		}
 
@@ -333,9 +333,6 @@ class UserController{
 			$messageParts[] = $currentPart;
 		}
 		
-		$text .= PHP_EOL."• - сериал выходит";
-		$text .= PHP_EOL."✕ - сериал закончен";
-
 		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
 		$outgoingMessage = new OutgoingMessage($messageParts[0], $markupType);
