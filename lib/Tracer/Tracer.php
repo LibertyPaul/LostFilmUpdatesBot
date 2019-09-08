@@ -18,7 +18,7 @@ class Tracer extends TracerBase{
 		}
 	}
 
-	private static function createDirIfNotExists($dir){
+	private function createDirIfNotExists($dir){
 		$prev_umask = umask(0);
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
@@ -31,19 +31,34 @@ class Tracer extends TracerBase{
 			}
 		}
 		else{
-			assert(mkdir($dir, 0777, true));
+			$group = $this->config->getLinuxGroup();
+			if($group !== null){
+				assert(mkdir($dir, 0770, true));
+				assert(chgrp($dir, $group));
+			}
+			else{
+				assert(mkdir($dir, 0777, true));
+			}
 		}
 		umask($prev_umask);
 	}
 		
 
-	private static function prepareTraceFile($path){
+	private function prepareTraceFile($path){
 		$prev_umask = umask(0);
-		self::createDirIfNotExists(dirname($path));
+		$this->createDirIfNotExists(dirname($path));
 	
 		if(file_exists($path) === false){
 			assert(touch($path));
-			assert(chmod($path, 0666));
+
+			$group = $this->config->getLinuxGroup();
+			if($group !== null){
+				assert(mkdir($path, 0660, true));
+				assert(chgrp($path, $group));
+			}
+			else{
+				assert(mkdir($path, 0666, true));
+			}
 		}
 		
 		$hFile = fopen($path, 'a');
@@ -68,7 +83,7 @@ class Tracer extends TracerBase{
 
 		$id = uniqid($this->traceName.'_');
 		
-		$hFile = self::prepareTraceFile(self::standaloneTracePath);
+		$hFile = $this->prepareTraceFile(self::standaloneTracePath);
 
 		assert(flock($hFile, LOCK_EX));
 		assert(fwrite($hFile, "id=[$id]"));
@@ -87,7 +102,7 @@ class Tracer extends TracerBase{
 		assert(is_string($text));
 
 		if($this->hFile === null){
-			$this->hFile = self::prepareTraceFile(self::logsDir.'/'.$this->traceName.'.log');
+			$this->hFile = $this->prepareTraceFile(self::logsDir.'/'.$this->traceName.'.log');
 		}
 		
 		$text .= PHP_EOL;
