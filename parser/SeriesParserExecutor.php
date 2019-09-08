@@ -36,7 +36,7 @@ class SeriesParserExecutor{
 		
 		$this->addSeriesQuery = $this->pdo->prepare('
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
-			VALUES :show_id, :seasonNumber, :seriesNumber, :title_ru, :title_en
+			VALUES (:show_id, :seasonNumber, :seriesNumber, :title_ru, :title_en)
 		');
 
 		$this->wasSeriesNotificationSentQuery = $this->pdo->prepare('
@@ -123,12 +123,11 @@ class SeriesParserExecutor{
 							$this->getShowIdByAlias->execute($args);
 						}
 						catch(\PDOException $ex){
-							$this->tracer->logError(
-								'[o]', __FILE__, __LINE__,
-								'Failed to execute getShowIdByAlias:'.PHP_EOL.
-								print_r($args, true)
-							);
 							$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+							$this->tracer->logDebug(
+								'[o]', __FILE__, __LINE__,
+								$this->addSeriesQuery->queryString
+							);
 							throw $ex;
 						}
 
@@ -151,12 +150,11 @@ class SeriesParserExecutor{
 							$this->addSeriesQuery->execute($args);
 						}
 						catch(\PDOException $ex){
-							$this->tracer->logError(
-								'[o]', __FILE__, __LINE__,
-								'Failed to execute addSeriesQuery:'.PHP_EOL.
-								print_r($args, true)
-							);
 							$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+							$this->tracer->logDebug(
+								'[o]', __FILE__, __LINE__,
+								$this->addSeriesQuery->queryString
+							);
 							throw $ex;
 						}
 
