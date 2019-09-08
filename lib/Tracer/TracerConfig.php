@@ -99,7 +99,7 @@ class TracerConfig{
 		}
 
 		if(isset($configIniSection['LinuxGroup'])){
-			$this->LinuxGroup = $configIniSection['CLIStdOutTrace'];
+			$this->LinuxGroup = $configIniSection['LinuxGroup'];
 		}
 
 	}

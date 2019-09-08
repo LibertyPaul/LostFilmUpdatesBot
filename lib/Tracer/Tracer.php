@@ -53,7 +53,6 @@ class Tracer extends TracerBase{
 
 			$group = $this->config->getLinuxGroup();
 			if($group !== null){
-				assert(mkdir($path, 0660, true));
 				assert(chgrp($path, $group));
 			}
 			else{
