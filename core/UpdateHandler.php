@@ -67,11 +67,11 @@ class UpdateHandler{
 		");
 	}
 
-	private function logIncomingMessage(IncomingMessage $incomingMessage){
+	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
 		try{
 			$this->logRequestQuery->execute(
 				array(
-					':user_id'		=> $incomingMessage->getUserId(),
+					':user_id'		=> $user_id,
 					':update_id'	=> $incomingMessage->getUpdateId(),
 					':text'			=> $incomingMessage->getText()
 				)
@@ -140,14 +140,14 @@ class UpdateHandler{
 		}
 	}
 
-	public function processIncomingMessage(IncomingMessage $incomingMessage){
+	public function processIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
 			'Entered processIncomingMessage with message:'.PHP_EOL.
 			$incomingMessage
 		);
 
-		$loggedRequestId = $this->logIncomingMessage($incomingMessage);
+		$loggedRequestId = $this->logIncomingMessage($user_id, $incomingMessage);
 
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
@@ -155,7 +155,7 @@ class UpdateHandler{
 		);
 
 		try{
-			$user = User::getUser($this->pdo, $incomingMessage->getUserId());
+			$user = User::getUser($this->pdo, $user_id);
 			$userController = new UserController($user);
 		}
 		catch(\Throwable $ex){
@@ -222,20 +222,4 @@ class UpdateHandler{
 		return $loggedRequestId;
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

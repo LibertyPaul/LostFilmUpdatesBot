@@ -360,15 +360,15 @@ class UpdateHandler{
 		);
 
 		$incomingMessage = new \core\IncomingMessage(
-			$user_id,
 			$command,
 			$text,
 			$update->update_id
 		);
 
 		$coreHandler = new \core\UpdateHandler();
-		$coreHandler->processIncomingMessage($incomingMessage);
+		$coreHandler->processIncomingMessage($user_id, $incomingMessage);
 
+		# TODO: Remove Botan
 		if($command !== null){
 			try{
 				$this->sendToBotan($update->message, $rawCommand);

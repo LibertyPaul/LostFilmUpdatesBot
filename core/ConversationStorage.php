@@ -9,6 +9,25 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/IncomingMessage.php');
 
 
+abstract class ConversationStorageInsertPosition{
+	const Front	= 1;
+	const Back	= 2;
+
+	public static function toString($position){
+		switch($position){
+			case 1:
+				return "Front";
+
+			case 2:
+				return "Back";
+
+			default:
+				return "<Incorrect Position ($position)>";
+		}
+	}	
+}
+
+
 class ConversationStorage{
 	private $user_id;
 	private $storage;
@@ -60,6 +79,26 @@ class ConversationStorage{
 			$this->conversation = array();
 		}
 
+		foreach($this->conversation as $incomingMessage){
+			if($incomingMessage instanceof IncomingMessage === false){
+				$this->tracer->logfError(
+					'[o]', __FILE__, __LINE__,
+					'Got invalid object from memcache [%s][%s]',
+					gettype($incomingMessage),
+					strval($incomingMessage)
+				);
+
+				$this->deleteConversation();
+
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Whole conversation was erased.'
+				);
+
+				throw new \RuntimeException('Conversation is not valid.');
+			}
+		}
+
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
 			'Fetched Conversation:'.PHP_EOL.
@@ -109,17 +148,39 @@ class ConversationStorage{
 		return count($this->conversation); // O(1)
 	}
 
-	public function insertMessage(IncomingMessage $incomingMessage){
-		$this->tracer->logDebug(
+	private function insertMessage(IncomingMessage $incomingMessage, $position){
+		$this->tracer->logfDebug(
 			'[o]', __FILE__, __LINE__,
-			'Inserting message:'.PHP_EOL.
+			"Inserting message to %s:\n%s",
+			ConversationStorageInsertPosition::toString($position),
 			$incomingMessage
 		);
 
-		$this->conversation[] = $incomingMessage;
+		switch($position){
+			case ConversationStorageInsertPosition::Front:
+				array_unshift($this->conversation, $incomingMessage);
+				break;
+
+			case ConversationStorageInsertPosition::Back:
+				array_push($this->conversation, $incomingMessage);
+				break;
+
+			default:
+				$this->tracer->logfError('[o]', __FILE__, __LINE__, 'Incorrect insertMessage position.');
+				throw new \RuntimeError('Incorrect insertMessage position.');
+		}
+
 		$this->commitConversation();
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
+	}
+
+	public function appendMessage(IncomingMessage $incomingMessage){
+		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Back);
+	}
+
+	public function prependMessage(IncomingMessage $incomingMessage){
+		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Front);
 	}
 
 	public function deleteConversation(){

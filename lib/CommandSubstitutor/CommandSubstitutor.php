@@ -74,7 +74,7 @@ class CommandSubstitutor{
 			return null;
 		}
 
-		return new CoreCommand($row['id'], $row['text']);
+		return new CoreCommand(intval($row['id']), strval($row['text']));
 	}
 
 	public function convertCoreToAPI($API, $text){
@@ -110,7 +110,7 @@ class CommandSubstitutor{
 			return null;
 		}
 
-		return new CoreCommand($row['id'], $row['text']);
+		return new CoreCommand(intval($row['id']), strval($row['text']));
 	}
 
 	public function getCoreCommandsAssociative(){
