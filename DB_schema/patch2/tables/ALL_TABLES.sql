@@ -5,4 +5,4 @@ GRANT
 	UPDATE,
 	LOCK TABLES 
 ON *
-TO 'LostFilmUpdates'@'localhost';
+TO '&&owner_db_user'@'&&owner_db_host';

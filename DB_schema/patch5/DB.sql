@@ -1,1 +1,1 @@
-USE LostFilmUpdatesBot;
+USE `&&db_name`;
