@@ -626,9 +626,6 @@ class UserController{
 				
 				switch(count($res)){
 				case 0://не найдено ни одного похожего названия
-
-					$query->debugDumpParams();
-
 					$this->conversationStorage->deleteConversation();
 					return new DirectedOutgoingMessage(
 						$this->user->getId(),
