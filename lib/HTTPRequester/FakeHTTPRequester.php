@@ -1,5 +1,9 @@
 <?php
+
+namespace HTTPRequester;
+
 require_once(__DIR__.'/HTTPRequesterInterface.php');
+require_once(__DIR__.'/HTTPResponse.php');
 require_once(__DIR__.'/../Tracer/Tracer.php');
 
 class FakeHTTPRequester implements HTTPRequesterInterface{
@@ -16,11 +20,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			'ok' => true
 		);
 
-		$resp = array(
-			'value' => json_encode($telegram_resp),
-			'code' => 200
-		);
-		
+		$resp = new HTTPResponse(200, json_encode($telegram_resp));
 		return $resp; 
 	}
 	
@@ -29,11 +29,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			'ok' => false
 		);
 		
-		$resp = array(
-			'value' => json_encode($telegram_resp),
-			'code' => 403
-		);
-		
+		$resp = new HTTPResponse(403, json_encode($telegram_resp));
 		return $resp;
 	}
 	
@@ -71,29 +67,14 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		}
 	}
 	
-	public function sendJSONRequest($destination, $content_json){
-		$this->tracer->logEvent('[JSON REQUEST]', __FILE__, __LINE__, $destination);
-		$this->tracer->logEvent(
-			'[JSON REQUEST]', __FILE__, __LINE__,
-			PHP_EOL.print_r($content_json, true)
-		);
-
-		$this->writeOut($content_json);	
+	public function request(HTTPRequestProperties $requestProperties){
+		$this->writeOut($requestProperties);
 		return $this->randomResponse();
 	}
 
-	public function sendGETRequest($destination, array $args = null){
-		assert(is_string($destination));
-
-		$request = $destination;
-		if($args !== null){
-			assert(strpos($destination, '?') === false);
-			$request .= '?'.http_build_query($args);
+	public function multiRequest(array $requestsProperties){
+		foreach($requestsProperties as $request){
+			$this->request($request);
 		}
-
-		$this->tracer->logEvent('[GET REQUEST]', __FILE__, __LINE__, $request);
-		$this->writeOut($request);	
-		return $this->randomResponse();
 	}
-
 }		

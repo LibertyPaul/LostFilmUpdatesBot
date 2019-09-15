@@ -16,6 +16,7 @@ class SeriesParserExecutor{
 	private $pdo;
 	private $seriesParser;
 	private $seriesAboutsParser;
+	private $getShowIdByAlias;
 	private $addSeriesQuery;
 	private $tracer;
 	
@@ -29,12 +30,14 @@ class SeriesParserExecutor{
 		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = ParserPDO::getInstance();
+
+		$this->getShowIdByAlias = $this->pdo->prepare('
+			SELECT `id` FROM `shows` WHERE `alias` = :alias
+		');
 		
 		$this->addSeriesQuery = $this->pdo->prepare('
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
-			SELECT id, :seasonNumber, :seriesNumber, :title_ru, :title_en
-			FROM `shows`
-			WHERE `alias` = :alias
+			VALUES :show_id, :seasonNumber, :seriesNumber, :title_ru, :title_en
 		');
 
 		$this->wasSeriesNotificationSentQuery = $this->pdo->prepare('
@@ -66,9 +69,9 @@ class SeriesParserExecutor{
 		try{
 			$this->seriesParser->loadSrc(self::rssURL);
 		}
-		catch(\HTTPException $ex){
-			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $ex);
-			return;
+		catch(\Throwable $ex){
+			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);
+			throw $ex;
 		}
 		
 		$latestSeriesList = $this->seriesParser->run();
@@ -106,13 +109,26 @@ class SeriesParserExecutor{
 							)
 						);
 
+						$this->getShowIdByAlias->execute(
+							array(
+								':alias' => $series['alias']
+							)
+						);
+
+						$res = $this->getShowIdByAlias->fetch();
+						if($res === false){
+							throw new \RuntimeException("Show [$series[alias] was not found");
+						}
+
+						$show_id = $res[0];
+
 						$this->addSeriesQuery->execute(
 							array(
+								':show_id'		=> $show_id,
 								':seasonNumber'	=> $series['seasonNumber'],
 								':seriesNumber'	=> $series['seriesNumber'],
 								':title_ru'		=> $about['title_ru'],
-								':title_en'		=> $about['title_en'],
-								':alias'		=> $series['alias']
+								':title_en'		=> $about['title_en']
 							)
 						);
 

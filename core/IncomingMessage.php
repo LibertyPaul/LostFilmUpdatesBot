@@ -2,18 +2,18 @@
 
 namespace core;
 
-require_once(__DIR__.'/UserCommand.php');
+require_once(__DIR__.'/../lib/CommandSubstitutor/CoreCommand.php');
 
 
 class IncomingMessage{
 	private $user_id;
-	private $userCommand;
+	private $coreCommand;
 	private $text;
 	private $update_id;
 
 	public function __construct(
 		$user_id,
-		UserCommand $userCommand = null,
+		\CommandSubstitutor\CoreCommand $coreCommand = null,
 		$text,
 		$rawMessage = null,
 		$update_id = null
@@ -22,7 +22,7 @@ class IncomingMessage{
 		assert(is_string($text));
 
 		$this->user_id = $user_id;
-		$this->userCommand = $userCommand;
+		$this->coreCommand = $coreCommand;
 		$this->text = $text;
 		$this->update_id = $update_id;
 	}
@@ -31,8 +31,8 @@ class IncomingMessage{
 		return $this->user_id;
 	}
 
-	public function getUserCommand(){
-		return $this->userCommand;
+	public function getCoreCommand(){
+		return $this->coreCommand;
 	}
 
 	public function getText(){
@@ -49,12 +49,17 @@ class IncomingMessage{
 			$update_id = '';
 		}
 
-		$result  = '***********************************'					.PHP_EOL;
-		$result .= 'IncomingMessage:'										.PHP_EOL;
-		$result .= sprintf("\tUser Id:      [%d]", $this->getUserId())		.PHP_EOL;
-		$result .= sprintf("\tUser Command: [%s]", $this->getUserCommand())	.PHP_EOL;
-		$result .= sprintf("\tText:         [%s]", $this->getText())		.PHP_EOL;
-		$result .= sprintf("\tUpdate Id:    [%s]", $update_id)				.PHP_EOL;
+		$coreCommandStr = null;
+		if($this->coreCommand !== null){
+			$coreCommandStr = $this->coreCommand->getText();
+		}
+
+		$result  = '***********************************'				.PHP_EOL;
+		$result .= 'IncomingMessage:'									.PHP_EOL;
+		$result .= sprintf("\tUser Id:      [%d]", $this->getUserId())	.PHP_EOL;
+		$result .= sprintf("\tCore Command: [%s]", $coreCommandStr)		.PHP_EOL;
+		$result .= sprintf("\tText:         [%s]", $this->getText())	.PHP_EOL;
+		$result .= sprintf("\tUpdate Id:    [%s]", $update_id)			.PHP_EOL;
 		$result .= '***********************************';
 		
 		return $result;

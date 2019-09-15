@@ -12,9 +12,9 @@ if [ ! -d "$incomingMessagesDir" ]; then
 	exit 1
 fi
 
-readonly selfDir=$(dirname $0)
-readonly address=$("$selfDir/getConfigValue.sh" 'TelegramAPI' 'Webhook URL')
-readonly password=$("$selfDir/getConfigValue.sh" 'TelegramAPI' 'Webhook Password')
+readonly selfDir="$(dirname $0)"
+readonly address="$("$selfDir/getConfigValue.sh" 'TelegramAPI' 'Webhook URL')"
+readonly password="$("$selfDir/getConfigValue.sh" 'TelegramAPI' 'Webhook Password')"
 
 
 if [ -z $address ]; then

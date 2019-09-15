@@ -9,10 +9,6 @@ class MessageRoute{
 	private $messageSender;
 
 	public function __construct(MessageSenderInterface $messageSender, $user_id){
-		if($messageSender === null){
-			throw \InvalidArgumentException('messageSender is null');
-		}
-
 		$this->messageSender = $messageSender;
 		$this->user_id = $user_id;
 	}

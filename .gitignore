@@ -1,14 +1,9 @@
 logs/*
 logsBackup/*
-locks/*
 TelegramAPI/tests/debug_webhook/update.json
-TelegramAPI/tests/debug_webhook/input_debug_webhook.php
 DBCredentials/*.ini
 DBCredentials/*
 tools/data/
-lib/Tracer/TracerConfig.php
+lib/Tracer/TracerConfig.ini
 
 *.swp
-.my.cnf
-DB_schema/Owner.ini
-*.sql_t.sql

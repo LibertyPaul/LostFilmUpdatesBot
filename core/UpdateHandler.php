@@ -12,7 +12,6 @@ require_once(__DIR__.'/UserController.php');
 
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
-require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 class DuplicateUpdateException extends \RuntimeException{}
 
@@ -156,39 +155,17 @@ class UpdateHandler{
 		);
 
 		try{
-			$conversationStorage = new ConversationStorage($incomingMessage->getUserId());
-			$conversationStorage->insertMessage($incomingMessage);
-			$initialCommand = $conversationStorage->getFirstMessage()->getUserCommand();
+			$user = User::getUser($this->pdo, $incomingMessage->getUserId());
+			$userController = new UserController($user);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'Conversation Storage Error'
-			);
-
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
-
-		try{
-			$userController = new UserController(
-				$incomingMessage->getUserId(),
-				$conversationStorage
-			);
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'UserController creation error'
-			);
-
 			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing message ...');
 
-		$directedOutgoingMessage = $userController->processLastUpdate();
+		$directedOutgoingMessage = $userController->processMessage($incomingMessage);
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing has finished.');
 

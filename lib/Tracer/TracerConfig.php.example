@@ -1,4 +1,8 @@
-<?php
-const TRACER_STANDALONE_SIZE = 5000;
-const TRACER_LEVEL = 'DEBUG';
-const LOG_STARTED_FINISHED = false;
+[Default]
+StandaloneIfLargerThan=500000
+LoggingLevel=DEBUG
+LogStartedFinished=false
+CLIStdOutTrace=true
+
+[Custom.Config]
+LoggingLevel=EVENT

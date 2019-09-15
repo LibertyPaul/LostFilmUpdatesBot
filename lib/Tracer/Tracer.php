@@ -91,10 +91,14 @@ class Tracer extends TracerBase{
 		}
 		
 		$text .= PHP_EOL;
-		
+
 		assert(flock($this->hFile, LOCK_EX));
 		assert(fwrite($this->hFile, $text));
 		assert(flock($this->hFile, LOCK_UN));
+
+		if($this->config->getCLIStdOutTrace() && strpos(php_sapi_name(), 'cli') !== false){
+			echo $text;
+		}
 
 	}
 

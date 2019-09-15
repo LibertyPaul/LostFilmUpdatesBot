@@ -3,6 +3,7 @@
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/Config.php');
 require_once(__DIR__.'/HTTPRequester/HTTPRequesterFactory.php');
+require_once(__DIR__.'/HTTPRequester/HTTPRequestProperties.php');
 
 /**
  * Class Botan
@@ -44,7 +45,7 @@ class Botan {
 
 		$pdo = \BotPDO::getInstance();
 		$config = new \Config($pdo);
-		$HTTPRequesterFactory = new \HTTPRequesterFactory($config);
+		$HTTPRequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 		$this->HTTPRequester = $HTTPRequesterFactory->getInstance();
 	}
 
@@ -63,41 +64,18 @@ class Botan {
 	}
 
 	protected function request($url, $body) {
-		$res = $this->HTTPRequester->sendJSONRequest($url, json_encode($body));
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+			\HTTPRequester\RequestType::Get,
+			\HTTPRequester\ContentType::JSON,
+			$url,
+			json_encode($body)
+		);
+
+		$res = $this->HTTPRequester->request($requestProperties);
 
 		return [
-			'error' => $res['code'] >= 400,
-			'response' => json_decode($res['value'], true)
+			'error' => $res->getCode() >= 400,
+			'response' => json_decode($res->getBody(), true)
 		];
-	}
-
-	private function curlRequest($url, $body) {
-		$ch = curl_init($url);
-		curl_setopt_array($ch, [
-			CURLOPT_POST => true,
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_HTTPHEADER => [
-				'Content-Type: application/json'
-			],
-			CURLOPT_POSTFIELDS => json_encode($body)
-		]);
-		$response = curl_exec($ch);
-		curl_close($ch);
-
-		return $response;
-	}
-
-	private function streamContextRequest($url, $body) {
-		$options = array(
-			'http' => array(
-				'header'  => 'Content-Type: application/json',
-				'method'  => 'POST',
-				'content' => json_encode($body)
-			)
-		);
-		$context = stream_context_create($options);
-		$response = file_get_contents($url, false, $context);
-
-		return $response;
 	}
 }

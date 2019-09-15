@@ -34,10 +34,17 @@ class ShowListFetcher{
 			$args['o'] = $pos;
 
 			try{
-				$res = $this->requester->sendGETRequest(self::URL, $args);
-				$showsJSON = $res['value'];
+				$requestProperties = new \HTTPRequester\HTTPRequestProperties(
+					\HTTPRequester\RequestType::Get,
+					\HTTPRequester\ContentType::TextHTML,
+					self::URL,
+					$args
+				);
+
+				$res = $this->requester->request($requestProperties);
+				$showsJSON = $res->getBody();
 			}
-			catch(\HTTPException $ex){
+			catch(\HTTPRequester\HTTPException $ex){
 				$this->tracer->logException('[HTTP]', __FILE__, __LINE__, $ex);
 				throw $ex;
 			}

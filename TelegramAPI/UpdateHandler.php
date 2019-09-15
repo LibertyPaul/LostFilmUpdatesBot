@@ -2,7 +2,6 @@
 
 namespace TelegramAPI;
 
-require_once(__DIR__.'/../core/UserCommand.php');
 require_once(__DIR__.'/../core/IncomingMessage.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../core/BotPDO.php');
@@ -13,11 +12,13 @@ require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
 require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 class UpdateHandler{
 	private $tracer;
 	private $pdo;
 	private $speechRecognizer;
+	private $commandSubstitutor;
 	private $telegramAPI;
 	private $botan;
 	
@@ -32,9 +33,11 @@ class UpdateHandler{
 			throw $ex;
 		}
 
+		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
+
 		try{
 			$config = new \Config($this->pdo);
-			$HTTPrequesterFactory = new \HTTPRequesterFactory($config);
+			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 
 			$this->speechRecognizer = new \SpeechRecognizer\SpeechRecognizer(
@@ -68,6 +71,14 @@ class UpdateHandler{
 			$this->speechRecognizer = null;
 			$this->telegramAPI = null;
 		}
+	}
+
+	private static function validateUpdate($update){
+		return
+			$update !== null				&&
+			isset($update->message) 		&&
+			isset($update->message->chat)	&&
+			isset($update->message->from);
 	}
 
 	private static function normalizeUpdateFields($update){
@@ -285,49 +296,17 @@ class UpdateHandler{
 		return $text;
 	}
 
-	private function mapUserCommand($text){
-		$result = null;
+	public function handleUpdate($update){
+		if(self::validateUpdate($update) === false){
+			$this->tracer->logError(
+				'[INVALID UPDATE]', __FILE__, __LINE__,
+				'Update is invalid:'.PHP_EOL.
+				print_r($update, true)
+			);
 
-		switch($text){
-			case '/start':
-				$result = new \core\UserCommand(\core\UserCommandMap::Start);
-				break;
-			case '/add_show':
-				$result = new \core\UserCommand(\core\UserCommandMap::AddShow);
-				break;
-			case '/remove_show':
-				$result = new \core\UserCommand(\core\UserCommandMap::RemoveShow);
-				break;
-			case '/get_my_shows':
-				$result = new \core\UserCommand(\core\UserCommandMap::GetMyShows);
-				break;
-			case '/mute':
-				$result = new \core\UserCommand(\core\UserCommandMap::Mute);
-				break;
-			case '/cancel':
-				$result = new \core\UserCommand(\core\UserCommandMap::Cancel);
-				break;
-			case '/help':
-				$result = new \core\UserCommand(\core\UserCommandMap::Help);
-				break;
-			case '/stop':
-				$result = new \core\UserCommand(\core\UserCommandMap::Stop);
-				break;
-			case '/share':
-				$result = new \core\UserCommand(\core\UserCommandMap::GetShareButton);
-				break;
-			case '/donate':
-				$result = new \core\UserCommand(\core\UserCommandMap::Donate);
-				break;
-			case '/broadcast':
-				$result = new \core\UserCommand(\core\UserCommandMap::Broadcast);
-				break;
+			throw new \RuntimeException('Invalid update');
 		}
 
-		return $result;
-	}
-
-	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
 
 		$user_id = $this->createOrUpdateUser($update->message->chat);
@@ -368,7 +347,17 @@ class UpdateHandler{
 		}
 
 		$rawCommand = $this->extractUserCommand($text);
-		$command = $this->mapUserCommand($rawCommand);
+		$command = $this->commandSubstitutor->convertAPIToCore('TelegramAPI', $rawCommand);
+
+		$commandText = $rawCommand;
+		if($command !== null){
+			$commandText = $command->getText();
+		}
+
+		$this->tracer->logDebug(
+			'[COMMAND]', __FILE__, __LINE__,
+			sprintf('User command [%s] was mapped to [%s]', $rawCommand, $commandText)
+		);
 
 		$incomingMessage = new \core\IncomingMessage(
 			$user_id,

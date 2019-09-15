@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS `coreCommands` (
+	`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`text` VARCHAR(255) CHARACTER SET 'ascii' COLLATE 'ascii_bin' NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX `Text_UNIQUE` (`text` ASC)
+);
+

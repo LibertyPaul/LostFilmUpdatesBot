@@ -1,0 +1,26 @@
+Patch creation & deployment description
+
+1. To create a new patch call ./createPatch.sh.
+   It will spawn a new dir patchXX with 'database.sql' default script.
+
+2. Fulfill patch by creating according directories:
+    database
+    data_before
+    constraints_drop
+    indexes_drop
+    tables
+    indexes_create
+    constraints_create
+    triggers
+    procedures
+    users
+    permissions
+    data_after
+    database_after
+
+3. Compile patch (from multiple direcorites/files) to one single file: ./compile.sh patchXX
+   Directories are picked up in order as listed in section 2.
+
+4. Replace setup-dependant variables by executing ./insertValues.sh /tmp/patchXXX.sql
+
+5. Deploy patch by calling ./deploy.sh /tmp/patchXXX.sql

@@ -22,10 +22,10 @@ class SpeechRecognizer{
 	private $velocityController;
 	private $tracer;
 
-	public function __construct(\Config $config, \HTTPRequesterInterface $HTTPRequester){
-		assert($config !== null);
-		assert($HTTPRequester !== null);
-
+	public function __construct(
+		\Config $config,
+		\HTTPRequester\HTTPRequesterInterface $HTTPRequester
+	){
 		$this->HTTPRequester = $HTTPRequester;
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->APIURL = 'https://speech.googleapis.com/v1/speech:recognize';
@@ -34,7 +34,7 @@ class SpeechRecognizer{
 		#$this->velocityController = new \VelocityController(__CLASS__);
 	}
 
-	private function createGetRequest(){
+	public function recognize($audioBase64, $format){
 		if($this->APIKey === null){
 			$this->tracer->logError(
 				'[CONFIG]', __FILE__, __LINE__,
@@ -43,11 +43,7 @@ class SpeechRecognizer{
 
 			throw new \RuntimeException('[SpeechRecognizer][API Key] was not set');
 		}
-		
-		return sprintf('%s?key=%s', $this->APIURL, $this->APIKey);
-	}
 
-	public function recognize($audioBase64, $format){
 		switch($format){
 			case 'ogg':
 				$encoding = 'OGG_OPUS';
@@ -80,21 +76,26 @@ class SpeechRecognizer{
 			'audio'		=> $RecognitionAudio
 		);
 
-		$JSONRequest = json_encode($Request, JSON_PRETTY_PRINT);
-		$URL = $this->createGetRequest();
-		$result = $this->HTTPRequester->sendJSONRequest($URL, $JSONRequest);
+		$requestProperties = new HTTPRequestProperties(
+			\HTTPRequester\RequestType::Post,
+			\HTTPRequester\ContentType::JSON,
+			$this->APIURL,
+			$this->APIKey
+		);
 
-		if($result['code'] >= 400){
+		$result = $this->HTTPRequester->request($requestProperties);
+
+		if($result->getCode() >= 400){
 			$this->tracer->logError(
 				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
-				"SpeechRecognition has failed with code=[$result[code]]. Response:".PHP_EOL.
-				$result['value']
+				'SpeechRecognition has failed. Response:'.PHP_EOL.
+				strval($result)
 			);
 
 			return Result::APIError;
 		}
 
-		$recognitionResult = json_decode($result['value']);
+		$recognitionResult = json_decode($result->getBody());
 		if($recognitionResult === false){
 			return Result::APIError;
 		}

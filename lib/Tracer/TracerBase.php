@@ -1,63 +1,21 @@
 <?php
 
+require_once(__DIR__.'/TracerLevel.php');
 require_once(__DIR__.'/TracerConfig.php');
 
-abstract class TracerLevel{
-	const Critical		= 0;
-	const Error			= 1;
-	const Warning		= 4;
-	const Notice		= 6;
-	const Event			= 8;
-	const Debug			= 9;
 
-	private static $levelMap = array(
-		'CRITICAL'	=> self::Critical,
-		'ERROR'		=> self::Error,
-		'WARNING'	=> self::Warning,
-		'NOTICE'	=> self::Notice,
-		'EVENT'		=> self::Event,
-		'DEBUG'		=> self::Debug
-	);
-
-//	private static $codeMap = array_flip(self::$levelMap);
-	private static $codeMap = array(
-		self::Critical	=> 'CRITICAL',
-		self::Error		=> 'ERROR',
-		self::Warning	=> 'WARNING',
-		self::Notice	=> 'NOTICE',
-		self::Event		=> 'EVENT',
-		self::Debug		=> 'DEBUG'
-	);
-
-	public static function logEverythingLevel(){
-		return self::Event;
-	}
-
-	public static function getLevelByName($name){
-		if(array_key_exists($name, self::$levelMap)){
-			return self::$levelMap[$name];
-		}
-		else{
-			throw new \OutOfBoundsException("Invalid trace level name: '$name'");
-		}
-	}
-
-	public static function getNameByLevel($level){
-		if(array_key_exists($level, self::$codeMap)){
-			return self::$codeMap[$level];
-		}
-		else{
-			throw new \OutOfBoundsException("Invalid trace level: '$level'");
-		}
-	}
-}
 
 abstract class TracerBase{
+	const CONFIG_INI_PATH = __DIR__.'/TracerConfig.ini';
+	protected $config;
 	protected $traceName;
-	private $maxLevel;
 	private $secondTracer;
 
-	protected function __construct($traceName, TracerBase $secondTracer = null){
+	protected function __construct(
+		$traceName,
+		TracerBase $secondTracer = null,
+		TracerConfig $config = null
+	){
 		assert(is_string($traceName));
 		if($traceName[0] === '-'){
 			$traceName = substr($traceName, 1);
@@ -67,26 +25,21 @@ abstract class TracerBase{
 
 		$this->traceName = $traceName;
 		$this->secondTracer = $secondTracer;
-			
-		if(defined('TRACER_LEVEL')){
-			$this->maxLevel = TracerLevel::getLevelByName(TRACER_LEVEL);
+		if($config === null){
+			$this->config = new TracerConfig(self::CONFIG_INI_PATH, $traceName);
 		}
 		else{
-			$this->maxLevel = TracerLevel::logEverythingLevel();
-			$this->logWarning(
-				'[TRACER]', __FILE__, __LINE__,
-				'TRACER_LEVEL is not set. Logging everything.'
-			);
+			$this->config = $config;
 		}
-
-		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+			
+		if($this->config->getLogStartedFinished()){
 			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Started.');
 		}
 
 	}
 
 	public function __destruct(){
-		if(defined('LOG_STARTED_FINISHED') && LOG_STARTED_FINISHED){
+		if($this->config->getLogStartedFinished()){
 			$this->logDebug('[TRACER]', __FILE__, __LINE__, 'Finished.');
 		}
 	}
@@ -94,38 +47,68 @@ abstract class TracerBase{
 	abstract protected function write($text);
 	abstract protected function storeStandalone($text);
 
-	private static function compileRecord($level, $tag, $file, $line, $message){
-		assert(is_string($tag));
-		assert(is_string($file));
-		assert(is_int($line));
-		
+	private static function getDateMicro(){
 		# PHP can't into microseconds. Let's help him.
 		sscanf(microtime(), '0.%d %d', $microseconds, $seconds);
 		$microseconds /= 100;
-		$date = sprintf('%s.%06d', date('Y.m.d H:i:s'), $microseconds);
+		return sprintf('%s.%06d', date('Y.m.d H:i:s'), $microseconds);
+	}		
 
+	private static function compileRecord(
+		int $level,
+		string $tag,
+		string $file,
+		int $line,
+		string $message
+	){
 		return sprintf(
-			'%s %s %s %s:%s %s',
-			$level,
+			"%s %s %s [%' 5d] %s:%s %s",
+			TracerLevel::getNameByLevel($level),
 			$tag,
-			$date,
+			self::getDateMicro(),
+			getmypid(),
 			basename($file),
 			$line,
 			$message
 		);
 	}
 
-	private function log($level, $tag, $file, $line, $message){
-		$messageLevel = TracerLevel::getLevelByName($level);
+	private function logf(
+			int $level,
+			string $tag,
+			string $file,
+			int	$line,
+			string $format = null,
+			...$args
+	){
+		if($format === null){
+			$format = '';
+		}
+		
+		return $this->log(
+			$level,
+			$tag,
+			$file,
+			$line,
+			sprintf($format, ...$args)
+		);
+	}
 
+	private function log(
+			int $level,
+			string $tag,
+			string $file,
+			int	$line,
+			string $message = null
+	){
 		if(empty($message)){
-			$message = 'No message provided.';
+			$message = '~|___0^0___|~';
 		}
 
-		if($messageLevel <= $this->maxLevel){
+		if($level <= $this->config->getLoggingLevel()){
 			$record = self::compileRecord($level, $tag, $file, $line, $message);
 			
-			if(defined('TRACER_STANDALONE_SIZE') && strlen($record) > TRACER_STANDALONE_SIZE){
+			if(strlen($record) > $this->config->getStandaloneIfLargerThan()){
 				try{
 					$this->storeStandalone($record);
 				}
@@ -144,48 +127,87 @@ abstract class TracerBase{
 		}
 	}
 
-	public function logCritical($tag, $file, $line, $message = null){
-		$this->log('CRITICAL', $tag, $file, $line, $message);
+	# Unformated log*
+	public function logCritical($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Critical, $tag, $file, $line, $format);
 	}
 
-	public function logError($tag, $file, $line, $message = null){
-		$this->log('ERROR', $tag, $file, $line, $message);
+	public function logError($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Error, $tag, $file, $line, $format);
 	}
 
-	public function logWarning($tag, $file, $line, $message = null){
-		$this->log('WARNING', $tag, $file, $line, $message);
+	public function logWarning($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Warning, $tag, $file, $line, $format);
 	}
 
-	public function logEvent($tag, $file, $line, $message = null){
-		$this->log('EVENT', $tag, $file, $line, $message);
+	public function logNotice($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Notice, $tag, $file, $line, $format);
 	}
 
-	public function logNotice($tag, $file, $line, $message = null){
-		$this->log('NOTICE', $tag, $file, $line, $message);
+	public function logEvent($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Event, $tag, $file, $line, $format);
 	}
 
-	public function logDebug($tag, $file, $line, $message = null){
-		$this->log('DEBUG', $tag, $file, $line, $message);
+	public function logDebug($tag, $file, $line, $format = null){
+		$this->log(TracerLevel::Debug, $tag, $file, $line, $format);
 	}
+
+	# Formatted log*
+	public function logfCritical($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Critical, $tag, $file, $line, $format, ...$args);
+	}
+
+	public function logfError($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Error, $tag, $file, $line, $format, ...$args);
+	}
+
+	public function logfWarning($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Warning, $tag, $file, $line, $format, ...$args);
+	}
+
+	public function logfNotice($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Notice, $tag, $file, $line, $format, ...$args);
+	}
+
+	public function logfEvent($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Event, $tag, $file, $line, $format, ...$args);
+	}
+
+	public function logfDebug($tag, $file, $line, $format = null, ...$args){
+		$this->logf(TracerLevel::Debug, $tag, $file, $line, $format, ...$args);
+	}
+
 
 	public function logException($tag, $file, $line, \Throwable $exception){
-		$description = sprintf(
+		$this->logfError(
+			$tag,
+			$file,
+			$line,
 			'%s, raised from %s:%s, reason: "%s"',
 			get_class($exception),
 			basename($exception->getFile()),
 			$exception->getLine(),
 			$exception->getMessage()
 		);
-
-		$this->logError($tag, $file, $line, $description);
 	}
 
-	public static function syslogCritical($tag, $file, $line, $message = null){
-		if(empty($message)){
+	public static function syslogCritical($tag, $file, $line, $format = null, ...$args){
+		if(empty($format)){
 			$message = 'No message provided.';
 		}
+		else{
+			$message = sprintf($format, ...$args);
+		}
+		
 
-		$record = self::compileRecord('CRITICAL', $tag, $file, $line, $message);
+		$record = self::compileRecord(
+			TracerLevel::Critical,
+			$tag,
+			$file,
+			$line,
+			$message
+		);
+
 		assert(syslog(LOG_CRIT, $record));
 	}
 }
