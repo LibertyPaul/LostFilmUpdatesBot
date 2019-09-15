@@ -14,17 +14,16 @@ abstract class CoreCommandMap{
 	const GetShareButton	= 9;
 	const Donate			= 10;
 	const Broadcast			= 11;
+	const AddShowTentative	= 12;
 }
 
 class CoreCommand{
 	private $id;
 	private $text;
 
-	public function __construct($id, $text){
-		assert(is_numeric($id));
+	public function __construct(int $id, string $text){
 		assert($id >= CoreCommandMap::Start);
-		assert($id <= CoreCommandMap::Broadcast);
-		assert(is_string($text));
+		assert($id <= CoreCommandMap::AddShowTentative);
 
 		$this->id = $id;
 		$this->text = $text;
@@ -36,5 +35,9 @@ class CoreCommand{
 
 	public function getText(){
 		return $this->text;
+	}
+
+	public function __toString(){
+		return sprintf("%s(%d)", $this->getText(), $this->getId());
 	}
 }

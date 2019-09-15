@@ -38,11 +38,12 @@ for f in $(find "$srcDir" -type f -name '*.tar.gz' | sort); do
 	)"
 
 	if [ $? -ne 0 ]; then
-		if [ $(echo "$res" | grep 'Not found in archive' -c) -eq 0 ]; then
+		if [ "$(echo "$res" | grep 'Not found in archive' -c)" -gt 0 ]; then
 			echo_yellow "Incoming Messages were not found. Continuing."
 		else
-			echo_red "Failed. Continuing."
+			echo_red "Failed. Aborting."
 			echo "$res"
+			exit 1
 		fi
 	fi
 

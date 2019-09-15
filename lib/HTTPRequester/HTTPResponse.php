@@ -24,7 +24,7 @@ class HTTPResponse{
 
 	private static function prettifyIfPossible($text){
 		$obj = json_decode($text);
-		if($obj === false){
+		if($obj === null){
 			return $text;
 		}
 

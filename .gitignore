@@ -2,7 +2,7 @@ logs/*
 logsBackup/*
 TelegramAPI/tests/debug_webhook/update.json
 DBCredentials/*.ini
-DBCredentials/*
+DB_schema/*.ini
 tools/data/
 lib/Tracer/TracerConfig.ini
 

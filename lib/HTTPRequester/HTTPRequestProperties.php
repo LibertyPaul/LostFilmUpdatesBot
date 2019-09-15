@@ -125,13 +125,13 @@ class HTTPRequestProperties{
 			$payloadStr = print_r($this->getPayload(), true);
 		}
 
-		$result  = '/************[HTTP Request Properties ]************/'			.PHP_EOL;
-		$result .= sprintf('URL:          [%s]'		, $this->getURL())				.PHP_EOL;
-		$result .= sprintf('Request Type: [%s]'		, $requestTypeStr)				.PHP_EOL;
-		$result .= sprintf('Content Type: [%s]'		, $contentTypeStr)				.PHP_EOL;
-		$result .= sprintf('Payload:      [%s]'		, $payloadStr)					.PHP_EOL;
-		$result .= sprintf('Custom Headers (%d):'	, count($this->customHeaders))	.PHP_EOL;
-		$result .= join(PHP_EOL, $this->customHeaders)								.PHP_EOL;
+		$result  = '/************[HTTP Request Properties]*************/'				.PHP_EOL;
+		$result .= sprintf('URL:          [%s]'		, $this->getURL())					.PHP_EOL;
+		$result .= sprintf('Request Type: [%s]'		, $requestTypeStr)					.PHP_EOL;
+		$result .= sprintf('Content Type: [%s]'		, $contentTypeStr)					.PHP_EOL;
+		$result .= sprintf('Payload:      [%d][%s]'	, strlen($payloadStr), $payloadStr)	.PHP_EOL;
+		$result .= sprintf('Custom Headers (%d):'	, count($this->customHeaders))		.PHP_EOL;
+		$result .= join(PHP_EOL, $this->customHeaders)									.PHP_EOL;
 		$result .= '/**************************************************/';
 
 		return $result;

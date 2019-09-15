@@ -12,14 +12,14 @@ class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
 	
-	public function __construct(\HTTPRequesterInterface $requester){
+	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
 		parent::__construct($requester, null);
 
 		$this->tracer = new \Tracer(__CLASS__);
 	}
 
-	public function loadSrc($path){
-		parent::loadSrc($path);
+	public function loadSrc($path, $requestHeaders = array()){
+		parent::loadSrc($path, $requestHeaders);
 		$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);

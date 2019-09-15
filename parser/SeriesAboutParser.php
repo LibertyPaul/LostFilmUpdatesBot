@@ -21,7 +21,7 @@ class SeriesAboutParser extends Parser{
 	
 
 
-	public function __construct(\HTTPRequesterInterface $requester){
+	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
 		parent::__construct($requester);
 
 		$this->tracer = new \Tracer(__CLASS__);
@@ -70,8 +70,10 @@ class SeriesAboutParser extends Parser{
 			);
 		}
 
-		$title_ru = trim($title_ru_res[1]);
-		$title_en = trim($title_en_res[1]);
+		$mask = " \t\n\r\0\x0B\xC2\xA0"; # Standard trim list + &nbsp
+
+		$title_ru = trim($title_ru_res[1], $mask);
+		$title_en = trim($title_en_res[1], $mask);
 
 		if($title_ru === $title_en){ 
 			// Either series wasn't published or title_ru is the same as tile_en

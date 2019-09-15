@@ -28,8 +28,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($curl, \CURLOPT_RETURNTRANSFER, true));
 		assert(curl_setopt($curl, \CURLOPT_FOLLOWLOCATION, true));
 		assert(curl_setopt($curl, \CURLOPT_PROTOCOLS, \CURLPROTO_HTTP | \CURLPROTO_HTTPS));
-		assert(curl_setopt($curl, \CURLOPT_CONNECTTIMEOUT, 5));
-		assert(curl_setopt($curl, \CURLOPT_TIMEOUT, 5));
+		assert(curl_setopt($curl, \CURLOPT_CONNECTTIMEOUT, 10));
+		assert(curl_setopt($curl, \CURLOPT_TIMEOUT, 10));
 	}
 
 	private static function createMultiCurl(){
@@ -72,7 +72,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 	private function createGetRequest($URL, $payload = null){
 		$request = $URL;
-		if($payload !== null){
+
+		if(empty($payload) === false){
 			assert(strpos($request, '?') === false);
 			if(is_array($payload)){
 				$request .= '?'.http_build_query($payload);
@@ -88,6 +89,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 				throw new \LogicException('Incorrect payload type: '.gettype($payload));
 			}
 		}
+
+		return $request;
 	}
 
 	private function setRequestOptions($curl, HTTPRequestProperties $requestProperties){
@@ -98,6 +101,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 					$requestProperties->getURL(),
 					$requestProperties->getPayload()
 				);
+
 				assert(curl_setopt($curl, \CURLOPT_URL, $URL));
 				break;
 
@@ -148,14 +152,16 @@ class HTTPRequester implements HTTPRequesterInterface{
 	}
 
 	public function request(HTTPRequestProperties $requestProperties){
-		$this->setRequestOptions($this->getCurl(), $requestProperties);
+		$curl = $this->getCurl();
+
+		$this->setRequestOptions($curl, $requestProperties);
 
 		$this->tracer->logEvent(
 			'[REQUEST]', __FILE__, __LINE__,
 			PHP_EOL.strval($requestProperties).PHP_EOL
 		);
 		
-		$result = $this->executeCurl($this->getCurl());
+		$result = $this->executeCurl($curl);
 		
 		$this->tracer->logEvent(
 			'[RESPONSE]', __FILE__, __LINE__, 

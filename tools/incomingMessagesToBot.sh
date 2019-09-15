@@ -39,4 +39,4 @@ else
 	URL="$address?password=$password"
 fi
 
-find "$incomingMessagesDir" -type f | xargs -n 1 -P 32 "$selfDir/messageToBot.sh" "$URL"
+find "$incomingMessagesDir" -type f | sort -z | xargs -n 1 -P 1 "$selfDir/messageToBot.sh" "$URL"

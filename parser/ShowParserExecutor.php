@@ -5,6 +5,7 @@ namespace parser;
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/ShowListFetcher.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
@@ -19,11 +20,10 @@ class ShowParserExecutor{
 	private $pdo;
 	private $renewShowQuery;
 
-	public function __construct(ShowListFetcher $showListFetcher){
-		assert($showListFetcher !== null);
+	public function __construct($pdo, ShowListFetcher $showListFetcher){
 		$this->showListFetcher = $showListFetcher;
 		$this->tracer = new \Tracer(__CLASS__);
-		$this->pdo = ParserPDO::getInstance();
+		$this->pdo = $pdo;
 	}
 
 	private static function isOnAir($status){
@@ -139,53 +139,64 @@ class ShowParserExecutor{
 		$parsedShowList = $this->showListFetcher->fetchShowList();
 		$parsedShowList = $this->remapShowList($parsedShowList);
 		$parsedAliasList = array_keys($parsedShowList);
+		
+		try{
+			$this->pdo->query('LOCK TABLES `shows` WRITE');
 
-		$this->pdo->query('LOCK TABLES `shows` WRITE');
+			$currentAliasList = $this->getCurrentAliases();
 
-		$currentAliasList = $this->getCurrentAliases();
-
-		$newAliasList = array_diff($parsedAliasList, $currentAliasList);
-		foreach($newAliasList as $newAlias){
-			$this->tracer->logEvent(
-				'[NEW SHOW]', __FILE__, __LINE__,
-				PHP_EOL.$parsedShowList[$newAlias]
-			);
-			try{
-				$this->addShow($parsedShowList[$newAlias]);
-			}
-			catch(\Throwable $ex){
-				$delimiter_pre = "[";
-				$delimiter_post = "]";
-				$delimiter = $delimiter_post.$delimiter_pre;
-				$this->tracer->logDebug(
+			$newAliasList = array_diff($parsedAliasList, $currentAliasList);
+			foreach($newAliasList as $newAlias){
+				$this->tracer->logEvent(
 					'[NEW SHOW]', __FILE__, __LINE__,
-					"Falied to insert a show.".PHP_EOL.
-					"My records:"	.$delimiter_pre.join($delimiter, $currentAliasList)	.$delimiter_post.PHP_EOL.
-					"Site shows:"	.$delimiter_pre.join($delimiter, $parsedAliasList)	.$delimiter_post.PHP_EOL.
-					"Diff:"			.$delimiter_pre.join($delimiter, $newAliasList)		.$delimiter_post.PHP_EOL
+					PHP_EOL.$parsedShowList[$newAlias]
+				);
+
+				try{
+					$this->addShow($parsedShowList[$newAlias]);
+				}
+				catch(\Throwable $ex){
+					$delimiter_pre = "[";
+					$delimiter_post = "]";
+					$delimiter = $delimiter_post.$delimiter_pre;
+					$this->tracer->logDebug(
+						'[NEW SHOW]', __FILE__, __LINE__,
+						"Falied to insert a show [".$parsedShowList[$newAlias]."].".PHP_EOL.
+						"My records:"	.$delimiter_pre.join($delimiter, $currentAliasList)	.$delimiter_post.PHP_EOL.
+						"Site shows:"	.$delimiter_pre.join($delimiter, $parsedAliasList)	.$delimiter_post.PHP_EOL.
+						"Diff:"			.$delimiter_pre.join($delimiter, $newAliasList)		.$delimiter_post.PHP_EOL
+					);
+				}
+			}
+			
+			$sameAliasList = array_intersect($parsedAliasList, $currentAliasList);
+			foreach($sameAliasList as $sameAlias){
+				$this->renewShow($parsedShowList[$sameAlias]);
+			}
+
+			$outdatedAliasList = array_diff($currentAliasList, $parsedAliasList);
+			foreach($outdatedAliasList as $outdatedAlias){
+				$this->tracer->logWarning(
+					'[OUTDATED SHOW]', __FILE__, __LINE__,
+					"Show $outdatedAlias has become outdated"
 				);
 			}
 		}
-		
-		$sameAliasList = array_intersect($parsedAliasList, $currentAliasList);
-		foreach($sameAliasList as $sameAlias){
-			$this->renewShow($parsedShowList[$sameAlias]);
+		finally{
+			$this->pdo->query('UNLOCK TABLES');
 		}
-
-		$outdatedAliasList = array_diff($currentAliasList, $parsedAliasList);
-		foreach($outdatedAliasList as $outdatedAlias){
-			$this->tracer->logWarning(
-				'[OUTDATED SHOW]', __FILE__, __LINE__,
-				"Show $outdatedAlias has become outdated"
-			);
-		}
-
-		$this->pdo->query('UNLOCK TABLES');
 	}
 }
 
-$requester = new \HTTPRequester();
-$showListFetcher = new ShowListFetcher($requester);
-$showParserExecutor = new ShowParserExecutor($showListFetcher);
+$requester = new \HTTPRequester\HTTPRequester();
+
+$pdo = ParserPDO::getInstance();
+$config = new \Config($pdo);
+$showListFetcher = new ShowListFetcher($requester, $config);
+$showParserExecutor = new ShowParserExecutor($pdo, $showListFetcher);
+
 $showParserExecutor->run();
+
+
+
 

@@ -11,6 +11,12 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
+abstract class ShowAction{
+	const Add = 1;
+	const Remove = 2;
+	const AddTentative = 3;
+}
+
 class UserController{
 	private $user;
 	private $conversationStorage;
@@ -19,6 +25,7 @@ class UserController{
 	private $config;
 	private $tracer;
 	private $coreCommands;
+	private $commandSubstitutor;
 
 	public function __construct(User $user){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -27,8 +34,8 @@ class UserController{
 		$this->user = $user;
 		$this->conversationStorage = new ConversationStorage($user->getId());
 
-		$commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
-		$this->coreCommands = $commandSubstitutor->getCoreCommandsAssociative();
+		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
+		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 	}
 
 	private function repeatQuestion(){
@@ -68,11 +75,11 @@ class UserController{
 		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 
 		$welcomingText =
-			'Привет, %username%'.PHP_EOL.	#TODO: pass real username
+			'Привет!'.PHP_EOL.
 			'Я - бот LostFilm updates.'.PHP_EOL.
 			'Моя задача - оповестить тебя о выходе новых серий '.
 			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
-			"Чтобы узнать что я умею - введи $helpCoreCommand или выбери эту команду в списке";
+			"Чтобы узнать что я умею - жми на $helpCoreCommand";
 		
 		$response = new DirectedOutgoingMessage(
 			$this->user->getId(),
@@ -242,15 +249,15 @@ class UserController{
 			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
 																					.PHP_EOL.
 			'Список команд:'														.PHP_EOL.
-			"'$addShowCoreCommand' - Добавить уведомления о сериале"				.PHP_EOL.
-			"'$removeShowCoreCommand' - Удалить уведомления о сериале"				.PHP_EOL.
-			"'$getMyShowsCoreCommand' - Показать, на что ты подписан"				.PHP_EOL.
-			"'$muteCoreCommand' - Выключить уведомления"							.PHP_EOL.
-			"'$cancelCoreCommand' - Отменить команду"								.PHP_EOL.
-			"'$helpCoreCommand' - Показать это сообщение"							.PHP_EOL.
-			"'$donateCoreCommand' - Задонатить пару баксов на доширак создателю"	.PHP_EOL.
-			"'$getShareButtonCoreCommand' - Поделиться контактом бота"				.PHP_EOL.
-			"'$stopCoreCommand' - Удалиться из контакт-листа бота"					.PHP_EOL
+			"$addShowCoreCommand - Добавить уведомления о сериале"					.PHP_EOL.
+			"$removeShowCoreCommand - Удалить уведомления о сериале"				.PHP_EOL.
+			"$getMyShowsCoreCommand - Показать, на что ты подписан"					.PHP_EOL.
+			"$muteCoreCommand - Выключить уведомления"								.PHP_EOL.
+			"$cancelCoreCommand - Отменить команду"									.PHP_EOL.
+			"$helpCoreCommand - Показать это сообщение"								.PHP_EOL.
+			"$donateCoreCommand - Задонатить пару баксов на доширак создателю"		.PHP_EOL.
+			"$getShareButtonCoreCommand - Поделиться контактом бота"				.PHP_EOL.
+			"$stopCoreCommand - Удалиться из контакт-листа бота"					.PHP_EOL
 																					.PHP_EOL.
 			'Telegram/VK создателя: @libertypaul'									.PHP_EOL.
 			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'			.PHP_EOL.
@@ -301,7 +308,6 @@ class UserController{
 		$hasOutdated = false;
 
 		$rows = array();
-		$rows[] = 'Твои сериалы:'.PHP_EOL.PHP_EOL;
 
 		foreach($userShows as $show){
 			$icon = '•';
@@ -314,6 +320,7 @@ class UserController{
 		}
 
 		if($hasOutdated){
+			$rows[] = '<i>• - сериал выходит</i>';
 			$rows[] = '<i>✕ - сериал закончен</i>';
 		}
 
@@ -333,9 +340,6 @@ class UserController{
 			$messageParts[] = $currentPart;
 		}
 		
-		$text .= PHP_EOL."• - сериал выходит";
-		$text .= PHP_EOL."✕ - сериал закончен";
-
 		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
 		$outgoingMessage = new OutgoingMessage($messageParts[0], $markupType);
@@ -389,25 +393,30 @@ class UserController{
 		);
 	}
 	
-	private function insertOrDeleteShow($in_out_flag){
-		$successText = '';
-		$action = null;
-		if($in_out_flag){
+	private function insertOrDeleteShow($showAction){
+		$this->tracer->logDebug('[insertOrDeleteShow]', __FILE__, __LINE__, "[$showAction]");
+
+		switch($showAction){
+		case ShowAction::Add:
+		case ShowAction::AddTentative:
 			$successText = 'добавлен';
 			$action = $this->pdo->prepare('
 				INSERT INTO `tracks` (`user_id`, `show_id`) 
 				VALUES (:user_id, :show_id)
 			');
-		}					
-		else{
+			
+			break;
+
+		case ShowAction::Remove: 
 			$successText = 'удален';
 			$action = $this->pdo->prepare('
 				DELETE FROM `tracks`
 				WHERE `user_id` = :user_id
 				AND   `show_id` = :show_id
 			');
+			
+			break;
 		}
-	
 	
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
@@ -426,9 +435,9 @@ class UserController{
 						FROM `tracks`
 						WHERE `user_id` = :user_id
 					)
-					XOR :in_out_flag
+					XOR :showAction
 				)
-				AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				AND ((`shows`.`onAir` = 'Y') OR NOT :showAction)
 				ORDER BY `title_ru`, `title_en`
 			");
 
@@ -436,7 +445,7 @@ class UserController{
 				$query->execute(
 					array(
 						':user_id'		=> $this->user->getId(),
-						':in_out_flag'	=> $in_out_flag
+						':showAction'	=> $showAction !== ShowAction::Remove
 					)
 				);
 			}
@@ -454,16 +463,20 @@ class UserController{
 			if(count($showTitles) === 0){
 				$this->conversationStorage->deleteConversation();
 				
-				$text = null;
-				if($in_out_flag){
+				switch($showAction){
+				case ShowAction::Add:
+				case ShowAction::AddTentative:
 					$text =
-						'Не осталось ни одного сериала, '.
-						'который можно было бы добавить.'.PHP_EOL.
+						'Ты подписан на все сериалы.'.PHP_EOL.
 						'И как ты успеваешь их все смотреть??';
-				}
-				else{
+					
+					break;
+
+				case ShowAction::Remove:
 					$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
-					$text = "Нечего удалять. Добавь парочку командой $addShowCoreCommand.";
+					$text = "Нечего удалять. Для начала добавь пару сериалов командой [$addShowCoreCommand].";
+					
+					break;
 				}
 				
 				return new DirectedOutgoingMessage(
@@ -501,14 +514,14 @@ class UserController{
 						')'
 					) AS `title_all`
 				FROM `shows`
-				WHERE ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				WHERE ((`shows`.`onAir` = 'Y') OR NOT :showAction)
 				AND (
 					`id` IN(
 						SELECT `show_id`
 						FROM `tracks`
 						WHERE `user_id` = :user_id
 					)
-					XOR :in_out_flag
+					XOR :showAction
 				)
 				HAVING `title_all` = :title
 				ORDER BY `title_ru`, `title_en`
@@ -520,7 +533,7 @@ class UserController{
 					array(
 						':title'		=> $messageText,
 						':user_id'		=> $this->user->getId(),
-						':in_out_flag'	=> $in_out_flag
+						':showAction'	=> $showAction !== ShowAction::Remove
 					)
 				);
 			}
@@ -583,12 +596,12 @@ class UserController{
 							FROM `tracks`
 							WHERE `user_id` = :user_id
 						)
-						XOR :in_out_flag
+						XOR :showAction
 					)
-					AND ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+					AND ((`shows`.`onAir` = 'Y') OR NOT :showAction)
 					HAVING `score` > 0.1
 					ORDER BY `score` DESC
-				"); #TODO: alter in_out_flag from bool to string ('Add', 'Remove')
+				");
 				
 				try{
 					$messageText = $this->conversationStorage->getLastMessage()->getText();
@@ -596,7 +609,7 @@ class UserController{
 						array(
 							':user_id' 		=> $this->user->getId(),
 							':show_name'	=> $messageText,
-							':in_out_flag'	=> $in_out_flag
+							':showAction'	=> $showAction !== ShowAction::Remove
 						)
 					);
 				}
@@ -678,14 +691,14 @@ class UserController{
 						')'
 					) AS `title_all`
 				FROM `shows`
-				WHERE ((`shows`.`onAir` = 'Y') OR NOT :in_out_flag)
+				WHERE ((`shows`.`onAir` = 'Y') OR NOT :showAction)
 				AND (
 					`id` IN(
 						SELECT `show_id`
 						FROM `tracks`
 						WHERE `user_id` = :user_id
 					)
-					XOR :in_out_flag
+					XOR :showAction
 				)
 				HAVING `title_all` = :exactShowName
 			");
@@ -694,7 +707,7 @@ class UserController{
 				$query->execute(
 					array(
 						':user_id' 			=> $this->user->getId(),
-						':in_out_flag'		=> $in_out_flag,
+						':showAction'		=> $showAction !== ShowAction::Remove,
 						':exactShowName'	=> $messageText
 					)
 				);
@@ -1033,10 +1046,10 @@ class UserController{
 
 	public function processMessage(IncomingMessage $incomingMessage){
 		try{
-			$this->conversationStorage->insertMessage($incomingMessage);
+
+			$this->conversationStorage->appendMessage($incomingMessage);
 
 			$currentCommand = $incomingMessage->getCoreCommand();
-			
 			if($currentCommand !== null){
 				if($currentCommand->getId() === \CommandSubstitutor\CoreCommandMap::Cancel){
 					return $this->cancelRequest();
@@ -1044,24 +1057,25 @@ class UserController{
 			}
 
 			$initialMessage = $this->conversationStorage->getFirstMessage();
-			$initialCommand = $initialMessage->getCoreCommand();
-			if($initialCommand === null){
-				$initialText = $initialMessage->getText();
 
-				$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
-				$response = new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage(
-						sprintf('Я хз чё "%s" значит.', $initialText).PHP_EOL.
-						"Нажми на $helpCoreCommand чтобы увидеть список команд."
-					)
+			# Case when user just typed a show name
+			if($initialMessage->getCoreCommand() === null){
+				$assumedCommand = $this->commandSubstitutor->getCoreCommand(
+						\CommandSubstitutor\CoreCommandMap::AddShowTentative
 				);
 
-				$response->appendMessage($this->cancelRequest());
-				return $response;
-			}
+				$this->tracer->logfEvent(
+					'[o]', __FILE__, __LINE__,
+					'Bare text without a command [%s]. Assuming to be [%s].',
+					$initialMessage->getText(),
+					$assumedCommand->getText()
+				);
 
-			switch($initialCommand->getId()){
+				$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
+				$this->conversationStorage->prependMessage($assumedMessage);
+			}
+			
+			switch($this->conversationStorage->getFirstMessage()->getCoreCommand()->getId()){
 				case \CommandSubstitutor\CoreCommandMap::Start:
 					return $this->welcomeUser();
 
@@ -1081,10 +1095,15 @@ class UserController{
 					return $this->showUserShows();
 					
 				case \CommandSubstitutor\CoreCommandMap::AddShow:
-					return $this->insertOrDeleteShow(true);
+					return $this->insertOrDeleteShow(ShowAction::Add);
 				
 				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
-					return $this->insertOrDeleteShow(false);
+					# TODO: Telegram rejects a keyboard with all shows.
+					# Need an alternative way to promps a choice.
+					return $this->insertOrDeleteShow(ShowAction::Remove);
+
+				case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
+					return $this->insertOrDeleteShow(ShowAction::AddTentative);
 
 				case \CommandSubstitutor\CoreCommandMap::GetShareButton:
 					return $this->getShareButton();
@@ -1104,14 +1123,16 @@ class UserController{
 					throw \LogicException('Unknown command');
 			}
 		}
+		catch(\Throwable $ex){
+			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
+			$this->conversationStorage->deleteConversation();
+
 			return new DirectedOutgoingMessage(
 				$this->user->getId(),
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
 			);
-			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
 		}
 	}
-
 }
 		
 		

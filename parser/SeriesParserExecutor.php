@@ -5,6 +5,7 @@ namespace parser;
 require_once(__DIR__.'/../lib/ErrorHandler.php');
 require_once(__DIR__.'/../lib/ExceptionHandler.php');
 
+require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/SeriesParser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
@@ -12,8 +13,8 @@ require_once(__DIR__.'/SeriesAboutParser.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 class SeriesParserExecutor{
-	const rssURL = 'https://www.lostfilm.tv/rss.xml'; // TODO: move URL to `config`
 	private $pdo;
+	private $config;
 	private $seriesParser;
 	private $seriesAboutsParser;
 	private $getShowIdByAlias;
@@ -21,15 +22,13 @@ class SeriesParserExecutor{
 	private $tracer;
 	
 	public function __construct(Parser $seriesParser, Parser $seriesAboutParser){
-		assert($seriesParser !== null);
 		$this->seriesParser = $seriesParser;
-
-		assert($seriesAboutParser !== null);
 		$this->seriesAboutParser = $seriesAboutParser;
 
 		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = ParserPDO::getInstance();
+		$this->config = new \Config($this->pdo);
 
 		$this->getShowIdByAlias = $this->pdo->prepare('
 			SELECT `id` FROM `shows` WHERE `alias` = :alias
@@ -37,7 +36,7 @@ class SeriesParserExecutor{
 		
 		$this->addSeriesQuery = $this->pdo->prepare('
 			INSERT INTO `series` (show_id, seasonNumber, seriesNumber, title_ru, title_en)
-			VALUES :show_id, :seasonNumber, :seriesNumber, :title_ru, :title_en
+			VALUES (:show_id, :seasonNumber, :seriesNumber, :title_ru, :title_en)
 		');
 
 		$this->wasSeriesNotificationSentQuery = $this->pdo->prepare('
@@ -66,8 +65,15 @@ class SeriesParserExecutor{
 	}
 
 	public function run(){
+		$rssURL = $this->config->getValue('Parser', 'RSS URL', 'https://www.lostfilm.tv/rss.xml');
+		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header', null);
+		$customHeaders = array();
+		if ($customHeader !== null){
+			$customHeaders[] = $customHeader;
+		}	
+
 		try{
-			$this->seriesParser->loadSrc(self::rssURL);
+			$this->seriesParser->loadSrc($rssURL, $customHeaders);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);
@@ -97,23 +103,31 @@ class SeriesParserExecutor{
 
 				switch($about['status']){
 					case SeriesStatus::Ready:
-						$this->tracer->logEvent(
+						$this->tracer->logfEvent(
 							'[o]', __FILE__, __LINE__,
-							sprintf(
-								"New series: %s S%02dE%02d %s(%s)",
-								$series['alias'],
-								$series['seasonNumber'],
-								$series['seriesNumber'],	
-                                $about['title_ru'],
-                                $about['title_en']
-							)
+							"New series: %s S%02dE%02d %s(%s)",
+							$series['alias'],
+							$series['seasonNumber'],
+							$series['seriesNumber'],
+							$about['title_ru'],
+							$about['title_en']
 						);
 
-						$this->getShowIdByAlias->execute(
-							array(
-								':alias' => $series['alias']
-							)
-						);
+						try{
+							$args = array(
+									':alias' => $series['alias']
+							);
+
+							$this->getShowIdByAlias->execute($args);
+						}
+						catch(\PDOException $ex){
+							$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+							$this->tracer->logDebug(
+								'[o]', __FILE__, __LINE__,
+								$this->addSeriesQuery->queryString
+							);
+							throw $ex;
+						}
 
 						$res = $this->getShowIdByAlias->fetch();
 						if($res === false){
@@ -122,15 +136,26 @@ class SeriesParserExecutor{
 
 						$show_id = $res[0];
 
-						$this->addSeriesQuery->execute(
-							array(
+						try{
+							$args = array(
 								':show_id'		=> $show_id,
 								':seasonNumber'	=> $series['seasonNumber'],
 								':seriesNumber'	=> $series['seriesNumber'],
 								':title_ru'		=> $about['title_ru'],
 								':title_en'		=> $about['title_en']
-							)
-						);
+							);
+
+							$this->addSeriesQuery->execute($args);
+						}
+						catch(\PDOException $ex){
+							$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+							$this->tracer->logDebug(
+								'[o]', __FILE__, __LINE__,
+								$this->addSeriesQuery->queryString
+							);
+							throw $ex;
+						}
+
 
 						$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Added.');
 
@@ -189,7 +214,7 @@ class SeriesParserExecutor{
 }
 
 
-$requester = new \HTTPRequester();
+$requester = new \HTTPRequester\HTTPRequester();
 $parser = new SeriesParser($requester);
 $seriesAboutParser = new SeriesAboutParser($requester);
 $seriesParserExecutor = new SeriesParserExecutor($parser, $seriesAboutParser);
