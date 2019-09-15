@@ -17,20 +17,25 @@ class DirectedOutgoingMessage{
 		$this->outgoingMessage = $outgoingMessage;
 	}
 
-	private function findLoop(self $newNode = null){
-		$current = $this;
-		do{
-			if($current === $lhs){
+	private function findLoop(self $newNode){
+		$current = $newNode;
+
+		while($current !== null){
+			if($current === $this){
 				return true;
 			}
 
 			$current = $current->nextMessage();
-		}while($current !== null);
+		}
 
 		return false; 
 	}
 
 	public function appendMessage(self $message = null){
+		if($message === null){
+			return $this;
+		}
+
 		if($this->findLoop($message)){
 			throw new \LogicException(
 				'Loop was detected:'.PHP_EOL.
