@@ -320,7 +320,7 @@ class UserController{
 		}
 
 		if($hasOutdated){
-			$rows[] = '<i>• - сериал выходит</i>';
+			$rows[] = '<i>• - сериал выходит</i>'.PHP_EOL;
 			$rows[] = '<i>✕ - сериал закончен</i>';
 		}
 
