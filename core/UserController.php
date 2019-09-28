@@ -627,10 +627,19 @@ class UserController{
 				switch(count($res)){
 				case 0://не найдено ни одного похожего названия
 					$this->conversationStorage->deleteConversation();
-					return new DirectedOutgoingMessage(
-						$this->user->getId(),
-						new OutgoingMessage('Не найдено подходящих названий')
-					);
+
+					switch($showAction){
+						case ShowAction::Add:
+						case ShowAction::Remove:
+							$notFoundText = 'Не найдено подходящих названий.';
+							break;
+
+						case ShowAction::AddTentative:
+							$notFoundText = 'Не найдено подходящих названий. Жми на /add_show чтобы посмотреть в списке.';
+							break;
+					}
+
+					return new DirectedOutgoingMessage($this->user->getId(), new OutgoingMessage($notFoundText));
 					break;
 								
 				case 1://найдено только одно подходящее название
