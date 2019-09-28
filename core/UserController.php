@@ -102,11 +102,15 @@ class UserController{
 	}
 
 	private function cancelRequest(){
+		if($this->conversationStorage->getConversationSize() > 1){
+			$text = 'Действие отменено.';
+		}
+		else{
+			$text = 'Нечего отменять.';
+		}
+
 		$this->conversationStorage->deleteConversation();
-		return new DirectedOutgoingMessage(
-			$this->user->getId(),
-			new OutgoingMessage('Действие отменено.')
-		);
+		return new DirectedOutgoingMessage($this->user->getId(), new OutgoingMessage($text));
 	}
 
 	private function deleteUser(){
