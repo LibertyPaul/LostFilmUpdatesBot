@@ -63,7 +63,11 @@ class NotificationDispatcher{
 		");
 		
 		$this->setNotificationDeliveryResult = $this->pdo->prepare('
-			CALL notificationDeliveryResult(:notificationId, :HTTPCode);
+			UPDATE 	`notificationsQueue`
+			SET 	`responseCode` 				= :HTTPCode,
+					`retryCount` 				= `retryCount` + 1,
+					`lastDeliveryAttemptTime`	= NOW()
+			WHERE 	`id` = :notificationId;
 		');
 
 	}
@@ -169,9 +173,7 @@ class NotificationDispatcher{
 					$this->setNotificationDeliveryResult->execute(
 						array(
 							'notificationId'	=> $notification['id'],
-							'HTTPCode' 			=> $sendResult === SendResult::Success ? 
-								200 :
-								400
+							'HTTPCode' 			=> $sendResult === SendResult::Success ? 200 : 400
 						)# TODO: alter HTTPCode column to internal format
 					);
 				}
@@ -187,5 +189,3 @@ class NotificationDispatcher{
 		}
 	}
 }
-			
-				
