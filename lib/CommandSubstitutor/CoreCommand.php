@@ -3,6 +3,8 @@
 namespace CommandSubstitutor;
 
 abstract class CoreCommandMap{
+	const MIN				= 1;
+
 	const Start				= 1;
 	const AddShow			= 2;
 	const RemoveShow		= 3;
@@ -10,11 +12,14 @@ abstract class CoreCommandMap{
 	const Mute				= 5;
 	const Cancel			= 6;
 	const Help				= 7;
-	const Stop				= 8;
+	const AboutTor			= 8;
 	const GetShareButton	= 9;
 	const Donate			= 10;
-	const Broadcast			= 11;
-	const AddShowTentative	= 12;
+	const Stop				= 11;
+	const Broadcast			= 12;
+	const AddShowTentative	= 13;
+
+	const MAX				=13;
 }
 
 class CoreCommand{
@@ -22,8 +27,8 @@ class CoreCommand{
 	private $text;
 
 	public function __construct(int $id, string $text){
-		assert($id >= CoreCommandMap::Start);
-		assert($id <= CoreCommandMap::AddShowTentative);
+		assert($id >= CoreCommandMap::MIN);
+		assert($id <= CoreCommandMap::MAX);
 
 		$this->id = $id;
 		$this->text = $text;
