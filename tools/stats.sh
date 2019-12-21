@@ -29,7 +29,11 @@ readonly query="																								\
 	UNION																										\
 	SELECT CONCAT('Muted users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE mute = 'Y'			\
 	UNION																										\
-	SELECT CONCAT('Tracks: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM tracks;								\
+	SELECT CONCAT('Tracks: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM tracks								\
+	UNION																										\
+	SELECT CONCAT('Shows: ', CAST(COUNT(*) AS CHAR)) FROM shows													\
+	UNION																										\
+	SELECT CONCAT('Series: ', CAST(COUNT(*) AS CHAR)) FROM series												\
 "
 
 
