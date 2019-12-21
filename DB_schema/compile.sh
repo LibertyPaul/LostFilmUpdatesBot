@@ -62,5 +62,7 @@ for element in "${elementsOrder[@]}"; do
 	echo_green "Done."
 done
 
+echo "COMMIT;" >> "$patch"
+
 echo "Compiled. Stored in $patch"
 

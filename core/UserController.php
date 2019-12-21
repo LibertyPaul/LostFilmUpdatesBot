@@ -244,6 +244,7 @@ class UserController{
 		$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
 		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
 		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+		$aboutTorCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AboutTor];
 		$stopCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Stop];
 		$getShareButtonCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
 		$donateCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
@@ -259,6 +260,7 @@ class UserController{
 			"$muteCoreCommand - Выключить уведомления"								.PHP_EOL.
 			"$cancelCoreCommand - Отменить команду"									.PHP_EOL.
 			"$helpCoreCommand - Показать это сообщение"								.PHP_EOL.
+			"$aboutTorCoreCommand - Как обойти блокировку LostFilm.tv"				.PHP_EOL.
 			"$donateCoreCommand - Задонатить пару баксов на доширак создателю"		.PHP_EOL.
 			"$getShareButtonCoreCommand - Поделиться контактом бота"				.PHP_EOL.
 			"$stopCoreCommand - Удалиться из контакт-листа бота"					.PHP_EOL
@@ -268,11 +270,34 @@ class UserController{
 			'Исходники бота есть на GitHub: '											.
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
 																					.PHP_EOL.
-			'Создатель бота не имеет никакого отношеня к проекту lostfilm.tv.';
+			'Создатель бота не имеет никакого отношеня к проекту LostFilm.tv.';
 		
 		return new DirectedOutgoingMessage(
 			$this->user->getId(),
 			new OutgoingMessage($helpText)
+		);
+	}
+
+	private function showAboutTor(){
+		$this->conversationStorage->deleteConversation();
+
+		$aboutTor =
+			'<i>Disclaimer: Это не реклама, TorProject - некоммерческая организация.</i>'		.PHP_EOL.
+			''																					.PHP_EOL.
+			'Для обхода блокировки LostFilm (да и вообще чего угодно) '									.
+			'можно воспользоваться <b>TorBrowser</b>: https://www.torproject.org/ru/download/'	.PHP_EOL.
+			'TorBrowser - это модифицированный Firefox, все подключения которого автоматически '		.
+			'направляются через сеть Tor, обеспечивая анонимность и обход блокировок.'			.PHP_EOL.
+			''																					.PHP_EOL.
+			'Подробнее о проекте: https://ru.wikipedia.org/wiki/Tor'							.PHP_EOL
+		;
+
+		return new DirectedOutgoingMessage(
+			$this->user->getId(),
+			new OutgoingMessage(
+				$aboutTor,
+				new MarkupType(MarkupTypeEnum::HTML)
+			)
 		);
 	}
 	
@@ -398,8 +423,6 @@ class UserController{
 	}
 	
 	private function insertOrDeleteShow($showAction){
-		$this->tracer->logDebug('[insertOrDeleteShow]', __FILE__, __LINE__, "[$showAction]");
-
 		switch($showAction){
 		case ShowAction::Add:
 		case ShowAction::AddTentative:
@@ -581,7 +604,7 @@ class UserController{
 				);
 			}
 			else{
-				# Совпадения не найдено. Скорее всего юзер ввел не полное название.
+				# Совпадения не найдено. Скорее всего юзер ввел неполное название.
 				# Придется угадывать.
 				$query = $this->pdo->prepare("
 					SELECT
@@ -1074,7 +1097,7 @@ class UserController{
 			# Case when user just typed a show name
 			if($initialMessage->getCoreCommand() === null){
 				$assumedCommand = $this->commandSubstitutor->getCoreCommand(
-						\CommandSubstitutor\CoreCommandMap::AddShowTentative
+					\CommandSubstitutor\CoreCommandMap::AddShowTentative
 				);
 
 				$this->tracer->logfEvent(
@@ -1101,6 +1124,9 @@ class UserController{
 				case \CommandSubstitutor\CoreCommandMap::Help:
 					return $this->showHelp();
 				
+				case \CommandSubstitutor\CoreCommandMap::AboutTor:
+					return $this->showAboutTor();
+
 				case \CommandSubstitutor\CoreCommandMap::Mute:
 					return $this->toggleMute();
 				

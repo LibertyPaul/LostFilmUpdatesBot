@@ -39,7 +39,7 @@ class NotificationGenerator{
 		");
 	}
 	
-	private static function generateNewSeriesNotificationText(
+	private function generateNewSeriesNotificationText(
 		$showTitleRu	,
 		$season			,
 		$seriesNumber	,
@@ -51,6 +51,12 @@ class NotificationGenerator{
 			'Серию можно скачать по ссылке:'	.PHP_EOL.
 			'%s'
 		;
+
+		$torAdvice = 'Если не получается зайти на LostFilm: /about_tor';
+
+		if($this->config->getValue('Notifications', 'Include Tor Advice') === 'Y'){
+			$template .= PHP_EOL.PHP_EOL.$torAdvice;
+		}
 
 		return sprintf(
 			$template,
@@ -75,7 +81,7 @@ class NotificationGenerator{
 		assert(is_string($seriesTitle));
 		assert(is_string($URL));
 		
-		$notificationText = self::generateNewSeriesNotificationText(
+		$notificationText = $this->generateNewSeriesNotificationText(
 			$title_ru,
 			$season,
 			$seriesNumber,
