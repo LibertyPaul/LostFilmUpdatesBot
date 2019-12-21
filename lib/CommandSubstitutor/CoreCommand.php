@@ -12,12 +12,12 @@ abstract class CoreCommandMap{
 	const Mute				= 5;
 	const Cancel			= 6;
 	const Help				= 7;
-	const Stop				= 8;
+	const AboutTor			= 8;
 	const GetShareButton	= 9;
 	const Donate			= 10;
-	const Broadcast			= 11;
-	const AddShowTentative	= 12;
-	const AboutTor			= 13;
+	const Stop				= 11;
+	const Broadcast			= 12;
+	const AddShowTentative	= 13;
 
 	const MAX				=13;
 }
