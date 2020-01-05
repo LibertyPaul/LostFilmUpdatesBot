@@ -7,8 +7,6 @@ require_once(__DIR__.'/Track.php');
 
 
 class TracksAccess extends CommonAccess{
-	private $pdo;
-
 	private $getTracksByUserQuery;
 	private $getUserTracksCount;
 	private $getTracksByShowQuery;
@@ -16,13 +14,13 @@ class TracksAccess extends CommonAccess{
 	private $deleteTrackQuery;
 
 	public function __construct(\PDO $pdo){
-		$this->pdo = $pdo;
+		parent::__construct($pdo);
 
 		$selectFields = "
 			SELECT
 				`tracks`.`user_id`,
 				`tracks`.`show_id`,
-				`tracks`.`created`
+				DATE_FORMAT(`tracks`.`created`, '".parent::dateTimeDBFormat."') AS createdStr,
 		";
 
 		$this->getTracksByUserQuery = $this->pdo->prepare("
@@ -59,7 +57,7 @@ class TracksAccess extends CommonAccess{
 		$track = new Track(
 			intval($row['user_id']),
 			intval($row['show_id']),
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['created'])
+			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['createdStr'])
 		);
 
 		return $track;
@@ -100,7 +98,7 @@ class TracksAccess extends CommonAccess{
 		$args = array(
 			':user_id' => $track->getUserId(),
 			':show_id' => $track->geShowId(),
-			':created' => $user->getRegistrationTime()->format(parent::dateTimeDBFormat)
+			':created' => $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
 		);
 
 		$this->executeInsertUpdateDelete($this->addTrackQuery, $args, QueryApproach::ONE);

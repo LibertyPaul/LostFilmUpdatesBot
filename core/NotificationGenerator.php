@@ -7,11 +7,13 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/DirectedOutgoingMessage.php');
 
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/../lib/DAL/Users/User.php');
+
 class NotificationGenerator{
 	private $config;
+	private $usersAccess;
 	private $getUserFirstNameQuery;
-	private $getUserCountQuery;
-	private $adminExistsQuery;
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
@@ -24,27 +26,14 @@ class NotificationGenerator{
 			WHERE `user_id` = :user_id
 		");
 		#TODO: do common way for different APIs
-		
-		$this->getUserCountQuery = $pdo->prepare("
-			SELECT COUNT(*) AS count
-			FROM `users`
-			WHERE `deleted` = 'N'
-		");
-
-		$this->userExistsQuery = $pdo->prepare("
-			SELECT COUNT(*) AS count
-			FROM `users`
-			WHERE `id` = :user_id
-			AND `deleted` = 'N'
-		");
 	}
 	
 	private function generateNewSeriesNotificationText(
-		$showTitleRu	,
-		$season			,
-		$seriesNumber	,
-		$seriesTitle	,
-		$url
+		string $showTitleRu,
+		int $season,
+		int $seriesNumber,
+		string $seriesTitle,
+		string $URL
 	){
 		$template = 
 			'<b>%s</b>: <b>S%02dE%02d</b> "%s"'	.PHP_EOL.
@@ -64,23 +53,17 @@ class NotificationGenerator{
 			$season,
 			$seriesNumber,
 			htmlspecialchars($seriesTitle),
-			$url
+			$URL
 		);
 	}
 
 	public function newSeriesEvent(
-		$title_ru		,
-		$season			,
-		$seriesNumber	,
-		$seriesTitle	,
-		$URL
+		string $title_ru,
+		int $season,
+		int $seriesNumber,
+		string $seriesTitle,
+		string $URL
 	){
-		assert(is_string($title_ru));
-		assert(is_int($season));
-		assert(is_int($seriesNumber));
-		assert(is_string($seriesTitle));
-		assert(is_string($URL));
-		
 		$notificationText = $this->generateNewSeriesNotificationText(
 			$title_ru,
 			$season,
@@ -95,7 +78,7 @@ class NotificationGenerator{
 		);
 	}
 
-	protected function getUserFirstName($user_id){
+	protected function getUserFirstName(int $user_id){
 		$this->getUserFirstNameQuery->execute(
 			array(
 				':user_id' => $user_id
@@ -110,63 +93,57 @@ class NotificationGenerator{
 		return $res['first_name'];
 	}
 
-	private function messageToAdmin($text){
-		assert(is_string($text));
-
+	private function messageToAdmin(string $text){
 		$admin_id = $this->config->getValue('Admin Notifications', 'Admin Id');
 		if($admin_id === null){
 			return null;
 		}
+		
+		try{
+			$admin = $this->usersAccess->getUserById(intval($admin_id));
 
-		$this->userExistsQuery->execute(
-			array(
-				'user_id' => $admin_id
-			)
-		);
-
-		$res = $this->userExistsQuery->fetch();
-		assert($res);
-
-		if(intval($res['count']) === 0){
+			return new DirectedOutgoingMessage(
+				$admin,
+				new OutgoingMessage($text)
+			);
+		}
+		catch(\Throwable $ex){
 			return null;
 		}
-
-		return new DirectedOutgoingMessage(
-			intval($admin_id),
-			new OutgoingMessage($text)
-		);
 	}
 	
-	public function newUserEvent($user_id){
-		$newUserEventEnabled = $this->config->getValue(
-			'Admin Notifications',
-			'Send New User Event'
-		);
+	public function newUserEvent(int $user_id){
+		$newUserEventEnabled = $this->config->getValue('Admin Notifications', 'Send New User Event');
 
 		if($newUserEventEnabled !== 'Y'){
 			return null;
 		}
-
-		$userFirstName = $this->getUserFirstName($user_id);
 		
-		$this->getUserCountQuery->execute();
-		$userCount = $this->getUserCountQuery->fetch()['count'];
+		try{
+			$userFirstName = $this->getUserFirstName($user_id);
+			$userCount = $this->usersAccess->getActiveUsersCount(false);
+		}
+		catch(\Throwable $ex){
+			return null;
+		}
 
 		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
 	}
 
-	public function userLeftEvent($user_id){
-		$userLeftEventEnabled = $this->config->getValue(
-			'Admin Notifications',
-			'Send User Left Event'
-		);
+	public function userLeftEvent(int $user_id){
+		$userLeftEventEnabled = $this->config->getValue('Admin Notifications', 'Send User Left Event');
 
 		if($userLeftEventEnabled !== 'Y'){
 			return null;
 		}
+		
+		try{
+			$userFirstName = $this->getUserFirstName($user_id);
+		}
+		catch(\Throwable $ex){
+			return null;
+		}
 
-		$userFirstName = $this->getUserFirstName($user_id);
 		return $this->messageToAdmin("Юзер $userFirstName удалился");
 	}
-
 }

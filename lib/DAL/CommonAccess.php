@@ -21,8 +21,10 @@ abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
 	const dateTimeAppFormat = 'd.m.Y H:i:s.u';
 
-	public function __construct(){
+	protected $pdo;
 
+	public function __construct(\PDO $pdo){
+		$this->pdo = $pdo;
 	}
 
 	abstract protected function buildObjectFromRow(array $row);
@@ -122,5 +124,14 @@ abstract class CommonAccess{
 			default:
 				throw new \RuntimeException("Invalid Select Approach: [$approach].");
 		}
+	}
+
+	protected function getLastInsertId(){
+		$id = intval($this->pdo->lastInsertId());
+		if($this->pdo->errorCode() === 'IM001'){
+			throw new \RuntimeException("PDO driver does not support lastInsertId() method.");
+		}
+		
+		return intval($id);
 	}
 }

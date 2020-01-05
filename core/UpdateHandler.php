@@ -13,92 +13,58 @@ require_once(__DIR__.'/UserController.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 
+require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessagesHistoryAccess.php');
+require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessageHistory.php');
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/../lib/DAL/Users/User.php');
+
+
 class DuplicateUpdateException extends \RuntimeException{}
 
 class UpdateHandler{
 	private $tracer;
 	private $botan;
-	private $pdo;
 	private $config;
 	private $messageRouter;
 
-	# Queries
-	private $logRequestQuery;
-	private $logResponseQuery;
+	private $messagesHistoryAccess;
+	private $usersAccess;
 
 	public function __construct(){
-		$this->pdo = \BotPDO::getInstance();
-		$this->config = new \Config($this->pdo);
+		$pdo = \BotPDO::getInstance();
+		$this->config = new \Config($pdo);
 
 		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
-
-		$this->logRequestQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (
-				source,
-				user_id,
-				update_id,
-				text
-			)
-			VALUES (
-				'User',
-				:user_id,
-				:update_id,
-				:text
-			)
-		");
-
-		$this->logResponseQuery = $this->pdo->prepare("
-			INSERT INTO `messagesHistory` (
-				source,
-				user_id,
-				text,
-				inResponseTo,
-				statusCode
-			)
-			VALUES (
-				'UpdateHandler',
-				:user_id,
-				:text,
-				:inResponseTo,
-				:statusCode
-			)
-		");
+		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($pdo);
+		$this->usersAccess = new \DAL\UsersAccess($pdo);
 	}
 
 	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
 		try{
-			$this->logRequestQuery->execute(
-				array(
-					':user_id'		=> $user_id,
-					':update_id'	=> $incomingMessage->getUpdateId(),
-					':text'			=> $incomingMessage->getText()
-				)
+			$messageHistory = new \DAL\MessageHistory(
+				null,
+				new \DateTimeImmutable(),
+				'User',
+				$user_id,
+				$incomingMessage->getUpdateId(),
+				$incomingMessage->getText(),
+				null,
+				null
 			);
 
-			$loggedMessageId = intval($this->pdo->lastInsertId());
-			if($this->pdo->errorCode() === 'IM001'){
-				$this->tracer->logError(
-					'[PDO]', __FILE__, __LINE__,
-					'PDO was unable to get lastInsertId'
-				);
-				$loggedMessageId = null;
-			}
+			$loggedMessageId = $this->messagesHistoryAccess->addMessageHistory($messageHistory);
+
 		}
-		catch(\PDOException $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError(
+			$this->tracer->logDebug(
 				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
 				$incomingMessage
 			);
-			
-			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
-				throw new DuplicateUpdateException();
-			}
-			else{
-				throw new \RuntimeException('logRequestQuery call has failed');
-			}
+
+			throw $ex;
 		}
 		
 		return $loggedMessageId;
@@ -106,37 +72,28 @@ class UpdateHandler{
 
 	private function logOutgoingMessage(
 		DirectedOutgoingMessage $outgoingMessage,
-		$loggedRequestId,
-		$statusCode
+		int $loggedRequestId,
+		int $statusCode
 	){
-		$text = substr($outgoingMessage->getOutgoingMessage()->getText(), 0, 5000);
-		$user_id = $outgoingMessage->getUserId();
 		try{
-			$this->logResponseQuery->execute(
-				array(
-					':user_id'		=> $user_id,
-					':text'			=> $text,
-					':inResponseTo'	=> $loggedRequestId,
-					':statusCode'	=> $statusCode
-				)
+			$messageHistory = new \DAL\MessageHistory(
+				null,
+				new \DateTimeImmutable(),
+				'UpdateHandler',
+				$outgoingMessage->getUser()->getId(),
+				null,
+				$outgoingMessage->getOutgoingMessage()->getText(),
+				$loggedRequestId,
+				$statusCode
 			);
+
+			$this->messagesHistoryAccess->addMessageHistory($messageHistory);
+
 		}
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError(
-				'[DB ERROR]', __FILE__, __LINE__, 	 PHP_EOL.
-				"loggedRequestId=[$loggedRequestId]".PHP_EOL.
-				"statusCode=[$statusCode]"			.PHP_EOL.
-				"user_id=[$user_id]"				.PHP_EOL.
-				$outgoingMessage
-			);
-			
-			if($ex->errorInfo[1] === 1062){# Duplicate entry error code
-				throw new DuplicateUpdateException();
-			}
-			else{
-				throw new \RuntimeException('logRequestQuery call has failed');
-			}
+			$this->tracer->logDebug('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.$messageHistory);
+			throw $ex;
 		}
 	}
 
@@ -155,7 +112,7 @@ class UpdateHandler{
 		);
 
 		try{
-			$user = User::getUser($this->pdo, $user_id);
+			$user = $this->usersAccess->getUserById($user_id);
 			$userController = new UserController($user);
 		}
 		catch(\Throwable $ex){
@@ -165,30 +122,20 @@ class UpdateHandler{
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing message ...');
 
-		$directedOutgoingMessage = $userController->processMessage($incomingMessage);
+		$response = $userController->processMessage($incomingMessage);
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing has finished.');
 
-		while($directedOutgoingMessage !== null){
+		while($response !== null){
 			try{
-				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Routing message:'.PHP_EOL.
-					$directedOutgoingMessage
-				);
-
-				$route = $this->messageRouter->route(
-					$directedOutgoingMessage->getUserId()
-				);
+				$route = $this->messageRouter->route($response->getUser());
 
 				$this->tracer->logDebug(
 					'[o]', __FILE__, __LINE__,
-					'Message was successfully routed.'
+					'Message was successfully routed. Sending ...'
 				);
-
-				$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Sending ...');
 			
-				$result = $route->send($directedOutgoingMessage->getOutgoingMessage());
+				$result = $route->send($response->getOutgoingMessage());
 
 				switch($result){
 					case SendResult::Success:
@@ -207,7 +154,7 @@ class UpdateHandler{
 				);
 				
 				$this->logOutgoingMessage(
-					$directedOutgoingMessage,
+					$response,
 					$loggedRequestId,
 					$statusCode
 				);
@@ -216,7 +163,7 @@ class UpdateHandler{
 				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			}
 			
-			$directedOutgoingMessage = $directedOutgoingMessage->nextMessage();
+			$response = $response->nextMessage();
 		}
 
 		return $loggedRequestId;

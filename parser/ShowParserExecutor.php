@@ -38,7 +38,8 @@ class ShowParserExecutor{
 			);
 
 			try{
-				$this->showsAccess->addShow($LFShows[$newAlias]);
+				$show_id = $this->showsAccess->addShow($LFShows[$newAlias]);
+				$LFShows[$newAlias]->setId($show_id);
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);

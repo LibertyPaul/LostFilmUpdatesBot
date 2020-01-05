@@ -55,10 +55,10 @@ class UserController{
 		$this->conversationStorage->deleteConversation();
 
 		$tracksCount = $this->tracksAccess->getUserTracksCount($this->user->getId());
-		if($tracksCount > 1){
+		if($tracksCount > 0){
 			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					"Мы ведь уже знакомы, правда?".PHP_EOL.
 					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand."
@@ -76,7 +76,7 @@ class UserController{
 			"Чтобы узнать что я умею - жми на $helpCoreCommand";
 		
 		$response = new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage($welcomingText)
 		);
 
@@ -104,7 +104,7 @@ class UserController{
 		}
 
 		$this->conversationStorage->deleteConversation();
-		return new DirectedOutgoingMessage($this->user->getId(), new OutgoingMessage($text));
+		return new DirectedOutgoingMessage($this->user, new OutgoingMessage($text));
 	}
 
 	private function deleteUser(){
@@ -125,7 +125,7 @@ class UserController{
 			}
 
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					$lastChance,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -147,7 +147,7 @@ class UserController{
 				$this->usersAccess->updateUser($this->user);
 				
 				$userResponse = new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage('Прощай...')
 				);
 				
@@ -167,7 +167,7 @@ class UserController{
 			case strtolower($ANSWER_NO):
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage('Фух, а то я уже испугался')
 				);
 			
@@ -184,7 +184,7 @@ class UserController{
 				$this->repeatQuestion();
 
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage(
 						"Давай конкретнее, либо $ANSWER_YES, либо $ANSWER_NO",
 						new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -243,7 +243,7 @@ class UserController{
 			'Создатель бота не имеет никакого отношеня к проекту LostFilm.tv.';
 		
 		return new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage($helpText)
 		);
 	}
@@ -263,7 +263,7 @@ class UserController{
 		;
 
 		return new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage(
 				$aboutTor,
 				new MarkupType(MarkupTypeEnum::HTML)
@@ -278,7 +278,7 @@ class UserController{
 		if(count($userShows) === 0){
 			$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage("Пока тут пусто. Добавь парочку командой $addShowCoreCommand")
 			);
 		}
@@ -328,7 +328,7 @@ class UserController{
 			$outgoingMessage->appendMessage($nextMessage);
 		}
 
-		return new DirectedOutgoingMessage($this->user->getId(), $outgoingMessage);
+		return new DirectedOutgoingMessage($this->user, $outgoingMessage);
 	}
 	
 	private function toggleMute(){
@@ -345,7 +345,7 @@ class UserController{
 		}
 		
 		return new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage("$action все уведомления")
 		);
 	}
@@ -376,7 +376,7 @@ class UserController{
 				}
 				
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage($text)
 				);
 			}
@@ -394,7 +394,7 @@ class UserController{
 				array_push($showTitles, '/cancel');
 				
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage(
 						$text,
 						new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -434,7 +434,7 @@ class UserController{
 				$messageText = sprintf("%s %s", $show->getFullTitle(), $successText);
 				
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage($messageText)
 				);
 			}
@@ -461,7 +461,7 @@ class UserController{
 							break;
 					}
 
-					return new DirectedOutgoingMessage($this->user->getId(), new OutgoingMessage($notFoundText));
+					return new DirectedOutgoingMessage($this->user, new OutgoingMessage($notFoundText));
 								
 				case 1:
 					$this->conversationStorage->deleteConversation();
@@ -486,7 +486,7 @@ class UserController{
 					$messageText = sprintf("%s %s", $mathedShow->getFullTitle(), $successText);
 					
 					return new DirectedOutgoingMessage(
-						$this->user->getId(),
+						$this->user,
 						new OutgoingMessage($messageText)
 					);
 				
@@ -502,7 +502,7 @@ class UserController{
 					$this->repeatQuestion();
 					
 					return new DirectedOutgoingMessage(
-						$this->user->getId(),
+						$this->user,
 						new OutgoingMessage(
 							'Какой из этих ты имеешь в виду:',
 							new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -521,7 +521,7 @@ class UserController{
 		$shareButton = new InlineOption('Поделиться', InlineOptionType::ShareButton, '');
 
 		return new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage(
 				'Вот тебе кнопочка. Нажми и выбери чат в который отправить мой контакт.',
 				new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -576,7 +576,7 @@ class UserController{
 		}
 
 		return new DirectedOutgoingMessage(
-			$this->user->getId(),
+			$this->user,
 			new OutgoingMessage(
 				$phrase,
 				new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -686,7 +686,7 @@ class UserController{
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage('Z@TTР3LL|3Н0')
 			);
 		}
@@ -694,7 +694,7 @@ class UserController{
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
@@ -702,7 +702,7 @@ class UserController{
 
 		case 2:
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					'Пуш уведомление?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -713,7 +713,7 @@ class UserController{
 
 		case 3:
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					'Будет ли разметка?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -724,7 +724,7 @@ class UserController{
 
 		case 4:
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					'Превью ссылок?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -735,7 +735,7 @@ class UserController{
 			
 		case 5:
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(
 					'Потревожить замьюченных?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
@@ -758,13 +758,13 @@ class UserController{
 				);
 				$example->appendMessage($confirm);
 
-				$response = new DirectedOutgoingMessage($this->user->getId(),	$example);
+				$response = new DirectedOutgoingMessage($this->user, $example);
 				return $response;
 			}
 			else{
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage('Ты накосячил!. '.$result['why'])
 				);
 			}
@@ -783,13 +783,13 @@ class UserController{
 
 			if($confirmation !== 'Да'){
 				return new DirectedOutgoingMessage(
-					$this->user->getId(),
+					$this->user,
 					new OutgoingMessage('Рассылка отменена.')
 				);
 			}
 
 			$started = new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage('Начал рассылку.')
 			);
 
@@ -800,14 +800,14 @@ class UserController{
 			$broadcastChain = null;
 
 			foreach($activeUsers as $user){
-				$current = new DirectedOutgoingMessage($user->getId(), $message);
+				$current = new DirectedOutgoingMessage($user, $message);
 				$current->appendMessage($broadcastChain);
 				$broadcastChain = $current;
 				++$count;
 			}
 
 			$confirmMessage = new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage(sprintf('Отправил %d сообщений(е/я).', $count))
 			);
 
@@ -903,7 +903,7 @@ class UserController{
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(
-				$this->user->getId(),
+				$this->user,
 				new OutgoingMessage('Произошла ошибка, я сообщу об этом создателю.')
 			);
 		}

@@ -7,15 +7,13 @@ require_once(__DIR__.'/Series.php');
 
 
 class SeriesAccess extends CommonAccess{
-	private $pdo;
-
 	private $getSeriesByIdQuery;
 	private $getSeriesByAliasSeasonSeriesQuery;
 
 	private $addSeriesQuery;
 
 	public function __construct(\PDO $pdo){
-		$this->pdo = $pdo;
+		parent::__construct($pdo);
 
 		$selectFields = "
 			SELECT
@@ -123,7 +121,7 @@ class SeriesAccess extends CommonAccess{
 		);
 
 		$this->executeInsertUpdateDelete($this->addSeriesQuery, $args, QueryApproach::ONE);
-		return intval($this->pdo->lastInsertId());
+		return $this->getLastInsertId();
 	}
 
 	public function updateSeries(Series $series){

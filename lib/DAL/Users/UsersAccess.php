@@ -7,13 +7,11 @@ require_once(__DIR__.'/User.php');
 
 
 class UsersAccess extends CommonAccess{
-	private $pdo;
-
 	private $getUserByIdQuery;
 	private $addUserQuery;
 
 	public function __construct(\PDO $pdo){
-		$this->pdo = $pdo;
+		parent::__construct($pdo);
 
 		$selectFields = "
 			SELECT
@@ -21,16 +19,17 @@ class UsersAccess extends CommonAccess{
 				`users`.`API`,
 				`users`.`deleted`,
 				`users`.`mute`,
-				`users`.`registration_time`
+				DATE_FORMAT(`users`.`registration_time`, '".parent::dateTimeDBFormat."') AS registrationTimeStr
 		";
 
 		$this->getUserByIdQuery = $this->pdo->prepare("
 			$selectFields
-			FROM `users`
-			WHERE `users`.`id` = :id
+			FROM	`users`
+			WHERE	`users`.`id` = :id
+			AND		`users`.`deleted` = 'N'
 		");
 
-		$this->getActiveUsers = $this->pdo->prepare("
+		$this->getActiveUsersQuery = $this->pdo->prepare("
 			$selectFields
 			FROM `users`
 			WHERE `users`.`deleted` = 'N'
@@ -41,9 +40,30 @@ class UsersAccess extends CommonAccess{
 			ORDER BY `users`.`id`
 		");
 
+		$this->getActiveUsersCountQuery = $this->pdo->prepare("
+			SELECT COUNT(*)
+			FROM `users`
+			WHERE `users`.`deleted` = 'N'
+			AND (
+				`users`.`mute` = 'N' OR
+				NOT :excludeMuted
+			)
+			ORDER BY `users`.`id`
+		");
+
 		$this->addUserQuery = $this->pdo->prepare("
-			INSERT INTO `users` (`API`, `deleted`, `mute`, `registration_time`)
-			VALUES (:API, :deleted, :mute, :registration_time)
+			INSERT INTO `users` (
+				`API`,
+				`deleted`,
+				`mute`,
+				`registration_time`
+			)
+			VALUES (
+				:API,
+				:deleted,
+				:mute,
+				STR_TO_DATE(:registration_time, '".parent::dateTimeDBFormat."')
+			)
 		");
 
 		$this->updateUserQuery = $this->pdo->prepare("
@@ -60,7 +80,7 @@ class UsersAccess extends CommonAccess{
 			$row['API'],
 			$row['deleted'] === 'Y',
 			$row['mute'] === 'Y',
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['registration_time'])
+			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['registrationTimeStr'])
 		);
 
 		return $user;
@@ -82,6 +102,21 @@ class UsersAccess extends CommonAccess{
 		return $this->executeSearch($this->getActiveUsersQuery, $args, QueryApproach::MANY);
 	}
 
+	public function getActiveUsersCount(bool $excludeMuted){
+		$args = array(
+			':excludeMuted' => $excludeMuted
+		);
+
+		$this->getActiveUsersCountQuery->exec($args);
+
+		$res = $this->getActiveUsersCountQuery->fetch();
+		if($res === false){
+			throw new \RuntimeException("Unable to execute [getActiveUsersCountQuery].");
+		}
+
+		return intval($res[0]);
+	}
+
 	public function addUser(User $user){
 		if($user->getId() !== null){
 			throw new \RuntimeError("Adding a user with existing id");
@@ -91,11 +126,11 @@ class UsersAccess extends CommonAccess{
 			':API'					=> $user->getAPI(),
 			':deleted'				=> $user->isDeleted() ? 'Y' : 'N',
 			':mute'					=> $user->isMuted() ? 'Y' : 'N',
-			':registration_time'	=> $user->getRegistrationTime()->format(parent::dateTimeDBFormat)
+			':registration_time'	=> $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
 		);
 
 		$this->executeInsertUpdateDelete($this->addUserQuery, $args, QueryApproach::ONE);
-		return intval($this->pdo->lastInsertId());
+		return $this->getLastInsertId();
 	}
 
 	public function updateUser($user){

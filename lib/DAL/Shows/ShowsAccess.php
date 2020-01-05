@@ -22,7 +22,6 @@ abstract class ShowAction{
 }
 
 class ShowsAccess extends CommonAccess{
-	private $pdo;
 	private $getShowByIdQuery;
 	private $getShowByAliasQuery;
 	private $getUserShowsQuery;
@@ -34,7 +33,7 @@ class ShowsAccess extends CommonAccess{
 	private $updateShowQuery;
 
 	public function __construct(\PDO $pdo){
-		$this->pdo = $pdo;
+		parent::__construct($pdo);
 
 		$selectFields = "
 			SELECT
@@ -270,7 +269,7 @@ class ShowsAccess extends CommonAccess{
 
 		$this->executeInsertUpdateDelete($this->addShowQuery, $args, QueryApproach::ONE);
 
-		$show->setId(intval($this->pdo->lastInsertId()));
+		return $this->getLastInsertId();
 	}
 
 	public function updateShow(Show $show){

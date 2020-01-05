@@ -2,7 +2,6 @@
 
 namespace core;
 
-require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/MessageRoute.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
@@ -12,15 +11,11 @@ class MessageRouter{
 	private $messageSenders; # array('APIName' => MessageSender)
 	private $tracer;
 
-	# Queries
-	private $getUserAPIQuery;
-	
-	public function __construct($messageSenders){
+	public function __construct(array $messageSenders){
 		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->messageSenders = array();
 
-		assert(is_array($messageSenders));
 		foreach($messageSenders as $APIName => $messageSender){
 			if($messageSender instanceof MessageSenderInterface === false){
 				$this->tracer->logError(
@@ -33,37 +28,9 @@ class MessageRouter{
 
 			$this->messageSenders[$APIName] = $messageSender;
 		}
-
-
-		$pdo = \BotPDO::getInstance();
-		$this->getUserAPIQuery = $pdo->prepare('
-			SELECT `API`
-			FROM `users`
-			WHERE `id` = :user_id
-		');
 	}
 
-	private function getUserAPI($user_id){
-		$this->getUserAPIQuery->execute(
-			array(
-				':user_id' => $user_id
-			)
-		);
-
-		$user = $this->getUserAPIQuery->fetch();
-
-		if($user === false){
-			$this->tracer->logError(
-				'[NOT FOUND]', __FILE__, __LINE__,
-				"User ($user_id) wasn't found"
-			);
-			throw new \RuntimeException("User ($user_id) wasn't found");
-		}
-
-		return $user['API'];
-	}
-
-	private function getMessageSender($API){
+	private function getMessageSender(string $API){
 		if(array_key_exists($API, $this->messageSenders) === false){
 			$this->tracer->logError(
 				'[DATA]', __FILE__, __LINE__,
@@ -79,17 +46,9 @@ class MessageRouter{
 	}
 		
 
-	public function route($user_id){
-		$userAPI = $this->getUserAPI($user_id);
-		$messageSender = $this->getMessageSender($userAPI);
-
-		$route = new MessageRoute($messageSender, $user_id);
-
-		$this->tracer->logEvent(
-			'[o]', __FILE__, __LINE__,
-			"Successfully routed message to user=[$user_id]: API=[$userAPI]"
-		);
-
+	public function route(\DAL\User $user){
+		$messageSender = $this->getMessageSender($user->getAPI());
+		$route = new MessageRoute($messageSender, $user->getId());
 		return $route;
 	}
 }

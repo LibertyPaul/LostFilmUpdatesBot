@@ -9,6 +9,9 @@ require_once(__DIR__.'/MessageRouterFactory.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/../lib/DAL/Users/User.php');
+
 class NotificationDispatcher{
 	private $notificationGenerator;
 	private $messageRouter;
@@ -27,6 +30,9 @@ class NotificationDispatcher{
 		$this->tracer = new \Tracer(__CLASS__);
 		
 		$this->pdo = \BotPDO::getInstance();
+
+		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
+
 		$this->getNotificationDataQuery = $this->pdo->prepare("
 			SELECT 	`notificationsQueue`.`id`,
 					`notificationsQueue`.`responseCode`,
@@ -148,6 +154,8 @@ class NotificationDispatcher{
 			
 			if($eligible){
 				try{
+					$user = $this->usersAccess->getUserById(intval($notification['user_id']));
+
 					$url = self::makeURL(
 						$notification['showAlias'],
 						intval($notification['seasonNumber']),
@@ -162,12 +170,9 @@ class NotificationDispatcher{
 						$url
 					);
 
-					$directredOutgoingMessage = new DirectedOutgoingMessage(
-						intval($notification['user_id']),
-						$outgoingMessage
-					);
+					$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
 
-					$route = $this->messageRouter->route($directredOutgoingMessage->getUserId());
+					$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
 					$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
 
 					$this->setNotificationDeliveryResult->execute(
