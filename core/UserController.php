@@ -2,7 +2,6 @@
 
 namespace core;
 
-require_once(__DIR__.'/User.php');
 require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
@@ -11,11 +10,13 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
-abstract class ShowAction{
-	const Add = 1;
-	const Remove = 2;
-	const AddTentative = 3;
-}
+require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
+require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/../lib/DAL/Users/User.php');
+require_once(__DIR__.'/../lib/DAL/Tracks/TracksAccess.php');
+require_once(__DIR__.'/../lib/DAL/Tracks/Track.php');
+
 
 class UserController{
 	private $user;
@@ -27,6 +28,10 @@ class UserController{
 	private $coreCommands;
 	private $commandSubstitutor;
 
+	private $showsAccess;
+	private $usersAccess;
+	private $tracksAccess;
+
 	public function __construct(User $user){
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
@@ -36,6 +41,10 @@ class UserController{
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
+
+		$this->showsAccess	= new \DAL\ShowsAccess($this->pdo);
+		$this->usersAccess	= new \DAL\UsersAccess($this->pdo);
+		$this->tracksAccess	= new \DAL\TracksAccess($this->pdo);
 	}
 
 	private function repeatQuestion(){
@@ -45,31 +54,16 @@ class UserController{
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
-		$getMessagesHistorySize = $this->pdo->prepare('
-			SELECT  COUNT(*) FROM `messagesHistory`
-			WHERE `user_id` = :user_id
-		');
-
-		try{
-			$getMessagesHistorySize->execute(
-				array(
-					':user_id' => $this->user->getId()
+		$tracksCount = $this->tracksAccess->getUserTracksCount($this->user->getId());
+		if($tracksCount > 1){
+			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
+			return new DirectedOutgoingMessage(
+				$this->user->getId(),
+				new OutgoingMessage(
+					"Мы ведь уже знакомы, правда?".PHP_EOL.
+					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand."
 				)
 			);
-
-			$res = $getMessagesHistorySize->fetch();
-			$count = intval($res[0]);
-
-			if($count > 1){
-				return new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage('Мы ведь уже знакомы, правда?')
-				);
-			}
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
-			$username = '';
 		}
 
 		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
@@ -123,7 +117,7 @@ class UserController{
 			$options = array($ANSWER_YES, $ANSWER_NO);
 			$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
 			
-			if($this->user->muted() === false){
+			if($this->user->isMuted() === false){
 				$lastChance .= 
 					PHP_EOL.PHP_EOL.
 					'Если тебя раздражают уведомления, '.
@@ -149,47 +143,23 @@ class UserController{
 			case strtolower($ANSWER_YES):
 				$this->conversationStorage->deleteConversation();
 
-				$adminNotification = null;
-				
-				try{
-					$notificationGenerator = new NotificationGenerator();
-					$adminNotification = $notificationGenerator->userLeftEvent(
-						$this->user->getId()
-					);
-				}
-				catch(\Throwable $ex){
-					$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
-				}
-				
-				$deleteUserQuery = $this->pdo->prepare("
-					UPDATE `users`
-					SET `deleted` = 'Y'
-					WHERE `id` = :user_id
-				");
-				
-				try{
-					$deleteUserQuery->execute(
-						array(
-							':user_id' => $this->user->getId()
-						)
-					);
-				}
-				catch(\PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					$this->conversationStorage->deleteConversation();
-					return new DirectedOutgoingMessage(
-						$this->user->getId(),
-						new OutgoingMessage('Возникла ошибка. Записал, починят.')
-					);
-				}
+				$this->user->markDeleted();
+				$this->usersAccess->updateUser($this->user);
 				
 				$userResponse = new DirectedOutgoingMessage(
 					$this->user->getId(),
 					new OutgoingMessage('Прощай...')
 				);
-
-				if($adminNotification !== null){
-					$userResponse->appendMessage($adminNotification);
+				
+				try{
+					$notificationGenerator = new NotificationGenerator();
+					$adminNotification = $notificationGenerator->userLeftEvent($this->user->getId());
+					if($adminNotification !== null){
+						$userResponse->appendMessage($adminNotification);
+					}
+				}
+				catch(\Throwable $ex){
+					$this->tracer->logException($ex);
 				}
 
 				return $userResponse;
@@ -204,7 +174,7 @@ class UserController{
 			default:
 				$command = $this->conversationStorage->getLastMessage()->getCoreCommand();
 				if(
-					$this->user->muted() === false						&&
+					$this->user->isMuted() === false					&&
 					$command !== null									&&
 					$command->getId() === \CommandSubstitutor\CoreCommandMap::Mute
 				){
@@ -238,16 +208,16 @@ class UserController{
 	private function showHelp(){
 		$this->conversationStorage->deleteConversation();
 
-		$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
-		$removeShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::RemoveShow];
-		$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
-		$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
-		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
-		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
-		$aboutTorCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AboutTor];
-		$stopCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Stop];
-		$getShareButtonCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
-		$donateCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
+		$addShowCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+		$removeShowCoreCommand		= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::RemoveShow];
+		$getMyShowsCoreCommand		= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
+		$muteCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
+		$cancelCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
+		$helpCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+		$aboutTorCoreCommand		= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AboutTor];
+		$stopCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Stop];
+		$getShareButtonCoreCommand	= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
+		$donateCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
 		
 		$helpText =
 			'LostFilm updates - бот, который оповещает '									.
@@ -303,29 +273,8 @@ class UserController{
 	
 	private function showUserShows(){
 		$this->conversationStorage->deleteConversation();
-		$getUserShowsQuery = $this->pdo->prepare("
-			SELECT 
-				CONCAT(
-					`shows`.`title_ru`,
-					' (',
-					`shows`.`title_en`,
-					')'
-				) AS `title`,
-				`shows`.`onAir`
-			FROM `tracks`
-			JOIN `shows` ON `tracks`.`show_id` = `shows`.`id`
-			WHERE `tracks`.`user_id` = :user_id
-			ORDER BY `shows`.`title_ru`
-		");
 
-		$getUserShowsQuery->execute(
-			array(
-				':user_id' => $this->user->getId()
-			)
-		);
-		
-		$userShows = $getUserShowsQuery->fetchAll();
-		
+		$userShows = $this->showsAccess->getUserShows($this->user->getId());
 		if(count($userShows) === 0){
 			$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 			return new DirectedOutgoingMessage(
@@ -339,13 +288,15 @@ class UserController{
 		$rows = array();
 
 		foreach($userShows as $show){
-			$icon = '•';
-			if($show['onAir'] === 'N'){
+			if($show->isOnAir()){
+				$icon = '•';
+			}
+			else{
 				$icon = '✕';
 				$hasOutdated = true;
 			}
 
-			$rows[] = sprintf('%s %s', $icon, $show['title']).PHP_EOL.PHP_EOL;
+			$rows[] = sprintf('%s %s', $icon, $show->getFullTitle()).PHP_EOL.PHP_EOL;
 		}
 
 		if($hasOutdated){
@@ -383,37 +334,14 @@ class UserController{
 	private function toggleMute(){
 		$this->conversationStorage->deleteConversation();
 
-		$toggleMuteQuery = $this->pdo->prepare("
-			UPDATE `users`
-			SET `mute` = (
-				CASE `mute`
-					WHEN 'Y' THEN 'N'
-					WHEN 'N' THEN 'Y'
-				END
-			)
-			WHERE `id` = :user_id
-		");
+		$this->user->toggleMuted();
+		$this->usersAccess->updateUser($this->user);
 		
-		try{
-			$toggleMuteQuery->execute(
-				array(
-					':user_id'	=> $this->user->getId()
-				)
-			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			return new DirectedOutgoingMessage(
-				$this->user->getId(),
-				new OutgoingMessage('Возникла ошибка в базе. Записал. Починят.')
-			);
-		}
-		
-		if($this->user->muted()){
-			$action = 'Включил';
+		if($this->user->isMuted()){
+			$action = 'Выключил';
 		}
 		else{
-			$action = 'Выключил';
+			$action = 'Включил';
 		}
 		
 		return new DirectedOutgoingMessage(
@@ -423,83 +351,24 @@ class UserController{
 	}
 	
 	private function insertOrDeleteShow($showAction){
-		switch($showAction){
-		case ShowAction::Add:
-		case ShowAction::AddTentative:
-			$successText = 'добавлен';
-			$action = $this->pdo->prepare('
-				INSERT INTO `tracks` (`user_id`, `show_id`) 
-				VALUES (:user_id, :show_id)
-			');
-			
-			break;
-
-		case ShowAction::Remove: 
-			$successText = 'удален';
-			$action = $this->pdo->prepare('
-				DELETE FROM `tracks`
-				WHERE `user_id` = :user_id
-				AND   `show_id` = :show_id
-			');
-			
-			break;
-		}
-	
 		switch($this->conversationStorage->getConversationSize()){
+		# Show all available options
 		case 1:
-			$query = $this->pdo->prepare("
-				SELECT
-					CONCAT(
-						`title_ru`,
-						' (',
-						`title_en`,
-						')'
-					) AS `title`
-				FROM `shows`
-				WHERE (
-					`id` IN(
-						SELECT `show_id`
-						FROM `tracks`
-						WHERE `user_id` = :user_id
-					)
-					XOR :showAction
-				)
-				AND ((`shows`.`onAir` = 'Y') OR NOT :showAction)
-				ORDER BY `title_ru`, `title_en`
-			");
-
-			try{
-				$query->execute(
-					array(
-						':user_id'		=> $this->user->getId(),
-						':showAction'	=> $showAction !== ShowAction::Remove
-					)
-				);
-			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				$this->conversationStorage->deleteConversation();
-				return new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-				); 
-			}
+			$shows = $this->showsAccess->getEligibleShows($this->user->getId(), $showAction);
 			
-			$showTitles = $query->fetchAll(\PDO::FETCH_COLUMN, 'title');
-			
-			if(count($showTitles) === 0){
+			if(count($shows) === 0){
 				$this->conversationStorage->deleteConversation();
 				
 				switch($showAction){
-				case ShowAction::Add:
-				case ShowAction::AddTentative:
+				case \DAL\ShowAction::Add:
+				case \DAL\ShowAction::AddTentative:
 					$text =
 						'Ты подписан на все сериалы.'.PHP_EOL.
 						'И как ты успеваешь их все смотреть??';
 					
 					break;
 
-				case ShowAction::Remove:
+				case \DAL\ShowAction::Remove:
 					$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 					$text = "Нечего удалять. Для начала добавь пару сериалов командой [$addShowCoreCommand].";
 					
@@ -516,6 +385,11 @@ class UserController{
 						'Выбери из списка / введи пару слов из названия или '.
 						'продиктуй их в голосовом сообщении';
 				
+				$showTitles = array();
+				foreach($shows as $show){
+					$showTitles[] = $show->getFullTitle();
+				}
+
 				array_unshift($showTitles, '/cancel');
 				array_push($showTitles, '/cancel');
 				
@@ -530,175 +404,102 @@ class UserController{
 				);
 			}
 			break;
+
+		# Search, add or propose narrow list
 		case 2:
-			$getShowId = $this->pdo->prepare("
-				SELECT 
-					`id`,
-					CONCAT(
-						`title_ru`,
-						' (',
-						`title_en`,
-						')'
-					) AS `title_all`
-				FROM `shows`
-				WHERE ((`shows`.`onAir` = 'Y') OR NOT :showAction)
-				AND (
-					`id` IN(
-						SELECT `show_id`
-						FROM `tracks`
-						WHERE `user_id` = :user_id
-					)
-					XOR :showAction
-				)
-				HAVING `title_all` = :title
-				ORDER BY `title_ru`, `title_en`
-			");
+			$messageText = $this->conversationStorage->getLastMessage()->getText();
+			$show = $this->showsAccess->getEligibleShowByTitle($this->user->getId(), $messageText, $showAction);
 			
-			try{
-				$messageText = $this->conversationStorage->getLastMessage()->getText();
-				$getShowId->execute(
-					array(
-						':title'		=> $messageText,
-						':user_id'		=> $this->user->getId(),
-						':showAction'	=> $showAction !== ShowAction::Remove
-					)
-				);
-			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				$this->conversationStorage->deleteConversation();
-				return new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-				); 
-			}
-				
-			$res = $getShowId->fetch();
-			if($res !== false){
-				# нашли совпадение по имени (пользователь нажал на кнопку или, что маловероятно, 
-				# сам ввел точное название)
+			# TODO: Merge the below if-else into a singular logic.
+			if($show !== null){
+				# An exact match was found.
 				$this->conversationStorage->deleteConversation();
 				
-				$show_id = intval($res['id']);
-				$title_all = $res['title_all'];
-				
-				try{
-					$action->execute(
-						array(
-							':show_id' => $show_id,
-							':user_id' => $this->user->getId()
-						)
-					);
+				$track = new \DAL\Track($this->user->getId(), $show->getId());
+
+				switch($showAction){
+					case \DAL\ShowAction::Add:
+					case \DAL\ShowAction::AddTentative:
+						$successText = 'добавлен';
+						$this->tracksAccess->addTrack($track);
+						
+						break;
+
+					case \DAL\ShowAction::Remove:
+						$successText = 'удален';
+						$this->tracksAccess->deleteTrack($track);
+						break;
 				}
-				catch(\PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					return new DirectedOutgoingMessage(
-						$this->user->getId(),
-						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-					); 
-				}
+
+				$messageText = sprintf("%s %s", $show->getFullTitle(), $successText);
 				
 				return new DirectedOutgoingMessage(
 					$this->user->getId(),
-					new OutgoingMessage("$title_all $successText")
+					new OutgoingMessage($messageText)
 				);
 			}
 			else{
-				# Совпадения не найдено. Скорее всего юзер ввел неполное название.
-				# Придется угадывать.
-				$query = $this->pdo->prepare("
-					SELECT
-						`id`,
-						MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`,
-						CONCAT(
-							`title_ru`,
-							' (',
-							`title_en`,
-							')'
-						) AS `title_all`
-					FROM `shows`
-					WHERE (
-						`id` IN(
-							SELECT `show_id`
-							FROM `tracks`
-							WHERE `user_id` = :user_id
-						)
-						XOR :showAction
-					)
-					AND ((`shows`.`onAir` = 'Y') OR NOT :showAction)
-					HAVING `score` > 0.1
-					ORDER BY `score` DESC
-				");
-				
-				try{
-					$messageText = $this->conversationStorage->getLastMessage()->getText();
-					$query->execute(
-						array(
-							':user_id' 		=> $this->user->getId(),
-							':show_name'	=> $messageText,
-							':showAction'	=> $showAction !== ShowAction::Remove
-						)
-					);
-				}
-				catch(\PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					$this->conversationStorage->deleteConversation();
-					return new DirectedOutgoingMessage(
-						$this->user->getId(),
-						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-					); 
-				}
-				
-				$res = $query->fetchAll();
-				
-				switch(count($res)){
-				case 0://не найдено ни одного похожего названия
+				# An exact match was not found. Going to guess...
+				$matchedShows = $this->showsAccess->getEligibleShowsWithScore(
+					$this->user->getId(),
+					$this->conversationStorage->getLastMessage()->getText(),
+					$showAction
+				);
+
+				switch(count($matchedShows)){
+				case 0:
 					$this->conversationStorage->deleteConversation();
 
 					switch($showAction){
-						case ShowAction::Add:
-						case ShowAction::Remove:
+						case \DAL\ShowAction::Add:
+						case \DAL\ShowAction::Remove:
 							$notFoundText = 'Не найдено подходящих названий.';
 							break;
 
-						case ShowAction::AddTentative:
+						case \DAL\ShowAction::AddTentative:
 							$notFoundText = 'Не найдено подходящих названий. Жми на /add_show чтобы посмотреть в списке.';
 							break;
 					}
 
 					return new DirectedOutgoingMessage($this->user->getId(), new OutgoingMessage($notFoundText));
-					break;
 								
-				case 1://найдено только одно подходящее название
+				case 1:
 					$this->conversationStorage->deleteConversation();
-					$show = $res[0];
-					try{
-						$action->execute(
-							array(
-								':show_id' => $show['id'],
-								':user_id' => $this->user->getId()
-							)
-						);
+					$matchedShow = $matchedShows[0];
+
+					$track = new \DAL\Track($this->user->getId(), $matchedShow->getId());
+
+					switch($showAction){
+						case \DAL\ShowAction::Add:
+						case \DAL\ShowAction::AddTentative:
+							$successText = 'добавлен';
+							$this->tracksAccess->addTrack($track);
+							
+							break;
+
+						case \DAL\ShowAction::Remove:
+							$successText = 'удален';
+							$this->tracksAccess->deleteTrack($track);
+							break;
 					}
-					catch(\PDOException $ex){
-						$this->tracer->logException(
-							'[DB ERROR]', __FILE__, __LINE__, $ex);
-						return new DirectedOutgoingMessage(
-							$this->user->getId(),
-							new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-						); 
-					}
+
+					$messageText = sprintf("%s %s", $mathedShow->getFullTitle(), $successText);
 					
 					return new DirectedOutgoingMessage(
 						$this->user->getId(),
-						new OutgoingMessage("$show[title_all] $successText")
+						new OutgoingMessage($messageText)
 					);
-					break;
 				
-				default://подходят несколько вариантов
-					$showTitles = array_column($res, 'title_all');
+				default:
+					$showTitles = array();
+					foreach($matchedShows as $matchedShow){
+						$showTitles[] = $matchedShow->getFullTitle();
+					}
+
 					array_unshift($showTitles, '/cancel');
 					array_push($showTitles, '/cancel');
+
+					$this->repeatQuestion();
 					
 					return new DirectedOutgoingMessage(
 						$this->user->getId(),
@@ -709,85 +510,8 @@ class UserController{
 							$showTitles
 						)
 					);
-					break;
 				}
 			}
-			break;
-		case 3:
-			$messageText = $this->conversationStorage->getLastMessage()->getText();
-			$this->conversationStorage->deleteConversation();
-
-			$query = $this->pdo->prepare("
-				SELECT 
-					`id`,
-					CONCAT(
-						`title_ru`,
-						' (',
-						`title_en`,
-						')'
-					) AS `title_all`
-				FROM `shows`
-				WHERE ((`shows`.`onAir` = 'Y') OR NOT :showAction)
-				AND (
-					`id` IN(
-						SELECT `show_id`
-						FROM `tracks`
-						WHERE `user_id` = :user_id
-					)
-					XOR :showAction
-				)
-				HAVING `title_all` = :exactShowName
-			");
-			
-			try{
-				$query->execute(
-					array(
-						':user_id' 			=> $this->user->getId(),
-						':showAction'		=> $showAction !== ShowAction::Remove,
-						':exactShowName'	=> $messageText
-					)
-				);
-			}
-			catch(\PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-				return new DirectedOutgoingMessage(
-					$this->user->getId(), 
-					new OurgoingMessage('Ошибка в базе. Записал. Починят.')
-				); 
-			}
-			
-			$res = $query->fetchAll();
-			
-			if(count($res) === 0){
-				return new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage('Не могу найти такое название.')
-				);
-			}
-			else{
-				$show = $res[0];
-				try{
-					$action->execute(
-						array(
-							':user_id' => $this->user->getId(),
-							':show_id' => $show['id']
-						)
-					);
-				}
-				catch(\PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					return new DirectedOutgoingMessage(
-						$this->user->getId(),
-						new OutgoingMessage('Ошибка в базе. Записал. Починят.')
-					); 
-				}
-				
-				return new DirectedOutgoingMessage(
-					$this->user->getId(),
-					new OutgoingMessage("$show[title_all] $successText")
-				);
-			}
-			break;
 		}
 	}
 
@@ -813,35 +537,21 @@ class UserController{
 		$YandexMoneyButton = null;
 		$PayPalButton = null;
 
-		$res = $this->pdo->query("
-			SELECT `value`
-			FROM `config`
-			WHERE `section` = 'Donate'
-			AND `item` = 'Yandex.Money'
-		");
-
-		$res = $res->fetch();
-		if($res !== false){
+		$YandexMoneyURL = $this->config->getValue('Donate', 'Yandex.Money');
+		if($YandexMoneyURL !== null){
 			$YandexMoneyButton = new InlineOption(
 				'Яндекс.Деньги / Visa / Mastercard',
 				InlineOptionType::ExternalLink,
-				$res[0]
+				$YandexMoneyURL
 			);
 		}
 
-		$res = $this->pdo->query("
-			SELECT `value`
-			FROM `config`
-			WHERE `section` = 'Donate'
-			AND `item` = 'PayPal'
-		");
-
-		$res = $res->fetch();
-		if($res !== false){
+		$PayPalURL = $this->config->getValue('Donate', 'PayPal');
+		if($PayPalURL !== null){
 			$PayPalButton = new InlineOption(
 				'PayPal / Visa / Mastercard / American Express / и т.д.',
 				InlineOptionType::ExternalLink,
-				$res[0]
+				$PayPalURL
 			);
 		}
 
@@ -882,6 +592,7 @@ class UserController{
 		$enablePush = $this->conversationStorage->getMessage(2)->getText();
 		$markup = $this->conversationStorage->getMessage(3)->getText();
 		$URLExpand = $this->conversationStorage->getMessage(4)->getText();
+		$excludeMutedStr = $this->conversationStorage->getMessage(5)->getText();
 
 		switch($enablePush){
 			case 'Да':
@@ -934,6 +645,22 @@ class UserController{
 					'why' => "URL Expand Flag=[$URLExpand]"
 				);
 		}
+
+		switch($excludeMutedStr){
+			case 'Да':
+				$excludeMuted = true;
+				break;
+
+			case 'Нет':
+				$excludeMuted = false;
+				break;
+
+			default:
+				return array(
+					'success' => false,
+					'why' => "Exclude Muted=[$excludeMutedStr]"
+				);
+		}
 		
 
 		$message = new OutgoingMessage(
@@ -947,7 +674,8 @@ class UserController{
 		
 		return array(
 			'success' => true,
-			'message' => $message
+			'message' => $message,
+			'excludeMuted' => $excludeMuted
 		);
 	}
 	
@@ -1006,6 +734,17 @@ class UserController{
 			);
 			
 		case 5:
+			return new DirectedOutgoingMessage(
+				$this->user->getId(),
+				new OutgoingMessage(
+					'Потревожить замьюченных?',
+					new MarkupType(MarkupTypeEnum::NoMarkup),
+					false,
+					array('Да', 'Нет', '/cancel')
+				)
+			);
+			
+		case 6:
 			$result = $this->buildBroadcastMessage();
 
 			if($result['success']){
@@ -1032,9 +771,12 @@ class UserController{
 
 			break;
 
-		case 6:
+		case 7:
 			$result = $this->buildBroadcastMessage();
-			assert($result['success']);
+			if($result['success'] !== true){
+				throw new \RuntimeException('Failed to build the broadcast message.');
+			}
+
 			$confirmation = $this->conversationStorage->getLastMessage()->getText();
 
 			$this->conversationStorage->deleteConversation();
@@ -1052,16 +794,13 @@ class UserController{
 			);
 
 			$message = $result['message'];
-			$userIdsQuery = $this->pdo->prepare('SELECT `id` FROM `users`');
-			$userIdsQuery->execute();
-
+			$activeUsers = $this->usersAccess->getActiveUsers($result['excludeMuted']);
 			$count = 0;
 
 			$broadcastChain = null;
 
-			while($user = $userIdsQuery->fetch()){
-				$user_id = intval($user['id']);
-				$current = new DirectedOutgoingMessage($user_id, $message);
+			foreach($activeUsers as $user){
+				$current = new DirectedOutgoingMessage($user->getId(), $message);
 				$current->appendMessage($broadcastChain);
 				$broadcastChain = $current;
 				++$count;
@@ -1075,14 +814,11 @@ class UserController{
 			$broadcastChain->appendMessage($confirmMessage);
 
 			return $broadcastChain;
-			
-			break;
 		}
 	}
 
 	public function processMessage(IncomingMessage $incomingMessage){
 		try{
-
 			$this->conversationStorage->appendMessage($incomingMessage);
 
 			$currentCommand = $incomingMessage->getCoreCommand();
@@ -1134,15 +870,15 @@ class UserController{
 					return $this->showUserShows();
 					
 				case \CommandSubstitutor\CoreCommandMap::AddShow:
-					return $this->insertOrDeleteShow(ShowAction::Add);
+					return $this->insertOrDeleteShow(\DAL\ShowAction::Add);
 				
 				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
 					# TODO: Telegram rejects a keyboard with all shows.
 					# Need an alternative way to promps a choice.
-					return $this->insertOrDeleteShow(ShowAction::Remove);
+					return $this->insertOrDeleteShow(\DAL\ShowAction::Remove);
 
 				case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
-					return $this->insertOrDeleteShow(ShowAction::AddTentative);
+					return $this->insertOrDeleteShow(\DAL\ShowAction::AddTentative);
 
 				case \CommandSubstitutor\CoreCommandMap::GetShareButton:
 					return $this->getShareButton();

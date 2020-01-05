@@ -18,24 +18,26 @@ class SeriesAccess extends CommonAccess{
 		$this->pdo = $pdo;
 
 		$selectFields = "
-			SELECT	`series`.`id`,
-					DATE_FORMAT(`series`.`firstSeenAt`, '".parent::dateTimeDBFormat."') AS firstSeenAtStr,
-					`series`.`show_id`,
-					`series`.`seasonNumber`,
-					`series`.`seriesNumber`,
-					`series`.`title_ru`,
-					`series`.`title_en`,
-					`series`.`ready`
-			FROM	`series`
+			SELECT
+				`series`.`id`,
+				DATE_FORMAT(`series`.`firstSeenAt`, '".parent::dateTimeDBFormat."') AS firstSeenAtStr,
+				`series`.`show_id`,
+				`series`.`seasonNumber`,
+				`series`.`seriesNumber`,
+				`series`.`title_ru`,
+				`series`.`title_en`,
+				`series`.`ready`
 		";
 
 		$this->getSeriesByIdQuery = $this->pdo->prepare("
 			$selectFields
+			FROM `series`
 			WHERE `id` = :id
 		");
 
 		$this->getSeriesByAliasSeasonSeriesQuery = $this->pdo->prepare("
 			$selectFields
+			FROM `series`
 			JOIN `shows` ON	`series`.`show_id` = `shows`.`id`
 			WHERE	`shows`.`alias`			=	:alias
 			AND		`series`.`seasonNumber`	=	:seasonNumber

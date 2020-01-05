@@ -13,12 +13,14 @@ require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
 require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 
 class UpdateHandler{
 	private $tracer;
 	private $pdo;
 	private $speechRecognizer;
 	private $commandSubstitutor;
+	private $usersAccess;
 	private $telegramAPI;
 	private $botan;
 	
@@ -34,6 +36,7 @@ class UpdateHandler{
 		}
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
+		$this->usersAccess = new \DAL\UsersAcess($this->pdo);
 
 		try{
 			$config = new \Config($this->pdo);
@@ -130,11 +133,6 @@ class UpdateHandler{
 	}
 
 	private function createUser($telegram_id, $username, $first_name, $last_name){
-		$createUserQuery = $this->pdo->prepare("
-			INSERT INTO `users` (`API`)
-			VALUES ('TelegramAPI')
-		");
-		
 		$createUserDataQuery = $this->pdo->prepare('
 			INSERT INTO `telegramUserData` (
 				`user_id`,
@@ -155,9 +153,17 @@ class UpdateHandler{
 		}
 
 		try{
-			$createUserQuery->execute();
+			$user = new \DAL\User(
+				null,
+				'TelegramAPI',
+				false,
+				false,
+				new \DateTimeImmutable()
+			);
 
-			$user_id = intval($this->pdo->lastInsertId());
+			$user_id = $this->usersAccess->addUser($user);
+
+			$user->setId($user_id);
 
 			$createUserDataQuery->execute(
 				array(
