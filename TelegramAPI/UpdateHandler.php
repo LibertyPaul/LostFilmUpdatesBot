@@ -14,6 +14,8 @@ require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserDataAccess.php');
+require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserData.php');
 
 class UpdateHandler{
 	private $tracer;
@@ -37,6 +39,7 @@ class UpdateHandler{
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->usersAccess = new \DAL\UsersAcess($this->pdo);
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->pdo);
 
 		try{
 			$config = new \Config($this->pdo);
@@ -96,63 +99,34 @@ class UpdateHandler{
 		return $result;
 	}
 
-	private static function extractUserInfo($message){
-		$chat = $message->chat;
+	private function getUserInfo(int $telegram_id){
+		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByTelegramId($telegram_id);
+		if($telegramUserData === null){
+			return null;
+		}
+
+		$user = $this->usersAccess->getUserById($telegramUserData->getUserId());
+		if($user === null){
+			return null;
+		}
+
+		if($user->isDeleted()){
+			return null;
+		}
 
 		return array(
-			'username'		=> isset($chat->username)	? $chat->username	: null,
-			'first_name' 	=> isset($chat->first_name)	? $chat->first_name	: null,
-			'last_name' 	=> isset($chat->last_name)	? $chat->last_name	: null
+			'user' => $user,
+			'telegramUserData' => $telegramUserData
 		);
 	}
 
-	private function getUserId($telegram_id){
-		$getUserIdQuery = $this->pdo->prepare("
-			SELECT `telegramUserData`.`user_id`
-			FROM `telegramUserData`
-			JOIN `users` ON `users`.`id` = `telegramUserData`.`user_id`
-			WHERE `users`.`deleted` = 'N'
-			AND `telegramUserData`.`telegram_id` = :telegram_id
-			FOR UPDATE
-		");
-
-		$getUserIdQuery->execute(
-			array(
-				':telegram_id' => $telegram_id
-			)
-		);
-
-		$result = $getUserIdQuery->fetch();
-
-		if($result === false){
-			return null; # not registred yet
-		}
-		else{
-			return intval($result[0]);
-		}
-	}
-
-	private function createUser($telegram_id, $username, $first_name, $last_name){
-		$createUserDataQuery = $this->pdo->prepare('
-			INSERT INTO `telegramUserData` (
-				`user_id`,
-				`telegram_id`,
-				`username`,
-				`first_name`,
-				`last_name`
-			)
-			VALUES (:user_id, :telegram_id, :username, :first_name, :last_name)
-		');
-
-		$res = $this->pdo->beginTransaction();
-		if($res === false){
-			$this->tracer->logError(
-				'[PDO-MySQL]', __FILE__, __LINE__,
-				'PDO beginTransaction has faied'
-			);
-		}
-
+	private function createUser(int $telegram_id, string $username = null, string $first_name, string $last_name = null){
 		try{
+			$res = $this->pdo->beginTransaction();
+			if($res === false){
+				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO beginTransaction has faied');
+			}
+
 			$user = new \DAL\User(
 				null,
 				'TelegramAPI',
@@ -162,66 +136,39 @@ class UpdateHandler{
 			);
 
 			$user_id = $this->usersAccess->addUser($user);
-
 			$user->setId($user_id);
+			
+			$telegramUserData = new \DAL\TelegramUserData(
+				$user_id,
+				$telegram_id,
+				$username,
+				$first_name,
+				$last_name
+			);
 
-			$createUserDataQuery->execute(
-				array(
-					':user_id'		=> $user_id,
-					':username'		=> $username,
-					':first_name'	=> $first_name,
-					':last_name'	=> $last_name,
-					':telegram_id'	=> $telegram_id
-				)
+			$this->telegramUserDataAccess->addAPIUserData($telegramUserData);
+
+			$res = $this->pdo->commit();
+			if($res === false){
+				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO commit has faied');
+			}
+
+			return array(
+				'user' => $user,
+				'telegramUserData' => $telegramUserData
 			);
 		}
-		catch(\PDOException $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
 
 			$res = $this->pdo->rollBack();
 			if($res === false){
-				$this->tracer->logError(
-					'[PDO-MySQL]', __FILE__, __LINE__,
-					'PDO rollback has faied'
-				);
+				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO rollback has faied');
 			}
 
 			throw $ex;
 		}
-		
-		$res = $this->pdo->commit();
-		if($res === false){
-			$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO commit has faied');
-		}
-
-		return $user_id;
 	}
-
-	private function updateUser($telegram_id, $username, $first_name, $last_name){
-		$updateUserDataQuery = $this->pdo->prepare('
-			UPDATE `telegramUserData`
-			SET	`username`		= :username,
-				`first_name`	= :first_name,
-				`last_name`		= :last_name
-			WHERE `telegram_id`	= :telegram_id
-		');
-
-		try{
-			$updateUserDataQuery->execute(
-				array(
-					':username'		=> $username,
-					':first_name'	=> $first_name,
-					':last_name'	=> $last_name,
-					':telegram_id'	=> $telegram_id
-				)
-			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
-	}
-				
 
 	private function createOrUpdateUser($chat){
 		$telegram_id = $chat->id;
@@ -229,16 +176,25 @@ class UpdateHandler{
 		$first_name = isset($chat->first_name) ? $chat->first_name : null;
 		$last_name = isset($chat->last_name) ? $chat->first_name : null;
 
-		$user_id = $this->getUserId($telegram_id);
+		$userInfo = $this->getUserInfo($telegram_id);
 		
-		if($user_id === null){
-			$user_id = $this->createUser($telegram_id, $username, $first_name, $last_name);
+		if($userInfo === null){
+			$userInfo = $this->createUser($telegram_id, $username, $first_name, $last_name);
 		}
 		else{
-			$this->updateUser($telegram_id, $username, $first_name, $last_name);
+			$telegramUserData = new \DAL\TelegramUserData(
+				$userInfo['user']->getId(),
+				$telegram_id,
+				$username,
+				$first_name,
+				$last_name
+			);
+
+			$telegramUserDataAccess->updateAPIUserData($telegramUserData);
+			$userInfo['telegramUserData'] = $telegramUserData;
 		}
 
-		return $user_id;
+		return $userInfo;
 	}
 
 	private function recognizeVoiceMessage($voice){
@@ -315,7 +271,7 @@ class UpdateHandler{
 
 		$update = self::normalizeUpdateFields($update);
 
-		$user_id = $this->createOrUpdateUser($update->message->chat);
+		$userInfo = $this->createOrUpdateUser($update->message->chat);
 
 		if(isset($update->message->text)){
 			$this->tracer->logDebug(
@@ -372,7 +328,7 @@ class UpdateHandler{
 		);
 
 		$coreHandler = new \core\UpdateHandler();
-		$coreHandler->processIncomingMessage($user_id, $incomingMessage);
+		$coreHandler->processIncomingMessage($userInfo['user']->getId(), $incomingMessage);
 
 		# TODO: Remove Botan
 		if($command !== null){

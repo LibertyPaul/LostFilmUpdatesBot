@@ -82,7 +82,7 @@ class UserController{
 
 		try{
 			$notificationGenerator = new NotificationGenerator();
-			$adminNotification = $notificationGenerator->newUserEvent($this->user->getId());
+			$adminNotification = $notificationGenerator->newUserEvent($this->user);
 
 			if($adminNotification !== null){
 				$response->appendMessage($adminNotification);
@@ -153,7 +153,7 @@ class UserController{
 				
 				try{
 					$notificationGenerator = new NotificationGenerator();
-					$adminNotification = $notificationGenerator->userLeftEvent($this->user->getId());
+					$adminNotification = $notificationGenerator->userLeftEvent($this->user);
 					if($adminNotification !== null){
 						$userResponse->appendMessage($adminNotification);
 					}

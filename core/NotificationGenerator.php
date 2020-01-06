@@ -6,6 +6,7 @@ require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/DirectedOutgoingMessage.php');
+require_once(__DIR__.'/APIUserDataAccessFactory.php');
 
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
@@ -13,19 +14,12 @@ require_once(__DIR__.'/../lib/DAL/Users/User.php');
 class NotificationGenerator{
 	private $config;
 	private $usersAccess;
-	private $getUserFirstNameQuery;
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
 
 		$this->config = new \Config($pdo);
-		
-		$this->getUserFirstNameQuery = $pdo->prepare("
-			SELECT `first_name`
-			FROM `telegramUserData`
-			WHERE `user_id` = :user_id
-		");
-		#TODO: do common way for different APIs
+		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance();
 	}
 	
 	private function generateNewSeriesNotificationText(
@@ -78,19 +72,19 @@ class NotificationGenerator{
 		);
 	}
 
-	protected function getUserFirstName(int $user_id){
-		$this->getUserFirstNameQuery->execute(
-			array(
-				':user_id' => $user_id
-			)
-		);
-		
-		$res = $this->getUserFirstNameQuery->fetch();
-		if($res === false){
-			throw new \Exception("User with id($user_id) wasn't found");
+	protected function getUserFirstName(User $user){
+		if(array_key_exists($user->getAPI(), $this->APIUserDataAccessInterfaces) === false){
+			throw \LogicException("An UserDataAccessInterface is not defined for ".$user->getAPI());
 		}
+
+		$APIUserDataAccessInterface = $this->APIUserDataAccessInterfaces[$user->getAPI()];
+		if($APIUserDataAccessInterface === null){
+			throw \LogicException("An UserDataAccessInterface is null for ".$user->getAPI());
+		}
+
+		$APIUserData = $APIUserDataAccessInterface->getAPIUserDataByUserId($user->getId());
 		
-		return $res['first_name'];
+		return $APIUserData->getFirstName();
 	}
 
 	private function messageToAdmin(string $text){
@@ -112,7 +106,7 @@ class NotificationGenerator{
 		}
 	}
 	
-	public function newUserEvent(int $user_id){
+	public function newUserEvent(User $user){
 		$newUserEventEnabled = $this->config->getValue('Admin Notifications', 'Send New User Event');
 
 		if($newUserEventEnabled !== 'Y'){
@@ -120,7 +114,7 @@ class NotificationGenerator{
 		}
 		
 		try{
-			$userFirstName = $this->getUserFirstName($user_id);
+			$userFirstName = $this->getUserFirstName($user);
 			$userCount = $this->usersAccess->getActiveUsersCount(false);
 		}
 		catch(\Throwable $ex){
@@ -130,7 +124,7 @@ class NotificationGenerator{
 		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
 	}
 
-	public function userLeftEvent(int $user_id){
+	public function userLeftEvent(User $user){
 		$userLeftEventEnabled = $this->config->getValue('Admin Notifications', 'Send User Left Event');
 
 		if($userLeftEventEnabled !== 'Y'){
@@ -138,7 +132,7 @@ class NotificationGenerator{
 		}
 		
 		try{
-			$userFirstName = $this->getUserFirstName($user_id);
+			$userFirstName = $this->getUserFirstName($user);
 		}
 		catch(\Throwable $ex){
 			return null;

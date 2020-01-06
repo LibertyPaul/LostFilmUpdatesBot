@@ -72,7 +72,7 @@ class MessageHistory{
 		$timeStr = $this->getTime()->format('d.m.Y H:i:s');
 
 		$result =
-			'"""""""""""""""[Message History]""""""""""""""'			.PHP_EOL.
+			'"""""""""""""""[Message History]"""""""""""""""'			.PHP_EOL.
 			sprintf('Id:             [%d]', $this->getId())				.PHP_EOL.
 			sprintf('Time:           [%s]', $timeStr)					.PHP_EOL.
 			sprintf('Source:         [%s]', $this->getSource())			.PHP_EOL.
@@ -82,7 +82,7 @@ class MessageHistory{
 			sprintf('Status Code:    [%d]', $this->getStatusCode())		.PHP_EOL.
 			'Text:'														.PHP_EOL.
 			$this->getText()											.PHP_EOL.
-			'""""""""""""""""""""""""""""""""""""""""""""""';
+			'"""""""""""""""""""""""""""""""""""""""""""""""';
 
 		return $result;
 	}
