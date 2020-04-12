@@ -3,7 +3,7 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
-require_once(__DIR__.'/UserBuilder.php');
+require_once(__DIR__.'/UsersAccess.php');
 require_once(__DIR__.'/User.php');
 
 class UsersAccess extends CommonAccess{

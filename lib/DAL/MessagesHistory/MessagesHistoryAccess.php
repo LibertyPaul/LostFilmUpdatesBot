@@ -3,14 +3,19 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
+require_once(__DIR__.'/MessageHistoryBuilder.php');
 require_once(__DIR__.'/MessageHistory.php');
 
 
-class MassagesHistoryAccess extends CommonAccess{
+class MessagesHistoryAccess extends CommonAccess{
 	private $addMessageHistoryQuery;
 
-	public function __construct(\PDO $pdo){
-		parent::__construct($pdo);
+	public function __construct(\Tracer $tracer, \PDO $pdo){
+		parent::__construct(
+			$tracer,
+			$pdo,
+			new MessageHistoryBuilder()
+		);
 
 		$this->addMessageHistoryQuery = $this->pdo->prepare("
 			INSERT INTO `messagesHistory` (
@@ -33,22 +38,6 @@ class MassagesHistoryAccess extends CommonAccess{
 			)
 		");
 
-	}
-
-	# Note: the method is not used, persists only in order to comply with CommonAccess requirements.
-	protected function buildObjectFromRow(array $row){
-		$messageHistory = new MessageHistory(
-			intval($row['id']),
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['createdStr']),
-			$row['source'],
-			intval($row['user_id']),
-			intval($row['update_id']),
-			$row['text'],
-			intval($row['inResponseTo']),
-			intval($row['statusCode'])
-		);
-
-		return $messageHistory;
 	}
 
 	public function addMessageHistory(MessageHistory $messageHistory){

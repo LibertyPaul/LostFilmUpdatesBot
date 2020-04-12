@@ -2,25 +2,28 @@
 
 namespace DAL;
 
-class User{
+class Notification{
 	private $id;
-	private $API;
-	private $isDeleted;
-	private $muted;
-	private $registration_time;
+	private $seriesId;
+	private $userId;
+	private $responseCode;
+	private $retryCount;
+	private $lastDeliveryAttemptTime;
 
 	public function __construct(
 		int $id = null,
-		string $API,
-		bool $isDeleted,
-		bool $muted,
-		\DateTimeInterface $registration_time
+		int $seriesId,
+		int $userId,
+		int $responseCode = null,
+		int $retryCount,
+		\DateTimeInterface $lastDeliveryAttemptTime = null
 	){
 		$this->id = $id;
-		$this->API = $API;
-		$this->isDeleted = $isDeleted;
-		$this->muted = $muted;
-		$this->registration_time = $registration_time;
+		$this->seriesId = $seriesId;
+		$this->userId = $userId;
+		$this->responseCode = $responseCode;
+		$this->retryCount = $retryCount;
+		$this->lastDeliveryAttemptTime = $lastDeliveryAttemptTime;
 	}
 
 	public function getId(){
@@ -32,19 +35,19 @@ class User{
 		$this->id = $id;
 	}
 
-	public function getAPI(){
-		return $this->API;
+	public function getSeriesId(){
+		return $this->seriesId;
 	}
 
-	public function isDeleted(){
-		return $this->isDeleted;
+	public function getUserId(){
+		return $this->userId;
 	}
 
-	public function markDeleted(){
-		$this->isDeleted = true;
+	public function getResponseCode(){
+		return $this->responseCode;
 	}
 
-	public function isMuted(){
+	public function (){
 		return $this->muted;
 	}
 

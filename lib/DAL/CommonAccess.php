@@ -2,6 +2,8 @@
 
 namespace DAL;
 
+require_once(__DIR__.'/DAOBuilderInterface.php');
+
 abstract class QueryApproach{
 	const MIN			= 1;
 
@@ -21,18 +23,34 @@ abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
 	const dateTimeAppFormat = 'd.m.Y H:i:s.u';
 
+	protected $tracer;
 	protected $pdo;
+	protected $DAOBuilder;
 
-	public function __construct(\PDO $pdo){
+	public function __construct(\Tracer $tracer, \PDO $pdo, DAOBuilderInterface $DAOBuilder){
+		$this->tracer = $tracer;
 		$this->pdo = $pdo;
+		$this->DAOBuilder = $DAOBuilder;
 	}
-
-	abstract protected function buildObjectFromRow(array $row);
 
 	protected function executeSearch(\PDOStatement $query, array $args, int $approach){
 		QueryApproach::validate($approach);
 
-		$query->execute($args);
+		try{
+			$query->execute($args);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException(
+				'[o]', __FILE__, __LINE__, $ex
+			);
+
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
+			);
+
+			throw new \RuntimeException("Failed to execute query");
+		}
+
 		$rows = $query->fetchAll();
 
 		switch($approach){
@@ -42,7 +60,7 @@ abstract class CommonAccess{
 						throw new \RuntimeException("The record was not found under condition".PHP_EOL.print_r($args, true));
 
 					case 1:
-						return $this->buildObjectFromRow($rows[0]);
+						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
 
 					default:
 						throw new \RuntimeException(
@@ -57,7 +75,7 @@ abstract class CommonAccess{
 						return null;
 
 					case 1:
-						return $this->buildObjectFromRow($rows[0]);
+						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
 
 					default:
 						throw new \RuntimeException(
@@ -70,7 +88,7 @@ abstract class CommonAccess{
 				$objects = array();
 
 				foreach($rows as $row){
-					$objects[] = $this->buildObjectFromRow($row);
+					$objects[] = $this->DAOBuilder->buildObjectFromRow($row, self::dateTimeAppFormat);
 				}
 
 				return $objects;
@@ -83,7 +101,21 @@ abstract class CommonAccess{
 	protected function executeInsertUpdateDelete(\PDOStatement $query, array $args, int $approach){
 		QueryApproach::validate($approach);
 
-		$query->execute($args);
+		try{
+			$query->execute($args);
+		}
+		catch(\PDOException $ex){
+			$this->tracer->logException(
+				'[o]', __FILE__, __LINE__, $ex
+			);
+
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
+			);
+
+			throw new \RuntimeException("Failed to execute query");
+		}
+
 		$rowsAffected = $query->rowCount();
 
 		# TODO: Get rid of (almost) duplicate code
@@ -91,7 +123,7 @@ abstract class CommonAccess{
 			case QueryApproach::ONE:
 				switch($rowsAffected){
 					case 0:
-						throw new \RuntimeException("Show was not found under condition".PHP_EOL.print_r($args, true));
+						throw new \RuntimeException("Record was not found under condition".PHP_EOL.print_r($args, true));
 
 					case 1:
 						return null;

@@ -3,6 +3,7 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
+require_once(__DIR__.'/TrackBuilder.php');
 require_once(__DIR__.'/Track.php');
 
 
@@ -13,8 +14,12 @@ class TracksAccess extends CommonAccess{
 	private $addTrackQuery;
 	private $deleteTrackQuery;
 
-	public function __construct(\PDO $pdo){
-		parent::__construct($pdo);
+	public function __construct(\Tracer $tracer, \PDO $pdo){
+		parent::__construct(
+			$tracer,
+			$pdo,
+			new TrackBuilder()
+		);
 
 		$selectFields = "
 			SELECT
@@ -51,16 +56,6 @@ class TracksAccess extends CommonAccess{
 			WHERE	`tracks`.`user_id` = :user_id
 			AND		`tracks`.`show_id` = :show_id
 		");
-	}
-
-	protected function buildObjectFromRow(array $row){
-		$track = new Track(
-			intval($row['user_id']),
-			intval($row['show_id']),
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['createdStr'])
-		);
-
-		return $track;
 	}
 
 	public function getTracksByUser(int $user_id){

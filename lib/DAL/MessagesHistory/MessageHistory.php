@@ -12,7 +12,7 @@ class MessageHistory{
 	private $inResponseTo;
 	private $statusCode;
 
-	private function __construct(
+	public function __construct(
 		int $id = null,
 		\DateTimeInterface $time,
 		string $source,

@@ -14,8 +14,8 @@ require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
-require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserDataAccess.php');
-require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserData.php');
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserDataAccess.php');
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserData.php');
 
 class UpdateHandler{
 	private $tracer;
@@ -23,6 +23,7 @@ class UpdateHandler{
 	private $speechRecognizer;
 	private $commandSubstitutor;
 	private $usersAccess;
+	private $telegramUserDataAccess;
 	private $telegramAPI;
 	private $botan;
 	
@@ -38,8 +39,8 @@ class UpdateHandler{
 		}
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
-		$this->usersAccess = new \DAL\UsersAcess($this->pdo);
-		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->pdo);
+		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $this->pdo);
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $this->pdo);
 
 		try{
 			$config = new \Config($this->pdo);
@@ -190,7 +191,7 @@ class UpdateHandler{
 				$last_name
 			);
 
-			$telegramUserDataAccess->updateAPIUserData($telegramUserData);
+			$this->telegramUserDataAccess->updateAPIUserData($telegramUserData);
 			$userInfo['telegramUserData'] = $telegramUserData;
 		}
 

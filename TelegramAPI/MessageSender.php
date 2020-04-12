@@ -10,8 +10,8 @@ require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
-require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserDataAccess.php');
-require_once(__DIR__.'/DAL/TelegramUserData/TelegramUserData.php');
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserDataAccess.php');
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserData.php');
 
 class MessageSender implements \core\MessageSenderInterface{
 	private $telegramAPI;

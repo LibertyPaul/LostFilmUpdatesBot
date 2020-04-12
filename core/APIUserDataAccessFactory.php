@@ -3,6 +3,7 @@
 namespace core;
 
 require_once(__DIR__.'/BotPDO.php');
+require_once(__DIR__.'/../lib/DAL/APIUserDataInterface/APIUserDataAccess.php');
 require_once(__DIR__.'/../TelegramAPI/DAL/TelegramUserDataAccess/TelegramUserDataAccess.php');
 
 class APIUserDataAccessFactory{

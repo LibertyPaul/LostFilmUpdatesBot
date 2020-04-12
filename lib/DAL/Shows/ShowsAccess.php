@@ -5,6 +5,7 @@ namespace DAL;
 require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/Show.php');
 require_once(__DIR__.'/MatchedShow.php');
+require_once(__DIR__.'/ShowBuilder.php');
 
 abstract class ShowAction{
 	const MIN = 1;
@@ -32,8 +33,12 @@ class ShowsAccess extends CommonAccess{
 	private $addShowQuery;
 	private $updateShowQuery;
 
-	public function __construct(\PDO $pdo){
-		parent::__construct($pdo);
+	public function __construct(\Tracer $tracer, \PDO $pdo){
+		parent::__construct(
+			$tracer,
+			$pdo,
+			new ShowBuilder()
+		);
 
 		$selectFields = "
 			SELECT
@@ -151,34 +156,6 @@ class ShowsAccess extends CommonAccess{
 				`lastAppearanceTime`	= STR_TO_DATE(:lastAppearanceTime,  '".parent::dateTimeDBFormat."')
 			WHERE `alias` = :alias
 		");
-	}
-
-	protected function buildObjectFromRow(array $row){
-		if(array_key_exists('score', $row)){
-			$show = new MatchedShow(
-				intval($row['id']),
-				$row['alias'],
-				$row['title_ru'],
-				$row['title_en'],
-				$row['onAir'] === 'Y',
-				\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['firstAppearanceTimeStr']),
-				\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['lastAppearanceTimeStr']),
-				doubleval($row['score'])
-			);
-		}
-		else{
-			$show = new Show(
-				intval($row['id']),
-				$row['alias'],
-				$row['title_ru'],
-				$row['title_en'],
-				$row['onAir'] === 'Y',
-				\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['firstAppearanceTimeStr']),
-				\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['lastAppearanceTimeStr'])
-			);
-		}
-
-		return $show;
 	}
 
 	public function getShowById(int $id){

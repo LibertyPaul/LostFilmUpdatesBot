@@ -3,6 +3,7 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
+require_once(__DIR__.'/SeriesBuilder.php');
 require_once(__DIR__.'/Series.php');
 
 
@@ -12,8 +13,12 @@ class SeriesAccess extends CommonAccess{
 
 	private $addSeriesQuery;
 
-	public function __construct(\PDO $pdo){
-		parent::__construct($pdo);
+	public function __construct(\Tracer $tracer, \PDO $pdo){
+		parent::__construct(
+			$tracer,
+			$pdo,
+			new SeriesBuilder()
+		);
 
 		$selectFields = "
 			SELECT
@@ -70,21 +75,6 @@ class SeriesAccess extends CommonAccess{
 				`ready`		= :ready
 			WHERE `id`		= :id
 		");
-	}
-
-	protected function buildObjectFromRow(array $row){
-		$series = new Series(
-			intval($row['id']),
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['firstSeenAtStr']),
-			intval($row['show_id']),
-			intval($row['seasonNumber']),
-			intval($row['seriesNumber']),
-			$row['title_ru'],
-			$row['title_en'],
-			$row['ready'] === 'Y'
-		);
-
-		return $series;
 	}
 
 	public function getSeriesById(int $id){

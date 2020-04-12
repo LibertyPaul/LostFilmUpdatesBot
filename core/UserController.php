@@ -220,7 +220,7 @@ class UserController{
 		$donateCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
 		
 		$helpText =
-			'LostFilm updates - бот, который оповещает '									.
+			'LostFilm updates - бот, который оповещает '							.PHP_EOL.
 			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
 																					.PHP_EOL.
 			'Список команд:'														.PHP_EOL.
@@ -237,7 +237,7 @@ class UserController{
 																					.PHP_EOL.
 			'Telegram/VK создателя: @libertypaul'									.PHP_EOL.
 			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'			.PHP_EOL.
-			'Исходники бота есть на GitHub: '											.
+			'Исходники бота есть на GitHub: '												.
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
 																					.PHP_EOL.
 			'Создатель бота не имеет никакого отношеня к проекту LostFilm.tv.';

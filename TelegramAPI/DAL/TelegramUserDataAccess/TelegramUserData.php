@@ -2,7 +2,7 @@
 
 namespace DAL;
 
-require_once(__DIR__.'/../../../lib/DAL/APIUserData/APIUserData.php');
+require_once(__DIR__.'/../../../lib/DAL/APIUserDataInterface/APIUserData.php');
 
 class TelegramUserData implements APIUserData{
 	private $userId;
@@ -11,7 +11,7 @@ class TelegramUserData implements APIUserData{
 	private $firstName;
 	private $lastName;
 
-	private function __construct(
+	public function __construct(
 		int $userId,
 		int $telegramId,
 		string $username = null,
