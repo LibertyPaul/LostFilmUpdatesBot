@@ -12,8 +12,8 @@ class SeriesAboutInfo{
 	public function __construct(
 		bool $ready,
 		int $reason = null,
-		string $title_ru = "",
-		string $title_en = ""
+		string $title_ru = null,
+		string $title_en = null
 	){
 		$this->ready = $ready;
 		$this->reason = $reason;
