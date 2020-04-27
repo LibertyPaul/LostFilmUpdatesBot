@@ -36,8 +36,8 @@ class SeriesParserExecutor{
 		$maxShowNotReadyPeriodMins = $this->config->getValue('Parser', 'Max Show Not Ready Period Mins', 30);
 		$this->maxShowNotReadyPeriod = new \DateInterval('PT'.$maxShowNotReadyPeriodMins.'M');
 
-		$this->seriesAccess = new \DAL\SeriesAccess($pdo);
-		$this->showsAccess = new \DAL\ShowsAccess($pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $pdo);
 	}
 
 	private function processSeries(array $seriesMetaInfo){
@@ -52,7 +52,19 @@ class SeriesParserExecutor{
 		}
 
 		$this->seriesAboutParser->loadSrc($seriesMetaInfo['URL']);
-		$seriesInfo = $this->seriesAboutParser->run();
+		$seriesAboutInfo = $this->seriesAboutParser->run();
+		if (
+			$seriesAboutInfo->getTitleRu() === null ||
+			$seriesAboutInfo->getTitleEn() === null
+		){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				"Series page is not published: [%s]",
+				$seriesMetaInfo['URL']
+			);
+
+			return;
+		}
 
 		$show = $this->showsAccess->getShowByAlias($seriesMetaInfo['alias']);
 		if($show === null){
@@ -71,9 +83,9 @@ class SeriesParserExecutor{
 			$show->getId(),
 			intval($seriesMetaInfo['seasonNumber']),
 			intval($seriesMetaInfo['seriesNumber']),
-			$seriesInfo['title_ru'],
-			$seriesInfo['title_en'],
-			$seriesInfo['status'] === SeriesStatus::Ready
+			$seriesAboutInfo->getTitleRu(),
+			$seriesAboutInfo->getTitleEn(),
+			$seriesAboutInfo->isReady()
 		);
 
 		$episodeDescription = sprintf(
@@ -83,16 +95,24 @@ class SeriesParserExecutor{
 			$LFSeries->getSeriesNumber(),
 			$LFSeries->getTitleRu(),
 			$LFSeries->getTitleEn(),
-			$LFSeries->isReady() ? 'Ready' : sprintf('Not ready (%s)', $seriesInfo['why'])
+			$LFSeries->isReady() ?
+				'Ready' :
+				sprintf('Not ready (%s)', $seriesAboutInfo->getReason())
 		);
 
 		if($DBSeries === null){
-			$this->tracer->logfEvent('[o]', __FILE__, __LINE__, "New episode: %s", $episodeDescription);
+			$this->tracer->logfEvent(
+				'[o]', __FILE__, __LINE__,
+				"New episode: %s", $episodeDescription
+			);
 			$this->seriesAccess->addSeries($LFSeries);
 		}
 		else{
 			$LFSeries->setId($DBSeries->getId());
-			$this->tracer->logfEvent('[o]', __FILE__, __LINE__, "Existing episode: %s", $episodeDescription);
+			$this->tracer->logfEvent(
+				'[o]', __FILE__, __LINE__,
+				"Existing episode: %s", $episodeDescription
+			);
 			
 			if($LFSeries->isReady() === false){
 				$now = new \DateTimeImmutable();
@@ -110,7 +130,10 @@ class SeriesParserExecutor{
 			
 			if($LFSeries->isReady()){
 				$this->seriesAccess->updateSeries($LFSeries);
-				$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Marked as ready.');
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Marked as ready.'
+				);
 			}
 		}
 	}
