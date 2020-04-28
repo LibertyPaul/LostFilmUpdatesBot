@@ -47,31 +47,34 @@ class Notification{
 		return $this->responseCode;
 	}
 
-	public function (){
-		return $this->muted;
+	public function getRetryCount(){
+		return $this->retryCount;
 	}
 
-	public function toggleMuted(){
-		$this->muted = !$this->muted;
+	# TODO: alter HTTPCode column to internal format
+	public function applyDeliveryResult(int $HTTPCode){
+		$this->responseCode = $HTTPCode;
+		$this->retryCount += 1;
+		$this->lastDeliveryAttemptTime = new DateTime();
 	}
 
-	public function getRegistrationTime(){
-		return $this->registration_time;
+	public function getLastDeliveryAttemptTime(){
+		return $this->lastDeliveryAttemptTime;
 	}
+
 
 	public function __toString(){
-		$isDeletedYN = $this->isDeleted() ? 'Y' : 'N';
-		$mutedYN = $this->isMuted() ? 'Y' : 'N';
-		$regTime = $this->registration_time->format('d.m.Y H:i:s');
+		$LDATime = $this->getLastDeliveryAttemptTime()->format('d.m.Y H:i:s');
 
 		$result =
-			'+++++++++++++++[USER]++++++++++++++'				.PHP_EOL.
-			sprintf('Id:                [%d]', $this->getId())	.PHP_EOL.
-			sprintf('API:               [%s]', $this->getAPI())	.PHP_EOL.
-			sprintf('Is Deleted?:       [%s]', $isDeletedYN)	.PHP_EOL.
-			sprintf('Muted?:            [%s]', $mutedYN)		.PHP_EOL.
-			sprintf('Registration Date: [%s]', $regTime)		.PHP_EOL.
-			'+++++++++++++++++++++++++++++++++++';
+			'===========[NOTIFICATION]=========='									.PHP_EOL.
+			sprintf('ID:                         [%d]', $this->getId())				.PHP_EOL.
+			sprintf('Series ID:                  [%d]', $this->getSeriesId())		.PHP_EOL.
+			sprintf('User ID:                    [%d]', $this->getUserId())			.PHP_EOL.
+			sprintf('Response Code:              [%d]', $this->getResponseCode())	.PHP_EOL.
+			sprintf('Retry Count:                [%d]', $this->getRetryCount())		.PHP_EOL.
+			sprintf('Last Delivery Attempt Time: [%s]', $LDATime)					.PHP_EOL.
+			'===================================';
 
 		return $result;
 	}

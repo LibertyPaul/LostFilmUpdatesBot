@@ -10,19 +10,16 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
-require_once(__DIR__.'/../lib/DAL/Users/User.php');
+require_once(__DIR__.'/../lib/DAL/Series/SeriesAccess.php');
+require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
+require_once(__DIR__.'/../lib/DAL/NotificationsQueue/NotificationsQueueAccess.php');
 
 class NotificationDispatcher{
 	private $notificationGenerator;
 	private $messageRouter;
-	private $pdo;
-	private $getNotificationDataQuery;
-	private $setNotificationCodeQuery;
 	private $tracer;
-	private $maxNotificationRetries;
 	
 	public function __construct(NotificationGenerator $notificationGenerator){
-		assert($notificationGenerator !== null);
 		$this->notificationGenerator = $notificationGenerator;
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
@@ -31,64 +28,30 @@ class NotificationDispatcher{
 		
 		$this->pdo = \BotPDO::getInstance();
 
+		$this->config = new \Config($this->pdo, \ConfigFetchMode::PER_REQUEST);
+		$this->maxRetryCount = $this->config->getValue(
+			'Notification Dispatcher',
+			'Max Attempts Count',
+			5
+		);
+
 		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
-
-		$this->getNotificationDataQuery = $this->pdo->prepare("
-			SELECT 	`notificationsQueue`.`id`,
-					`notificationsQueue`.`responseCode`,
-					`notificationsQueue`.`retryCount`,
-					`notificationsQueue`.`lastDeliveryAttemptTime`,
-					`users`.`id` AS user_id,
-					`shows`.`title_ru` AS showTitle,
-					`shows`.`alias` AS showAlias,
-					`series`.`title_ru` AS seriesTitle,
-					`series`.`seasonNumber`,
-					`series`.`seriesNumber`
-			FROM `notificationsQueue`
-			JOIN `users` 	ON `notificationsQueue`.`user_id` 	= `users`.`id`
-			JOIN `series` 	ON `notificationsQueue`.`series_id`	= `series`.`id`
-			JOIN `shows` 	ON `series`.`show_id` 				= `shows`.`id`
-			WHERE (
-				`notificationsQueue`.`responseCode` IS NULL OR
-				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
-			)
-			AND (
-				`notificationsQueue`.`retryCount` < (
-					SELECT IFNULL (
-						(
-							SELECT `value`
-							FROM `config`
-							WHERE `section` = 'Notification Dispatcher'
-							AND `item` = 'Max Attempts Count'
-						),
-						1
-					)
-				)
-			)
-			FOR UPDATE
-		");
-		
-		$this->setNotificationDeliveryResult = $this->pdo->prepare('
-			UPDATE 	`notificationsQueue`
-			SET 	`responseCode` 				= :HTTPCode,
-					`retryCount` 				= `retryCount` + 1,
-					`lastDeliveryAttemptTime`	= NOW()
-			WHERE 	`id` = :notificationId;
-		');
-
+		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($this->pdo);
+		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->pdo);
 	}
 
-	private static function eligibleToBeSent($responseCode, $retryCount, $lastDeliveryAttemptTime){
-		if($responseCode === null){
+	private static function eligibleToBeSent(\DAL\Notification $notification){
+		if($notification->getResponseCode() === null){
 			return true;
 		}
 
-		if($lastDeliveryAttemptTime === null){
-			throw new \Throwable('lastDeliveryAttemptTime is null but responseCode is not');
+		if($notification-->getLastDeliveryAttemptTime() === null){
+			throw new \LogicException('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
 		$waitTime = null;
-		switch($retryCount){ # TODO: move intervals to `config` table
+		switch($notification->getRetryCount()){ # TODO: move intervals to `config` table
 			case 0:
 				$interval = 'PT0S';
 				break;
@@ -116,11 +79,10 @@ class NotificationDispatcher{
 		}
 
 		$waitTime = new \DateInterval($interval);
+		$currentTime = new \DateTimeImmutable();
+		$nextDeliveryTime = $notification-->getLastDeliveryAttemptTime()->add($waitTime);
 		
-		$lastAttemptTime 	= new \DateTime($lastDeliveryAttemptTime);
-		$currentTime		= new \DateTime();
-		
-		return $lastAttemptTime->add($waitTime) < $currentTime;
+		return $nextDeliveryTime < $currentTime;
 	}
 	
 	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
@@ -133,15 +95,11 @@ class NotificationDispatcher{
 	}
 
 	public function run(){
-		$this->getNotificationDataQuery->execute();
-		
-		while($notification = $this->getNotificationDataQuery->fetch(\PDO::FETCH_ASSOC)){
+		$notifications = $this->notificationsQueueAccess->getPendingNotifications($this->maxRetryCount);
+
+		foreach($notifications as $notification){
 			try{
-				$eligible = self::eligibleToBeSent(
-					$notification['responseCode'],
-					$notification['retryCount'],
-					$notification['lastDeliveryAttemptTime']
-				);
+				$eligible = self::eligibleToBeSent($notification);
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException(
@@ -152,44 +110,44 @@ class NotificationDispatcher{
 				continue;
 			}
 			
-			if($eligible){
-				try{
-					$user = $this->usersAccess->getUserById(intval($notification['user_id']));
+			if($eligible === false){
+				continue;
+			}
 
-					$url = self::makeURL(
-						$notification['showAlias'],
-						intval($notification['seasonNumber']),
-						intval($notification['seriesNumber'])
-					);
+			try{
+				$user = $this->usersAccess->getUserById($notification->getUserId());
+				$series = $this->seriesAccess->getSeriesById($notification->getSeriesId());
+				$show = $this->showsAccess->getShowById($series->getShowId());
 
-					$outgoingMessage = $this->notificationGenerator->newSeriesEvent(
-						$notification['showTitle'], 
-						intval($notification['seasonNumber']),
-						intval($notification['seriesNumber']), 
-						$notification['seriesTitle'],
-						$url
-					);
+				$url = self::makeURL(
+					$show->getAlias(),
+					$series->getSeasonNumber(),
+					$series->getSeriesNumber()
+				);
 
-					$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
+				$outgoingMessage = $this->notificationGenerator->newSeriesEvent(
+					$show->getTitleRu(),
+					$series->getSeasonNumber(),
+					$series->getSeriesNumber(),
+					$series->getTileRu(),
+					$url
+				);
 
-					$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
-					$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
+				$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
 
-					$this->setNotificationDeliveryResult->execute(
-						array(
-							'notificationId'	=> $notification['id'],
-							'HTTPCode' 			=> $sendResult === SendResult::Success ? 200 : 400
-						)# TODO: alter HTTPCode column to internal format
-					);
-				}
-				catch(\PDOException $ex){
-					$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-					continue;
-				}
-				catch(\Throwable $ex){
-					$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-					continue;
-				}
+				$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
+				$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
+
+				$notification->applyDeliveryResult($sendResult === SendResult::Success ? 200 : 400);
+				$this->notificationsQueueAccess->updateNotification($notification);
+			}
+			catch(\PDOException $ex){
+				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+				continue;
+			}
+			catch(\Throwable $ex){
+				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+				continue;
 			}
 		}
 	}

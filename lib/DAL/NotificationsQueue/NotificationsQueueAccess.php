@@ -3,10 +3,9 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
-require_once(__DIR__.'/UsersAccess.php');
-require_once(__DIR__.'/User.php');
+require_once(__DIR__.'/NotificationBuilder.php');
 
-class UsersAccess extends CommonAccess{
+class NotificationsQueueAccess extends CommonAccess{
 	private $getUserByIdQuery;
 	private $addUserQuery;
 
@@ -14,127 +13,64 @@ class UsersAccess extends CommonAccess{
 		parent::__construct(
 			$tracer,
 			$pdo,
-			new UserBuilder()
+			new NotificationBuilder()
 		);
 
 		$selectFields = "
 			SELECT
-				`users`.`id`,
-				`users`.`API`,
-				`users`.`deleted`,
-				`users`.`mute`,
-				DATE_FORMAT(`users`.`registration_time`, '".parent::dateTimeDBFormat."') AS registrationTimeStr
+				`notificationsQueue`.`id`,
+				`notificationsQueue`.`series_id`,
+				`notificationsQueue`.`user_id`,
+				`notificationsQueue`.`responseCode`,
+				`notificationsQueue`.`retryCount`,
+				DATE_FORMAT(`notificationsQueue`.`lastDeliveryAttemptTime`, '".parent::dateTimeDBFormat."') AS lastDeliveryAttemptTimeStr
 		";
 
-		$this->getUserByIdQuery = $this->pdo->prepare("
-			$selectFields
-			FROM	`users`
-			WHERE	`users`.`id` = :id
-			AND		`users`.`deleted` = 'N'
+		$this->getPendingNotificationsQuery = $this->pdo->prepare(
+			$selectFields."
+			FROM `notificationsQueue`
+			WHERE (
+				`notificationsQueue`.`responseCode` IS NULL OR
+				`notificationsQueue`.`responseCode` BETWEEN 400 AND 599
+			)
+			AND `notificationsQueue`.`retryCount` < :maxRetryCount
+			FOR UPDATE
 		");
 
-		$this->getActiveUsersQuery = $this->pdo->prepare("
-			$selectFields
-			FROM `users`
-			WHERE `users`.`deleted` = 'N'
-			AND (
-				`users`.`mute` = 'N' OR
-				NOT :excludeMuted
-			)
-			ORDER BY `users`.`id`
+		$this->updateNotificationQuery = $this->pdo->prepare("
+			UPDATE 	`notificationsQueue`
+			SET 	`responseCode` 				= :HTTPCode,
+					`retryCount` 				= :retryCount,
+					`lastDeliveryAttemptTime`	= :lastDeliveryAttemptTime
+			WHERE 	`id` = :id;
 		");
 
-		$this->getActiveUsersCountQuery = $this->pdo->prepare("
-			SELECT COUNT(*)
-			FROM `users`
-			WHERE `users`.`deleted` = 'N'
-			AND (
-				`users`.`mute` = 'N' OR
-				NOT :excludeMuted
-			)
-			ORDER BY `users`.`id`
-		");
-
-		$this->addUserQuery = $this->pdo->prepare("
-			INSERT INTO `users` (
-				`API`,
-				`deleted`,
-				`mute`,
-				`registration_time`
-			)
-			VALUES (
-				:API,
-				:deleted,
-				:mute,
-				STR_TO_DATE(:registration_time, '".parent::dateTimeDBFormat."')
-			)
-		");
-
-		$this->updateUserQuery = $this->pdo->prepare("
-			UPDATE `users`
-			SET	`users`.`deleted` = :deleted,
-				`users`.`mute` = :mute
-			WHERE `users`.`id` = :id
-		");
 	}
 
-	public function getUserById(int $id){
-		$args = array(
-			':id' => $id
-		);
-
-		return $this->executeSearch($this->getUserByIdQuery, $args, QueryApproach::ONE);
-	}
-
-	public function getActiveUsers(bool $excludeMuted){
-		$args = array(
-			':excludeMuted' => $excludeMuted
-		);
-
-		return $this->executeSearch($this->getActiveUsersQuery, $args, QueryApproach::MANY);
-	}
-
-	public function getActiveUsersCount(bool $excludeMuted){
-		$args = array(
-			':excludeMuted' => $excludeMuted
-		);
-
-		$this->getActiveUsersCountQuery->exec($args);
-
-		$res = $this->getActiveUsersCountQuery->fetch();
-		if($res === false){
-			throw new \RuntimeException("Unable to execute [getActiveUsersCountQuery].");
-		}
-
-		return intval($res[0]);
-	}
-
-	public function addUser(User $user){
-		if($user->getId() !== null){
-			throw new \RuntimeError("Adding a user with existing id");
+	public function getPendingNotifications(int $maxRetryCount){
+		if ($maxRetryCount < 1){
+			throw new \LogicException("Incorrect maxRetryCount value ($maxRetryCount).");
 		}
 
 		$args = array(
-			':API'					=> $user->getAPI(),
-			':deleted'				=> $user->isDeleted() ? 'Y' : 'N',
-			':mute'					=> $user->isMuted() ? 'Y' : 'N',
-			':registration_time'	=> $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
+			':maxRetryCount' => $maxRetryCount
 		);
 
-		$this->executeInsertUpdateDelete($this->addUserQuery, $args, QueryApproach::ONE);
-		return $this->getLastInsertId();
+		return $this->executeSearch($this->getPendingNotificationsQuery, $args, QueryApproach::MANY);
 	}
 
-	public function updateUser($user){
-		if($user->getId() === null){
-			throw new \RuntimeException("Updating user with empty id");
+	public function updateNotification(Notification $notification){
+		if($notification->getId() === null){
+			throw new \LogicException("Updating a notification with an empty id");
 		}
 		
 		$args = array(
-			':deleted'	=> $user->isDeleted() ? 'Y' : 'N',
-			':mute'		=> $user->isMuted() ? 'Y' : 'N'
+			':id'						=> $notification->getId(),
+			':HTTPCode'					=> $notification->getResponseCode(),
+			':retryCount'				=> $notification->getRetryCount(),
+			':lastDeliveryAttemptTime'	=> $notification->getLastDeliveryAttemptTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->executeInsertUpdateDelete($this->updateUserQuery, $args, QueryApproach::ONE);
+		$this->executeInsertUpdateDelete($this->updateNotificationQuery, $args, QueryApproach::ONE);
 	}
 }
