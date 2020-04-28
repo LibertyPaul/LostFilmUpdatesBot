@@ -173,9 +173,9 @@ class UpdateHandler{
 
 	private function createOrUpdateUser($chat){
 		$telegram_id = $chat->id;
-		$username = isset($chat->username) ? $chat->username : null;
-		$first_name = isset($chat->first_name) ? $chat->first_name : null;
-		$last_name = isset($chat->last_name) ? $chat->first_name : null;
+		$username	= isset($chat->username)	? $chat->username	: null;
+		$first_name	= isset($chat->first_name)	? $chat->first_name	: null;
+		$last_name	= isset($chat->last_name)	? $chat->last_name	: null;
 
 		$userInfo = $this->getUserInfo($telegram_id);
 		
