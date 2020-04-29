@@ -44,7 +44,7 @@ class SeriesParser extends Parser{
 	}
 	
 	private function parseLink($link){
-		$regexp = '/https:\/\/[\w\.]*?lostfilm.tv\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
+		$regexp = '/https:\/\/[\w\.]*?lostfilm\.t(v|w\/mr)\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
 		$matchesRes = preg_match($regexp, $link, $matches);
 		if($matchesRes === false){
@@ -70,9 +70,9 @@ class SeriesParser extends Parser{
 
 		return array(
 			'link'			=> $matches[0],
-			'alias'			=> $matches[1],
-			'seasonNumber'	=> $matches[2],
-			'seriesNumber'	=> $matches[3]
+			'alias'			=> $matches[2],
+			'seasonNumber'	=> $matches[3],
+			'seriesNumber'	=> $matches[4]
 		);
 	}
 	

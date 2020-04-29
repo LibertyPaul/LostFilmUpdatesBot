@@ -64,6 +64,16 @@ class SeriesParserExecutor{
 		return intval($res[0]) > 0;
 	}
 
+	// Duplicate of NotificationDispatcher's one. TODO: move to another place both.
+	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
+		return sprintf(
+			'https://www.lostfilm.tv/series/%s/season_%d/episode_%d',
+			$showAlias,
+			$seasonNumber,
+			$seriesNumber
+		);
+	}
+
 	public function run(){
 		$rssURL = $this->config->getValue('Parser', 'RSS URL', 'https://www.lostfilm.tv/rss.xml');
 		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header', null);
@@ -97,8 +107,14 @@ class SeriesParserExecutor{
 				continue;
 			}
 
+			$URL = self::makeURL(
+				$series['alias'],
+				$series['seasonNumber'],
+				$series['seriesNumber']
+			);
+
 			try{
-				$this->seriesAboutParser->loadSrc($series['link']);
+				$this->seriesAboutParser->loadSrc($URL);
 				$about = $this->seriesAboutParser->run();
 
 				switch($about['status']){
@@ -115,7 +131,7 @@ class SeriesParserExecutor{
 
 						try{
 							$args = array(
-									':alias' => $series['alias']
+								':alias' => $series['alias']
 							);
 
 							$this->getShowIdByAlias->execute($args);
