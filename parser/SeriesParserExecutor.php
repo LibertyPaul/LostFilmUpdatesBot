@@ -51,7 +51,13 @@ class SeriesParserExecutor{
 			return;
 		}
 
-		$this->seriesAboutParser->loadSrc($seriesMetaInfo['URL']);
+		$URL = self::makeURL(
+			$seriesMetaInfo['alias'],
+			intval($seriesMetaInfo['seasonNumber']),
+			intval($seriesMetaInfo['seriesNumber'])
+		);
+
+		$this->seriesAboutParser->loadSrc($URL);
 		$seriesAboutInfo = $this->seriesAboutParser->run();
 		if (
 			$seriesAboutInfo->getTitleRu() === null ||
@@ -136,6 +142,16 @@ class SeriesParserExecutor{
 				);
 			}
 		}
+	}
+
+	// Duplicate of NotificationDispatcher's one. TODO: move to another place both.
+	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
+		return sprintf(
+			'https://www.lostfilm.tv/series/%s/season_%d/episode_%d',
+			$showAlias,
+			$seasonNumber,
+			$seriesNumber
+		);
 	}
 
 	public function run(){
