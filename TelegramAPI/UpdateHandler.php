@@ -101,24 +101,21 @@ class UpdateHandler{
 	}
 
 	private function getUserInfo(int $telegram_id){
-		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByTelegramId($telegram_id);
-		if($telegramUserData === null){
-			return null;
+		$telegramUserDataList = $this->telegramUserDataAccess->getAPIUserDataByTelegramId($telegram_id);
+
+		foreach($telegramUserDataList as $telegramUserData){
+			$user = $this->usersAccess->getUserById($telegramUserData->getUserId());
+			if($user->isDeleted()){
+				continue;
+			}
+
+			return array(
+				'user' => $user,
+				'telegramUserData' => $telegramUserData
+			);
 		}
 
-		$user = $this->usersAccess->getUserById($telegramUserData->getUserId());
-		if($user === null){
-			return null;
-		}
-
-		if($user->isDeleted()){
-			return null;
-		}
-
-		return array(
-			'user' => $user,
-			'telegramUserData' => $telegramUserData
-		);
+		return null;
 	}
 
 	private function createUser(int $telegram_id, string $username = null, string $first_name, string $last_name = null){
@@ -178,21 +175,17 @@ class UpdateHandler{
 		$last_name	= isset($chat->last_name)	? $chat->last_name	: null;
 
 		$userInfo = $this->getUserInfo($telegram_id);
+		$this->tracer->logfDebug(
+			'[o]', __FILE__, __LINE__, '%s',
+			$userInfo ? $userInfo : 'null'
+		);
+
 		
 		if($userInfo === null){
 			$userInfo = $this->createUser($telegram_id, $username, $first_name, $last_name);
 		}
 		else{
-			$telegramUserData = new \DAL\TelegramUserData(
-				$userInfo['user']->getId(),
-				$telegram_id,
-				$username,
-				$first_name,
-				$last_name
-			);
-
-			$this->telegramUserDataAccess->updateAPIUserData($telegramUserData);
-			$userInfo['telegramUserData'] = $telegramUserData;
+			$this->telegramUserDataAccess->updateAPIUserData($userInfo['telegramUserData']);
 		}
 
 		return $userInfo;
@@ -271,8 +264,14 @@ class UpdateHandler{
 		}
 
 		$update = self::normalizeUpdateFields($update);
-
-		$userInfo = $this->createOrUpdateUser($update->message->chat);
+		
+		try{
+			$userInfo = $this->createOrUpdateUser($update->message->chat);
+		}
+		catch(\Throwable $ex){
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			throw $ex;
+		}
 
 		if(isset($update->message->text)){
 			$this->tracer->logDebug(

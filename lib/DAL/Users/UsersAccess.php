@@ -111,7 +111,7 @@ class UsersAccess extends CommonAccess{
 
 	public function addUser(User $user){
 		if($user->getId() !== null){
-			throw new \RuntimeError("Adding a user with existing id");
+			throw new \LogicException("Adding a user with existing id");
 		}
 
 		$args = array(
@@ -127,7 +127,7 @@ class UsersAccess extends CommonAccess{
 
 	public function updateUser($user){
 		if($user->getId() === null){
-			throw new \RuntimeException("Updating user with empty id");
+			throw new \LogicException("Updating user with empty id");
 		}
 		
 		$args = array(

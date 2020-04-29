@@ -122,7 +122,7 @@ class SeriesAccess extends CommonAccess{
 		$args = array(
 			':title_ru'	=> $series->getTitleRu(),
 			':title_en'	=> $series->getTitleEn(),
-			':ready'	=> $series->getReady() ? 'Y' : 'N',
+			':ready'	=> $series->isReady() ? 'Y' : 'N',
 			':id'		=> $series->getId()
 		);
 

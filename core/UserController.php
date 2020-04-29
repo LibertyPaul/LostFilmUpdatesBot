@@ -42,9 +42,9 @@ class UserController{
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
-		$this->showsAccess	= new \DAL\ShowsAccess($this->pdo);
-		$this->usersAccess	= new \DAL\UsersAccess($this->pdo);
-		$this->tracksAccess	= new \DAL\TracksAccess($this->pdo);
+		$this->showsAccess	= new \DAL\ShowsAccess($this->tracer, $this->pdo);
+		$this->usersAccess	= new \DAL\UsersAccess($this->tracer, $this->pdo);
+		$this->tracksAccess	= new \DAL\TracksAccess($this->tracer, $this->pdo);
 	}
 
 	private function repeatQuestion(){

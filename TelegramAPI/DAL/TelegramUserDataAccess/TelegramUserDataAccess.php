@@ -67,7 +67,7 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':telegram_id' => $telegram_id
 		);
 
-		return $this->executeSearch($this->getAPIUserDataByTelegramIdQuery, $args, QueryApproach::ONE_IF_EXISTS);
+		return $this->executeSearch($this->getAPIUserDataByTelegramIdQuery, $args, QueryApproach::MANY);
 	}
 
 	public function getAPIUserDataByUserId(int $user_id){

@@ -34,7 +34,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		$pdo = \BotPDO::getInstance();
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 
-		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($pdo);
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $pdo);
 
 		$config = new \Config($pdo);
 		$this->sleepOn429CodeMs = $config->getValue(

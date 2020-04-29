@@ -136,7 +136,7 @@ abstract class CommonAccess{
 				break;
 
 			case QueryApproach::ONE_IF_EXISTS:
-				switch(count($rows)){
+				switch($rowsAffected){
 					case 0:
 						return null;
 
@@ -164,6 +164,6 @@ abstract class CommonAccess{
 			throw new \RuntimeException("PDO driver does not support lastInsertId() method.");
 		}
 		
-		return intval($id);
+		return $id;
 	}
 }

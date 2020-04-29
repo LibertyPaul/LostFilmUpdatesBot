@@ -37,8 +37,8 @@ class UpdateHandler{
 		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
-		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($pdo);
-		$this->usersAccess = new \DAL\UsersAccess($pdo);
+		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($this->tracer, $pdo);
+		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $pdo);
 	}
 
 	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){

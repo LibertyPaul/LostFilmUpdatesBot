@@ -35,10 +35,10 @@ class NotificationDispatcher{
 			5
 		);
 
-		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
-		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
-		$this->showsAccess = new \DAL\ShowsAccess($this->pdo);
-		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->pdo);
+		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $this->pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $this->pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $this->pdo);
+		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->tracer, $this->pdo);
 	}
 
 	private static function eligibleToBeSent(\DAL\Notification $notification){
