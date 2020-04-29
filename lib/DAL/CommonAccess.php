@@ -57,13 +57,13 @@ abstract class CommonAccess{
 			case QueryApproach::ONE:
 				switch(count($rows)){
 					case 0:
-						throw new \RuntimeException("The record was not found under condition".PHP_EOL.print_r($args, true));
+						throw new \LogicException("The record was not found under condition".PHP_EOL.print_r($args, true));
 
 					case 1:
 						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
 
 					default:
-						throw new \RuntimeException(
+						throw new \LogicException(
 							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
 						);
 				}
@@ -78,7 +78,7 @@ abstract class CommonAccess{
 						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
 
 					default:
-						throw new \RuntimeException(
+						throw new \LogicException(
 							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
 						);
 				}
@@ -94,7 +94,7 @@ abstract class CommonAccess{
 				return $objects;
 
 			default:
-				throw new \RuntimeException("Invalid Select Approach: [$approach].");
+				throw new \LogicException("Invalid Select Approach: [$approach].");
 		}
 	}
 
@@ -123,14 +123,14 @@ abstract class CommonAccess{
 			case QueryApproach::ONE:
 				switch($rowsAffected){
 					case 0:
-						throw new \RuntimeException("Record was not found under condition".PHP_EOL.print_r($args, true));
+						throw new \LogicException("Record was not found under condition".PHP_EOL.print_r($args, true));
 
 					case 1:
 						return null;
 
 					default:
-						throw new \RuntimeException(
-							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
+						throw new \LogicException(
+							"Multiple records were affected while one was expected.".PHP_EOL.print_r($args, true)
 						);
 				}
 				break;
@@ -144,8 +144,8 @@ abstract class CommonAccess{
 						return null;
 
 					default:
-						throw new \RuntimeException(
-							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
+						throw new \LogicException(
+							"Multiple records were affected while one was expected.".PHP_EOL.print_r($args, true)
 						);
 				}
 				break;
@@ -154,7 +154,7 @@ abstract class CommonAccess{
 				return null;
 
 			default:
-				throw new \RuntimeException("Invalid Select Approach: [$approach].");
+				throw new \LogicException("Invalid Select Approach: [$approach].");
 		}
 	}
 
