@@ -5,8 +5,6 @@ namespace SpeechRecognizer;
 require_once(__DIR__.'/../Tracer/Tracer.php');
 require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/../HTTPRequester/HTTPRequesterInterface.php');
-#require_once(__DIR__.'/VelocityController/VelocityController.php');
-
 
 abstract class Result{
 	const Success			= 0;
@@ -17,7 +15,6 @@ abstract class Result{
 
 class SpeechRecognizer{
 	private $APIURL;
-	private $APIKey;
 	private $HTTPRequester;
 	private $velocityController;
 	private $tracer;
@@ -28,22 +25,11 @@ class SpeechRecognizer{
 	){
 		$this->HTTPRequester = $HTTPRequester;
 		$this->tracer = new \Tracer(__CLASS__);
-		$this->APIURL = 'https://speech.googleapis.com/v1/speech:recognize';
-		$this->APIKey = $config->getValue('SpeechRecognizer', 'API Key');
-
-		#$this->velocityController = new \VelocityController(__CLASS__);
+		$APIKey = $config->getValue('SpeechRecognizer', 'API Key', '');
+		$this->APIURL = "https://speech.googleapis.com/v1/speech:recognize?key=$APIKey";
 	}
 
 	public function recognize($audioBase64, $format){
-		if($this->APIKey === null){
-			$this->tracer->logError(
-				'[CONFIG]', __FILE__, __LINE__,
-				'[SpeechRecognizer][API Key] was not set'
-			);
-
-			throw new \RuntimeException('[SpeechRecognizer][API Key] was not set');
-		}
-
 		switch($format){
 			case 'ogg':
 				$encoding = 'OGG_OPUS';
@@ -67,7 +53,7 @@ class SpeechRecognizer{
 			'languageCode'			=> 'ru-RU',
 			'maxAlternatives'		=> 5,
 			'profanityFilter'		=> false,
-			'speechContexts'		=> $SpeechContext,
+			#'speechContexts'		=> $SpeechContext,
 			'enableWordTimeOffsets'	=> false
 		);
 
@@ -76,11 +62,11 @@ class SpeechRecognizer{
 			'audio'		=> $RecognitionAudio
 		);
 
-		$requestProperties = new HTTPRequestProperties(
+		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
 			\HTTPRequester\RequestType::Post,
 			\HTTPRequester\ContentType::JSON,
 			$this->APIURL,
-			$this->APIKey
+			json_encode($Request, JSON_FORCE_OBJECT)
 		);
 
 		$result = $this->HTTPRequester->request($requestProperties);
