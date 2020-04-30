@@ -78,7 +78,7 @@ class NotificationDispatcher{
 		}
 
 		if($lastDeliveryAttemptTime === null){
-			throw new \Throwable('lastDeliveryAttemptTime is null but responseCode is not');
+			throw new \LogicException('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
 		$waitTime = null;

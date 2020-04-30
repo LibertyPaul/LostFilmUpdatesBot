@@ -24,7 +24,7 @@ class SeriesParser extends Parser{
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
-		catch(\Throwable $ex){
+		catch(\RuntimeException $ex){
 			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
@@ -54,7 +54,7 @@ class SeriesParser extends Parser{
 				"Link: '$link'"
 			);
 
-			throw new \Throwable('preg_match has failed');
+			throw new \RuntimeException('preg_match has failed');
 		}
 
 		if($matchesRes === 0){
