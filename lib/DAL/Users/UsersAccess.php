@@ -30,7 +30,6 @@ class UsersAccess extends CommonAccess{
 			$selectFields
 			FROM	`users`
 			WHERE	`users`.`id` = :id
-			AND		`users`.`deleted` = 'N'
 		");
 
 		$this->getActiveUsersQuery = $this->pdo->prepare("

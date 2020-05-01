@@ -6,8 +6,8 @@ require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/NotificationBuilder.php');
 
 class NotificationsQueueAccess extends CommonAccess{
-	private $getUserByIdQuery;
-	private $addUserQuery;
+	private $getPendingNotificationsQuery;
+	private $updateNotificationQuery;
 
 	public function __construct(\Tracer $tracer, \PDO $pdo){
 		parent::__construct(

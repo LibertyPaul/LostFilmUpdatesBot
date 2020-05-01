@@ -80,7 +80,7 @@ class NotificationDispatcher{
 
 		$waitTime = new \DateInterval($interval);
 		$currentTime = new \DateTimeImmutable();
-		$nextDeliveryTime = $notification-->getLastDeliveryAttemptTime()->add($waitTime);
+		$nextDeliveryTime = $notification->getLastDeliveryAttemptTime()->add($waitTime);
 		
 		return $nextDeliveryTime < $currentTime;
 	}
@@ -129,11 +129,15 @@ class NotificationDispatcher{
 					$series->getTitleRu(),
 					$url
 				);
-
-				$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
-
-				$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
-				$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
+				
+				if($user->isDeleted() === false){
+					$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
+					$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
+					$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
+				}
+				else{
+					$sendResult = SendResult::Fail;
+				}
 
 				$notification->applyDeliveryResult($sendResult === SendResult::Success ? 200 : 400);
 				$this->notificationsQueueAccess->updateNotification($notification);

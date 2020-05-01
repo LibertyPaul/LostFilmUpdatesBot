@@ -112,6 +112,10 @@ class UpdateHandler{
 
 		try{
 			$user = $this->usersAccess->getUserById($user_id);
+			if($user->isDeleted()){
+				throw new \LogicException("Incoming update from a deleted user [$user_id]");
+			}
+
 			$userController = new UserController($user);
 		}
 		catch(\Throwable $ex){

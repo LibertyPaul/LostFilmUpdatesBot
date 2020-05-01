@@ -97,6 +97,9 @@ class NotificationGenerator{
 		
 		try{
 			$admin = $this->usersAccess->getUserById(intval($admin_id));
+			if($admin->isDeleted()){
+				return null;
+			}
 
 			return new DirectedOutgoingMessage(
 				$admin,
