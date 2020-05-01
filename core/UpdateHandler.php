@@ -23,7 +23,6 @@ class DuplicateUpdateException extends \RuntimeException{}
 
 class UpdateHandler{
 	private $tracer;
-	private $botan;
 	private $config;
 	private $messageRouter;
 

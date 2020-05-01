@@ -10,7 +10,6 @@ require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
-require_once(__DIR__.'/../lib/Botan.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
@@ -25,7 +24,6 @@ class UpdateHandler{
 	private $usersAccess;
 	private $telegramUserDataAccess;
 	private $telegramAPI;
-	private $botan;
 	
 	public function __construct(){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -54,24 +52,6 @@ class UpdateHandler{
 
 			$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
 			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
-
-			$this->botan = null;
-			$botanEnabled = $config->getValue('Botan', 'Enabled');
-
-			if($botanEnabled === 'Y'){
-				$botanAPIKey = $config->getValue('Botan', 'API Key');
-
-				if($botanAPIKey === null){
-					$this->tracer->logWarning(
-						'[o]', __FILE__, __LINE__, 
-						'Botan is enabled but no API key was found.'
-					);
-				}
-				else{
-					$this->botan = new \Botan($botanAPIKey);
-				}
-			}
-
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
@@ -327,29 +307,6 @@ class UpdateHandler{
 		$coreHandler = new \core\UpdateHandler();
 		$coreHandler->processIncomingMessage($userInfo['user']->getId(), $incomingMessage);
 
-		# TODO: Remove Botan
-		if($command !== null){
-			try{
-				$this->sendToBotan($update->message, $rawCommand);
-			}
-			catch(\Throwable $ex){
-				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-			}
-		}
-	}
-
-	private function sendToBotan($message, $event){
-		if($this->botan === null){
-			return;
-		}
-
-		$messageJSON = json_encode($message);
-		assert($messageJSON !== false);
-
-		$message_assoc = json_decode($messageJSON, true);
-		assert($message_assoc !== null);
-
-		$this->botan->track($message_assoc, $event);
 	}
 
 }
