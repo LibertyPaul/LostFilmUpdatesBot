@@ -54,8 +54,6 @@ class UserController{
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
-		$this->tracer->logDebug('[x]', __FILE__, __LINE__, $this->user);
-
 		if($this->user->isJustRegistred() === false){
 			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
 			return new DirectedOutgoingMessage(
@@ -410,7 +408,7 @@ class UserController{
 		case 2:
 			$messageText = $this->conversationStorage->getLastMessage()->getText();
 			$show = $this->showsAccess->getEligibleShowByTitle($this->user->getId(), $messageText, $showAction);
-			
+
 			# TODO: Merge the below if-else into a singular logic.
 			if($show !== null){
 				# An exact match was found.
