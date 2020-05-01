@@ -207,7 +207,11 @@ class UpdateHandler{
 		return $topOptions[0];
 	}
 
-	private function extractUserCommand($rawText){
+	private function extractUserCommand(string $rawText = null){
+		if($rawText === null){
+			return null;
+		}
+
 		$text = trim($rawText);
 		if(empty($text)){
 			return $rawText;
