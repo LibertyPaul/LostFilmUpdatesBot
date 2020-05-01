@@ -101,14 +101,13 @@ class ShowsAccess extends CommonAccess{
 				XOR :showAction
 			)
 			AND ((`shows`.`onAir` = 'Y') OR NOT :showAction)
-			AND CONCAT(`title_ru`, '(', `title_en`, ')') = :title
+			AND CONCAT(`title_ru`, ' (', `title_en`, ')') = :title
 			ORDER BY `title_ru`, `title_en`
-
 		");
 
 		$this->getEligibleShowsWithScoreQuery = $this->pdo->prepare("
 			$selectFields,
-			MATCH(`title_ru`, `title_en`) AGAINST(:show_name) AS `score`
+			MATCH(`title_ru`, `title_en`) AGAINST(:title) AS `score`
 			FROM `shows`
 			WHERE (
 				`id` IN (
@@ -205,7 +204,7 @@ class ShowsAccess extends CommonAccess{
 		return $this->executeSearch($this->getEligibleShowByTitleQuery, $args, QueryApproach::ONE_IF_EXISTS);
 	}
 
-	public function getEligibleShowsWithScore(int $suer_id, string $title, int $action){
+	public function getEligibleShowsWithScore(int $user_id, string $title, int $action){
 		ShowAction::verify($action);
 
 		$args = array(
