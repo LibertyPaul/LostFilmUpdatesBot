@@ -3,39 +3,44 @@
 namespace DAL;
 
 require_once(__DIR__.'/../CommonAccess.php');
+require_once(__DIR__.'/SeriesBuilder.php');
 require_once(__DIR__.'/Series.php');
 
 
 class SeriesAccess extends CommonAccess{
-	private $pdo;
-
 	private $getSeriesByIdQuery;
 	private $getSeriesByAliasSeasonSeriesQuery;
 
 	private $addSeriesQuery;
 
-	public function __construct(\PDO $pdo){
-		$this->pdo = $pdo;
+	public function __construct(\Tracer $tracer, \PDO $pdo){
+		parent::__construct(
+			$tracer,
+			$pdo,
+			new SeriesBuilder()
+		);
 
 		$selectFields = "
-			SELECT	`series`.`id`,
-					DATE_FORMAT(`series`.`firstSeenAt`, '".parent::dateTimeDBFormat."') AS firstSeenAtStr,
-					`series`.`show_id`,
-					`series`.`seasonNumber`,
-					`series`.`seriesNumber`,
-					`series`.`title_ru`,
-					`series`.`title_en`,
-					`series`.`ready`
-			FROM	`series`
+			SELECT
+				`series`.`id`,
+				DATE_FORMAT(`series`.`firstSeenAt`, '".parent::dateTimeDBFormat."') AS firstSeenAtStr,
+				`series`.`show_id`,
+				`series`.`seasonNumber`,
+				`series`.`seriesNumber`,
+				`series`.`title_ru`,
+				`series`.`title_en`,
+				`series`.`ready`
 		";
 
 		$this->getSeriesByIdQuery = $this->pdo->prepare("
 			$selectFields
+			FROM `series`
 			WHERE `id` = :id
 		");
 
 		$this->getSeriesByAliasSeasonSeriesQuery = $this->pdo->prepare("
 			$selectFields
+			FROM `series`
 			JOIN `shows` ON	`series`.`show_id` = `shows`.`id`
 			WHERE	`shows`.`alias`			=	:alias
 			AND		`series`.`seasonNumber`	=	:seasonNumber
@@ -72,21 +77,6 @@ class SeriesAccess extends CommonAccess{
 		");
 	}
 
-	protected function buildObjectFromRow(array $row){
-		$series = new Series(
-			intval($row['id']),
-			\DateTimeImmutable::createFromFormat(parent::dateTimeAppFormat, $row['firstSeenAtStr']),
-			intval($row['show_id']),
-			intval($row['seasonNumber']),
-			intval($row['seriesNumber']),
-			$row['title_ru'],
-			$row['title_en'],
-			$row['ready'] === 'Y'
-		);
-
-		return $series;
-	}
-
 	public function getSeriesById(int $id){
 		$args = array(
 			':id' => $id
@@ -121,7 +111,7 @@ class SeriesAccess extends CommonAccess{
 		);
 
 		$this->executeInsertUpdateDelete($this->addSeriesQuery, $args, QueryApproach::ONE);
-		return intval($this->pdo->lastInsertId());
+		return $this->getLastInsertId();
 	}
 
 	public function updateSeries(Series $series){
@@ -132,7 +122,7 @@ class SeriesAccess extends CommonAccess{
 		$args = array(
 			':title_ru'	=> $series->getTitleRu(),
 			':title_en'	=> $series->getTitleEn(),
-			':ready'	=> $series->getReady() ? 'Y' : 'N',
+			':ready'	=> $series->isReady() ? 'Y' : 'N',
 			':id'		=> $series->getId()
 		);
 

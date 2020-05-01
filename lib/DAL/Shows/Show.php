@@ -53,6 +53,10 @@ class Show{
 		return $this->title_en;
 	}
 
+	public function getFullTitle(string $format = "%s (%s)"){
+		return sprintf($format, $this->getTitleRu(), $this->getTitleEn());
+	}
+
 	public function isOnAir(){
 		return $this->onAir;
 	}

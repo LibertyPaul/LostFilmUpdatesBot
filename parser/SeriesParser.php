@@ -33,7 +33,7 @@ class SeriesParser extends Parser{
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
-		catch(\Throwable $ex){
+		catch(\RuntimeException $ex){
 			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
 			throw $ex;
@@ -53,7 +53,7 @@ class SeriesParser extends Parser{
 	}
 	
 	private function parseURL($URL){
-		$regexp = '/https:\/\/[\w\.]*?lostfilm.tv\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
+		$regexp = '/https:\/\/[\w\.]*?lostfilm\.t(v|w\/mr)\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
 		$matchesRes = preg_match($regexp, $URL, $matches);
 		if($matchesRes === false){
@@ -65,7 +65,7 @@ class SeriesParser extends Parser{
 				$URL
 			);
 
-			throw new \Throwable('Unable to parse URL [$URL]');
+			throw new \RuntimeException('Unable to parse URL [$URL]');
 		}
 
 		if($matchesRes === 0){
@@ -81,9 +81,9 @@ class SeriesParser extends Parser{
 
 		return array(
 			'URL'			=> $matches[0],
-			'alias'			=> $matches[1],
-			'seasonNumber'	=> $matches[2],
-			'seriesNumber'	=> $matches[3]
+			'alias'			=> $matches[2],
+			'seasonNumber'	=> $matches[3],
+			'seriesNumber'	=> $matches[4]
 		);
 	}
 	

@@ -6,45 +6,30 @@ require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/DirectedOutgoingMessage.php');
+require_once(__DIR__.'/APIUserDataAccessFactory.php');
+
+require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
+require_once(__DIR__.'/../lib/DAL/Users/User.php');
 
 class NotificationGenerator{
+	private $tracer;
 	private $config;
-	private $getUserFirstNameQuery;
-	private $getUserCountQuery;
-	private $adminExistsQuery;
+	private $APIUserDataAccessInterfaces;
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->config = new \Config($pdo);
-		
-		$this->getUserFirstNameQuery = $pdo->prepare("
-			SELECT `first_name`
-			FROM `telegramUserData`
-			WHERE `user_id` = :user_id
-		");
-		#TODO: do common way for different APIs
-		
-		$this->getUserCountQuery = $pdo->prepare("
-			SELECT COUNT(*) AS count
-			FROM `users`
-			WHERE `deleted` = 'N'
-		");
-
-		$this->userExistsQuery = $pdo->prepare("
-			SELECT COUNT(*) AS count
-			FROM `users`
-			WHERE `id` = :user_id
-			AND `deleted` = 'N'
-		");
+		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance($this->tracer);
 	}
 	
 	private function generateNewSeriesNotificationText(
-		$showTitleRu	,
-		$season			,
-		$seriesNumber	,
-		$seriesTitle	,
-		$url
+		string $showTitleRu,
+		int $season,
+		int $seriesNumber,
+		string $seriesTitle,
+		string $URL
 	){
 		$template = 
 			'<b>%s</b>: <b>S%02dE%02d</b> "%s"'	.PHP_EOL.
@@ -64,23 +49,17 @@ class NotificationGenerator{
 			$season,
 			$seriesNumber,
 			htmlspecialchars($seriesTitle),
-			$url
+			$URL
 		);
 	}
 
 	public function newSeriesEvent(
-		$title_ru		,
-		$season			,
-		$seriesNumber	,
-		$seriesTitle	,
-		$URL
+		string $title_ru,
+		int $season,
+		int $seriesNumber,
+		string $seriesTitle,
+		string $URL
 	){
-		assert(is_string($title_ru));
-		assert(is_int($season));
-		assert(is_int($seriesNumber));
-		assert(is_string($seriesTitle));
-		assert(is_string($URL));
-		
 		$notificationText = $this->generateNewSeriesNotificationText(
 			$title_ru,
 			$season,
@@ -95,78 +74,72 @@ class NotificationGenerator{
 		);
 	}
 
-	protected function getUserFirstName($user_id){
-		$this->getUserFirstNameQuery->execute(
-			array(
-				':user_id' => $user_id
-			)
-		);
-		
-		$res = $this->getUserFirstNameQuery->fetch();
-		if($res === false){
-			throw new \Exception("User with id($user_id) wasn't found");
+	protected function getUserFirstName(User $user){
+		if(array_key_exists($user->getAPI(), $this->APIUserDataAccessInterfaces) === false){
+			throw \LogicException("An UserDataAccessInterface is not defined for ".$user->getAPI());
 		}
+
+		$APIUserDataAccessInterface = $this->APIUserDataAccessInterfaces[$user->getAPI()];
+		if($APIUserDataAccessInterface === null){
+			throw \LogicException("An UserDataAccessInterface is null for ".$user->getAPI());
+		}
+
+		$APIUserData = $APIUserDataAccessInterface->getAPIUserDataByUserId($user->getId());
 		
-		return $res['first_name'];
+		return $APIUserData->getFirstName();
 	}
 
-	private function messageToAdmin($text){
-		assert(is_string($text));
-
+	private function messageToAdmin(string $text){
 		$admin_id = $this->config->getValue('Admin Notifications', 'Admin Id');
 		if($admin_id === null){
 			return null;
 		}
+		
+		try{
+			$admin = $this->usersAccess->getUserById(intval($admin_id));
 
-		$this->userExistsQuery->execute(
-			array(
-				'user_id' => $admin_id
-			)
-		);
-
-		$res = $this->userExistsQuery->fetch();
-		assert($res);
-
-		if(intval($res['count']) === 0){
+			return new DirectedOutgoingMessage(
+				$admin,
+				new OutgoingMessage($text)
+			);
+		}
+		catch(\Throwable $ex){
 			return null;
 		}
-
-		return new DirectedOutgoingMessage(
-			intval($admin_id),
-			new OutgoingMessage($text)
-		);
 	}
 	
-	public function newUserEvent($user_id){
-		$newUserEventEnabled = $this->config->getValue(
-			'Admin Notifications',
-			'Send New User Event'
-		);
+	public function newUserEvent(\DAL\User $user){
+		$newUserEventEnabled = $this->config->getValue('Admin Notifications', 'Send New User Event');
 
 		if($newUserEventEnabled !== 'Y'){
 			return null;
 		}
-
-		$userFirstName = $this->getUserFirstName($user_id);
 		
-		$this->getUserCountQuery->execute();
-		$userCount = $this->getUserCountQuery->fetch()['count'];
+		try{
+			$userFirstName = $this->getUserFirstName($user);
+			$userCount = $this->usersAccess->getActiveUsersCount(false);
+		}
+		catch(\Throwable $ex){
+			return null;
+		}
 
 		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
 	}
 
-	public function userLeftEvent($user_id){
-		$userLeftEventEnabled = $this->config->getValue(
-			'Admin Notifications',
-			'Send User Left Event'
-		);
+	public function userLeftEvent(\DAL\User $user){
+		$userLeftEventEnabled = $this->config->getValue('Admin Notifications', 'Send User Left Event');
 
 		if($userLeftEventEnabled !== 'Y'){
 			return null;
 		}
+		
+		try{
+			$userFirstName = $this->getUserFirstName($user);
+		}
+		catch(\Throwable $ex){
+			return null;
+		}
 
-		$userFirstName = $this->getUserFirstName($user_id);
 		return $this->messageToAdmin("Юзер $userFirstName удалился");
 	}
-
 }

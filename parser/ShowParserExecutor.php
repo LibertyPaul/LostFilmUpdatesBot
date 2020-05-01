@@ -25,7 +25,15 @@ class ShowParserExecutor{
 		$this->showListFetcher = $showListFetcher;
 		$this->tracer = new \Tracer(__CLASS__);
 
-		$this->showsAccess = new \DAL\ShowsAccess($pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $pdo);
+	}
+
+	private static function aliasListToText(array $aliases){
+		$delimiter_pre = "[";
+		$delimiter_post = "]";
+		$delimiter = $delimiter_post.$delimiter_pre;
+		
+		return $delimiter_pre.join($delimiter, $aliases).$delimiter_post;
 	}
 
 	private function handleNewShows(array $DBShowAliases, array $LFShows){
@@ -38,19 +46,16 @@ class ShowParserExecutor{
 			);
 
 			try{
-				$this->showsAccess->addShow($LFShows[$newAlias]);
+				$show_id = $this->showsAccess->addShow($LFShows[$newAlias]);
+				$LFShows[$newAlias]->setId($show_id);
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
-				$delimiter_pre = "[";
-				$delimiter_post = "]";
-				$delimiter = $delimiter_post.$delimiter_pre;
 				$this->tracer->logDebug(
 					'[NEW SHOW]', __FILE__, __LINE__,
-					"Falied to insert a show [".$LFShows[$newAlias]."].".PHP_EOL.
-					"My records:"	.$delimiter_pre.join($delimiter, $DBShowAliases)	.$delimiter_post.PHP_EOL.
-					"Site shows:"	.$delimiter_pre.join($delimiter, $LFShowAliases)	.$delimiter_post.PHP_EOL.
-					"Diff:"			.$delimiter_pre.join($delimiter, $newShowAliases)	.$delimiter_post.PHP_EOL
+					"Falied to insert a show:".PHP_EOL.
+					$LFShows[$newAlias].PHP_EOL.
+					"My records: ".self::aliasListToText($DBShowAliases)
 				);
 			}
 		}
