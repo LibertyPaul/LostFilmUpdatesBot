@@ -64,7 +64,12 @@ class Notification{
 
 
 	public function __toString(){
-		$LDATime = $this->getLastDeliveryAttemptTime()->format('d.m.Y H:i:s');
+		if($this->getLastDeliveryAttemptTime() !== null){
+			$LDATime = $this->getLastDeliveryAttemptTime()->format('d.m.Y H:i:s');
+		}
+		else{
+			$LDATime = '<null>';
+		}
 
 		$result =
 			'===========[NOTIFICATION]=========='									.PHP_EOL.

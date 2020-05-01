@@ -131,6 +131,7 @@ class UsersAccess extends CommonAccess{
 		}
 		
 		$args = array(
+			':id'		=> $user->getId(),
 			':deleted'	=> $user->isDeleted() ? 'Y' : 'N',
 			':mute'		=> $user->isMuted() ? 'Y' : 'N'
 		);

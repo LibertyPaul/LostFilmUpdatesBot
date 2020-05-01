@@ -8,13 +8,30 @@ require_once(__DIR__.'/Notification.php');
 class NotificationBuilder implements DAOBuilderInterface{
 
 	public function buildObjectFromRow(array $row, string $dateTimeFormat){
+		if($row['lastDeliveryAttemptTimeStr'] !== null){
+			$lastDeliveryAttemptTime = \DateTimeImmutable::createFromFormat($dateTimeFormat, $row['lastDeliveryAttemptTimeStr']);
+			if($lastDeliveryAttemptTime === false){
+				throw new \LogicException("Failed to convert DB Timestamp [$row[lastDeliveryAttemptTimeStr]].");
+			}
+		}
+		else{
+			$lastDeliveryAttemptTime = null;
+		}
+
+		if($row['responseCode'] !== null){
+			$responseCode = intval($row['responseCode']);
+		}
+		else{
+			$responseCode = null;
+		}
+
 		$notification = new Notification(
 			intval($row['id']),
 			intval($row['series_id']),
 			intval($row['user_id']),
-			intval($row['responseCode']),
+			$responseCode,
 			intval($row['retryCount']),
-			\DateTimeImmutable::createFromFormat($dateTimeFormat, $row['lastDeliveryAttemptTimeStr'])
+			$lastDeliveryAttemptTime
 		);
 
 		return $notification;

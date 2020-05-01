@@ -41,7 +41,7 @@ class TracksAccess extends CommonAccess{
 
 		$this->addTrackQuery = $this->pdo->prepare("
 			INSERT INTO `tracks` (`user_id`, `show_id`, `created`)
-			VALUES (:iser_id, :show_id, :created)
+			VALUES (:user_id, :show_id, STR_TO_DATE(:created, '".parent::dateTimeDBFormat."'))
 		");
 
 		$this->deleteTrackQuery = $this->pdo->prepare("
@@ -70,8 +70,8 @@ class TracksAccess extends CommonAccess{
 	public function addTrack(Track $track){
 		$args = array(
 			':user_id' => $track->getUserId(),
-			':show_id' => $track->geShowId(),
-			':created' => $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
+			':show_id' => $track->getShowId(),
+			':created' => $track->getCreationTime()->format(parent::dateTimeAppFormat)
 		);
 
 		$this->executeInsertUpdateDelete($this->addTrackQuery, $args, QueryApproach::ONE);
@@ -80,7 +80,7 @@ class TracksAccess extends CommonAccess{
 	public function deleteTrack(Track $track){
 		$args = array(
 			':user_id' => $track->getUserId(),
-			':show_id' => $track->geShowId()
+			':show_id' => $track->getShowId()
 		);
 
 		$this->executeInsertUpdateDelete($this->deleteTrackQuery, $args, QueryApproach::ONE);

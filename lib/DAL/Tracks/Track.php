@@ -16,9 +16,11 @@ class Track{
 		$this->show_id = $show_id;
 
 		if($creationTime === null){
-			$creationTime = new \DateTimeImmutable();
+			$this->creationTime = new \DateTimeImmutable();
 		}
-		$this->creationTime = $creationTime;
+		else{
+			$this->creationTime = $creationTime;
+		}
 	}
 
 	public function getUserId(){
