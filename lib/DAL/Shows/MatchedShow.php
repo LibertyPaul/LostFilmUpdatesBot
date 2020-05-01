@@ -15,7 +15,7 @@ class MatchedShow extends Show{
 		bool $onAir,
 		\DateTimeInterface $firstAppearanceTime,
 		\DateTimeInterface $lastAppearanceTime,
-		double $score
+		float $score
 	){
 		parent::__construct(
 			$id,
