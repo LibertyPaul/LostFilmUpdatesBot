@@ -217,10 +217,11 @@ class Webhook{
 		
 		$update = json_decode($postData);
 		if($update === null){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				'Unable to parse JSON update: '.json_last_error_msg().PHP_EOL.
-				'Raw JSON:'.PHP_EOL.
+				"Unable to parse JSON update: [%s]\n",
+				'Raw JSON: [%s]',
+				json_last_error_msg(),
 				$postData
 			);
 
