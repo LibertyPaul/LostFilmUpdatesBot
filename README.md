@@ -1,5 +1,5 @@
 # LostFilmUpdatesBot
-A Telegram bot that notifies about new series at https://lostfilm.tv
+A Telegram bot that notifies about new episodes released at  https://lostfilm.tv
 
 https://telegram.me/LostFilmUpdatesBot
 

@@ -37,17 +37,18 @@ for f in $(find "$srcDir" -type f -name '*.tar.gz' | sort); do
 		2>&1												\
 	)"
 
-	if [ $? -ne 0 ]; then
-		if [ "$(echo "$res" | grep 'Not found in archive' -c)" -gt 0 ]; then
-			echo_yellow "Incoming Messages were not found. Continuing."
-		else
-			echo_red "Failed. Aborting."
-			echo "$res"
-			exit 1
-		fi
-	fi
+	# TODO: tar returns non-zero result if any of wildcards unmatched
+	# Need to create a proper validation
+	#if [ $? -ne 0 ]; then
+	#	if [ "$(ls --almost-all | wc -l)" -gt 0 ]; then
+	#		echo_green "Done."
+	#	else
+	#		echo_red "Failed. Aborting."
+	#		echo "$res"
+	#		exit 1
+	#	fi
+	#fi
 
-	echo_green "Done."
 
 	for incomingMessages in $(find "$tmpDir" -type f); do
 		fName="$(basename "$incomingMessages")"

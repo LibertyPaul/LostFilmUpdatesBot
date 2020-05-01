@@ -145,7 +145,7 @@ class ConversationStorage{
 	}
 
 	public function getConversationSize(){
-		return count($this->conversation); // O(1)
+		return count($this->conversation);
 	}
 
 	private function insertMessage(IncomingMessage $incomingMessage, $position){
