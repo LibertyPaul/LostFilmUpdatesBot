@@ -78,7 +78,7 @@ class MessageSender implements \core\MessageSenderInterface{
 				"Message to user_id=[%d], telegram_id=[%d]".PHP_EOL.
 				"%s",
 				$telegramUserData->getUserId(),
-				$telegramUserData->getTelegramId(),
+				$telegramUserData->getAPISpecificId(),
 				$message
 			);
 
@@ -91,7 +91,7 @@ class MessageSender implements \core\MessageSenderInterface{
 			
 			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
-					$telegramUserData->getTelegramId(),
+					$telegramUserData->getAPISpecificId(),
 					$messageText,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
@@ -136,7 +136,7 @@ class MessageSender implements \core\MessageSenderInterface{
 				}
 				else{
 					$messageId = intval($APIResponse->result->message_id);
-					$this->forwardIfApplicable($telegramUserData->getTelegramId(), $messageId);
+					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
 				}
 			}
 

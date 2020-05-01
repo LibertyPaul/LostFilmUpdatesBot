@@ -25,7 +25,8 @@ class MessageHistory{
 		$this->id = $id;
 		$this->time = $time;
 
-		MessageHistorySource::verify($source);
+		// TODO: implement verification
+		// MessageHistorySource::verify($source);
 		$this->source = $source;
 
 		$this->userId = $userId;

@@ -29,7 +29,7 @@ class MessagesHistoryAccess extends CommonAccess{
 			)
 			VALUES (
 				STR_TO_DATE(:time, '".parent::dateTimeDBFormat."'),
-				'User',
+				:source,
 				:user_id,
 				:update_id,
 				:text,

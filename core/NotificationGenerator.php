@@ -12,14 +12,16 @@ require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
 
 class NotificationGenerator{
+	private $tracer;
 	private $config;
-	private $usersAccess;
+	private $APIUserDataAccessInterfaces;
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
+		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->config = new \Config($pdo);
-		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance();
+		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance($this->tracer);
 	}
 	
 	private function generateNewSeriesNotificationText(
@@ -106,7 +108,7 @@ class NotificationGenerator{
 		}
 	}
 	
-	public function newUserEvent(User $user){
+	public function newUserEvent(\DAL\User $user){
 		$newUserEventEnabled = $this->config->getValue('Admin Notifications', 'Send New User Event');
 
 		if($newUserEventEnabled !== 'Y'){
@@ -124,7 +126,7 @@ class NotificationGenerator{
 		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
 	}
 
-	public function userLeftEvent(User $user){
+	public function userLeftEvent(\DAL\User $user){
 		$userLeftEventEnabled = $this->config->getValue('Admin Notifications', 'Send User Left Event');
 
 		if($userLeftEventEnabled !== 'Y'){
