@@ -105,6 +105,7 @@ class UpdateHandler{
 
 		foreach($telegramUserDataList as $telegramUserData){
 			$user = $this->usersAccess->getUserById($telegramUserData->getUserId());
+
 			if($user->isDeleted()){
 				continue;
 			}
@@ -135,6 +136,7 @@ class UpdateHandler{
 
 			$user_id = $this->usersAccess->addUser($user);
 			$user->setId($user_id);
+			$user->setJustRegistred();
 			
 			$telegramUserData = new \DAL\TelegramUserData(
 				$user_id,
@@ -175,12 +177,7 @@ class UpdateHandler{
 		$last_name	= isset($chat->last_name)	? $chat->last_name	: null;
 
 		$userInfo = $this->getUserInfo($telegram_id);
-		$this->tracer->logfDebug(
-			'[o]', __FILE__, __LINE__, '%s',
-			$userInfo ? $userInfo : 'null'
-		);
 
-		
 		if($userInfo === null){
 			$userInfo = $this->createUser($telegram_id, $username, $first_name, $last_name);
 		}

@@ -32,7 +32,7 @@ class UserController{
 	private $usersAccess;
 	private $tracksAccess;
 
-	public function __construct(User $user){
+	public function __construct(\DAL\User $user){
 		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
 		$this->config = new \Config($this->pdo);
@@ -54,8 +54,7 @@ class UserController{
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
-		$tracksCount = $this->tracksAccess->getUserTracksCount($this->user->getId());
-		if($tracksCount > 0){
+		if($this->user->isJustRegistred()){
 			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
 			return new DirectedOutgoingMessage(
 				$this->user,

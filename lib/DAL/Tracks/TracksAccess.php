@@ -9,7 +9,6 @@ require_once(__DIR__.'/Track.php');
 
 class TracksAccess extends CommonAccess{
 	private $getTracksByUserQuery;
-	private $getUserTracksCount;
 	private $getTracksByShowQuery;
 	private $addTrackQuery;
 	private $deleteTrackQuery;
@@ -30,12 +29,6 @@ class TracksAccess extends CommonAccess{
 
 		$this->getTracksByUserQuery = $this->pdo->prepare("
 			$selectFields
-			FROM `tracks`
-			WHERE `tracks`.`user_id` = :user_id
-		");
-
-		$this->getUserTracksCount = $this->pdo->prepare("
-			SELECT COUNT(*)
 			FROM `tracks`
 			WHERE `tracks`.`user_id` = :user_id
 		");
@@ -64,21 +57,6 @@ class TracksAccess extends CommonAccess{
 		);
 
 		return $this->executeSearch($this->getTracksByUserQuery, $args, QueryApproach::MANY);
-	}
-
-	public function getUserTracksCount(int $user_id){
-		$args = array(
-			':user_id' => $user_id
-		);
-
-		$this->getTracksByUserQuery->exec($args);
-
-		$res = $this->getTracksByUserQuery->fetch();
-		if($res === false){
-			throw new \RuntimeException("Unable to fetch user's tracks count");
-		}
-
-		return intval($res[0]);
 	}
 
 	public function getTracksByShow(int $show_id){
