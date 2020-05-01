@@ -55,7 +55,7 @@ class Notification{
 	public function applyDeliveryResult(int $HTTPCode){
 		$this->responseCode = $HTTPCode;
 		$this->retryCount += 1;
-		$this->lastDeliveryAttemptTime = new DateTime();
+		$this->lastDeliveryAttemptTime = new \DateTimeImmutable();
 	}
 
 	public function getLastDeliveryAttemptTime(){

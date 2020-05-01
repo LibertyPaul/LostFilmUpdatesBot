@@ -126,7 +126,7 @@ class NotificationDispatcher{
 					$show->getTitleRu(),
 					$series->getSeasonNumber(),
 					$series->getSeriesNumber(),
-					$series->getTileRu(),
+					$series->getTitleRu(),
 					$url
 				);
 

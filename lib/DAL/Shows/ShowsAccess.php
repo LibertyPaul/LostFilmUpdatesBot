@@ -51,7 +51,7 @@ class ShowsAccess extends CommonAccess{
 				DATE_FORMAT(`shows`.`lastAppearanceTime`,  '".parent::dateTimeDBFormat."') AS lastAppearanceTimeStr
 		";
 
-		$this->getShowsByIdQuery = $this->pdo->prepare("
+		$this->getShowByIdQuery = $this->pdo->prepare("
 			$selectFields
 			FROM `shows`
 			WHERE `shows`.`id` = :id

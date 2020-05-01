@@ -41,7 +41,7 @@ class NotificationsQueueAccess extends CommonAccess{
 			UPDATE 	`notificationsQueue`
 			SET 	`responseCode` 				= :HTTPCode,
 					`retryCount` 				= :retryCount,
-					`lastDeliveryAttemptTime`	= :lastDeliveryAttemptTime
+					`lastDeliveryAttemptTime`	= STR_TO_DATE(:lastDeliveryAttemptTime, '".parent::dateTimeDBFormat."')
 			WHERE 	`id` = :id;
 		");
 
