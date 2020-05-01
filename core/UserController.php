@@ -482,7 +482,7 @@ class UserController{
 							break;
 					}
 
-					$messageText = sprintf("%s %s", $mathedShow->getFullTitle(), $successText);
+					$messageText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
 					
 					return new DirectedOutgoingMessage(
 						$this->user,
@@ -818,11 +818,14 @@ class UserController{
 
 	public function processMessage(IncomingMessage $incomingMessage){
 		try{
+			$this->pdo->beginTransaction();
 			$this->conversationStorage->appendMessage($incomingMessage);
-
+			
+			// TODO: rebuild the conversation in case of cancel and use the main switch
 			$currentCommand = $incomingMessage->getCoreCommand();
 			if($currentCommand !== null){
 				if($currentCommand->getId() === \CommandSubstitutor\CoreCommandMap::Cancel){
+					$this->pdo->commit();
 					return $this->cancelRequest();
 				}
 			}
@@ -845,59 +848,78 @@ class UserController{
 				$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
 				$this->conversationStorage->prependMessage($assumedMessage);
 			}
+
+			$retVal = null;
 			
 			switch($this->conversationStorage->getFirstMessage()->getCoreCommand()->getId()){
 				case \CommandSubstitutor\CoreCommandMap::Start:
-					return $this->welcomeUser();
+					$retVal = $this->welcomeUser();
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::Cancel:
-					return $this->cancelRequest();
+					$retVal = $this->cancelRequest();
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::Stop:
-					return $this->deleteUser();
+					$retVal = $this->deleteUser();
+					break;
 				
 				case \CommandSubstitutor\CoreCommandMap::Help:
-					return $this->showHelp();
+					$retVal = $this->showHelp();
+					break;
 				
 				case \CommandSubstitutor\CoreCommandMap::AboutTor:
-					return $this->showAboutTor();
+					$retVal = $this->showAboutTor();
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::Mute:
-					return $this->toggleMute();
+					$retVal = $this->toggleMute();
+					break;
 				
 				case \CommandSubstitutor\CoreCommandMap::GetMyShows:
-					return $this->showUserShows();
+					$retVal = $this->showUserShows();
+					break;
 					
 				case \CommandSubstitutor\CoreCommandMap::AddShow:
-					return $this->insertOrDeleteShow(\DAL\ShowAction::Add);
+					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::Add);
+					break;
 				
 				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
-					# TODO: Telegram rejects a keyboard with all shows.
+					# TODO: Telegram rejects a keyboard with all shows (dont fit the limit).
 					# Need an alternative way to promps a choice.
-					return $this->insertOrDeleteShow(\DAL\ShowAction::Remove);
+					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::Remove);
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
-					return $this->insertOrDeleteShow(\DAL\ShowAction::AddTentative);
+					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::AddTentative);
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::GetShareButton:
-					return $this->getShareButton();
+					$retVal = $this->getShareButton();
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::Donate:
-					return $this->getDonateOptions();
+					$retVal = $this->getDonateOptions();
+					break;
 
 				case \CommandSubstitutor\CoreCommandMap::Broadcast:
-					return $this->broadcast();
+					$retVal = $this->broadcast();
+					break;
 
 				default:
 					$this->tracer->logError(
 						'[COMMAND]', __FILE__, __LINE__,
 						'Unknown command:'.PHP_EOL.
-						print_r($initialCommand, true)
+						print_r($this->conversationStorage->getFirstMessage(), true)
 					);
-					throw \LogicException('Unknown command');
+					throw new \LogicException('Unknown command');
 			}
+
+			$this->pdo->commit();
+			return $retVal;
 		}
 		catch(\Throwable $ex){
+			$this->pdo->rollBack();
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
 			$this->conversationStorage->deleteConversation();
 
