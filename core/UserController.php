@@ -54,7 +54,9 @@ class UserController{
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
-		if($this->user->isJustRegistred()){
+		$this->tracer->logDebug('[x]', __FILE__, __LINE__, $this->user);
+
+		if($this->user->isJustRegistred() === false){
 			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
 			return new DirectedOutgoingMessage(
 				$this->user,
