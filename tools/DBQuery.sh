@@ -14,7 +14,6 @@ mysql									\
 	--defaults-file="$DBCredentials" 	\
 	--execute="$query"					\
 	--skip-line-numbers					\
-	--i-am-a-dummy						\
 	--syslog							\
 	--vertical							;
 
