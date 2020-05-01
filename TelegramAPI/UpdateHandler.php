@@ -62,10 +62,11 @@ class UpdateHandler{
 
 	private static function validateUpdate($update){
 		return
-			$update !== null				&&
-			isset($update->message) 		&&
-			isset($update->message->chat)	&&
-			isset($update->message->from);
+			$update !== null							&&
+			isset($update->message) 					&&
+			isset($update->message->chat)				&&
+			isset($update->message->from)				&&
+			$update->message->chat->type !== 'private';
 	}
 
 	private static function normalizeUpdateFields($update){
