@@ -46,7 +46,7 @@ class NotificationDispatcher{
 			return true;
 		}
 
-		if($notification-->getLastDeliveryAttemptTime() === null){
+		if($notification->getLastDeliveryAttemptTime() === null){
 			throw new \LogicException('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
@@ -102,11 +102,8 @@ class NotificationDispatcher{
 				$eligible = self::eligibleToBeSent($notification);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException(
-					'[ERROR]', __FILE__, __LINE__,
-					$ex.PHP_EOL.
-					print_r($notification, true)
-				);
+				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logfDebug('[ERROR]', __FILE__, __LINE__, "\n%s\n", $notification);
 				continue;
 			}
 			

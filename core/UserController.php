@@ -50,7 +50,7 @@ class UserController{
 	private function repeatQuestion(){
 		$this->conversationStorage->deleteLastMessage();
 	}
-	
+
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
 
@@ -73,7 +73,7 @@ class UserController{
 			'Моя задача - оповестить тебя о выходе новых серий '.
 			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
 			"Чтобы узнать что я умею - жми на $helpCoreCommand";
-		
+
 		$response = new DirectedOutgoingMessage(
 			$this->user,
 			new OutgoingMessage($welcomingText)
@@ -115,7 +115,7 @@ class UserController{
 			$lastChance = 'Точно? Вся информация о тебе будет безвозвратно потеряна...';
 			$options = array($ANSWER_YES, $ANSWER_NO);
 			$muteCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Mute];
-			
+
 			if($this->user->isMuted() === false){
 				$lastChance .= 
 					PHP_EOL.PHP_EOL.
@@ -132,9 +132,9 @@ class UserController{
 					array($ANSWER_YES, $ANSWER_NO)
 				)
 			);
-	
+
 			break;
-		
+
 		case 2:
 			$response = $this->conversationStorage->getLastMessage()->getText();
 
@@ -144,12 +144,12 @@ class UserController{
 
 				$this->user->markDeleted();
 				$this->usersAccess->updateUser($this->user);
-				
+
 				$userResponse = new DirectedOutgoingMessage(
 					$this->user,
 					new OutgoingMessage('Прощай...')
 				);
-				
+
 				try{
 					$notificationGenerator = new NotificationGenerator();
 					$adminNotification = $notificationGenerator->userLeftEvent($this->user);
@@ -162,14 +162,14 @@ class UserController{
 				}
 
 				return $userResponse;
-				
+
 			case strtolower($ANSWER_NO):
 				$this->conversationStorage->deleteConversation();
 				return new DirectedOutgoingMessage(
 					$this->user,
 					new OutgoingMessage('Фух, а то я уже испугался')
 				);
-			
+
 			default:
 				$command = $this->conversationStorage->getLastMessage()->getCoreCommand();
 				if(
@@ -203,7 +203,7 @@ class UserController{
 			$this->conversationStorage->deleteConversation();
 		}
 	}
-	
+
 	private function showHelp(){
 		$this->conversationStorage->deleteConversation();
 
@@ -217,7 +217,7 @@ class UserController{
 		$stopCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Stop];
 		$getShareButtonCoreCommand	= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
 		$donateCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
-		
+
 		$helpText =
 			'LostFilm updates - бот, который оповещает '							.PHP_EOL.
 			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
@@ -240,7 +240,7 @@ class UserController{
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
 																					.PHP_EOL.
 			'Создатель бота не имеет никакого отношеня к проекту LostFilm.tv.';
-		
+
 		return new DirectedOutgoingMessage(
 			$this->user,
 			new OutgoingMessage($helpText)
@@ -269,7 +269,7 @@ class UserController{
 			)
 		);
 	}
-	
+
 	private function showUserShows(){
 		$this->conversationStorage->deleteConversation();
 
@@ -314,11 +314,11 @@ class UserController{
 
 			$currentPart .= $row;
 		}
-		
+
 		if(strlen($currentPart) > 0){
 			$messageParts[] = $currentPart;
 		}
-		
+
 		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
 		$outgoingMessage = new OutgoingMessage($messageParts[0], $markupType);
@@ -329,20 +329,20 @@ class UserController{
 
 		return new DirectedOutgoingMessage($this->user, $outgoingMessage);
 	}
-	
+
 	private function toggleMute(){
 		$this->conversationStorage->deleteConversation();
 
 		$this->user->toggleMuted();
 		$this->usersAccess->updateUser($this->user);
-		
+
 		if($this->user->isMuted()){
 			$action = 'Выключил';
 		}
 		else{
 			$action = 'Включил';
 		}
-		
+
 		return new DirectedOutgoingMessage(
 			$this->user,
 			new OutgoingMessage("$action все уведомления")
