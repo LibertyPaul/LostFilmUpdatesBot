@@ -29,6 +29,14 @@ class TelegramUserData implements APIUserData{
 		return $this->userId;
 	}
 
+	public function setUserId(int $userId){
+		if($this->userId !== null){
+			throw new \LogicException("Changing user id for the second time [$this->userId] --> $userId.");
+		}
+
+		$this->userId = $userId;
+	}
+
 	public function getAPISpecificId(){
 		return $this->telegramId;
 	}

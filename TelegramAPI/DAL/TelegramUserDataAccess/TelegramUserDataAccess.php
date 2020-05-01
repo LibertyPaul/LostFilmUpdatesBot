@@ -58,7 +58,7 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 				`telegramUserData`.`first_name`	= :first_name,
 				`telegramUserData`.`last_name`	= :last_name
 			WHERE
-				`telegramUserData`.`telegram_id` = :telegram_id
+				`telegramUserData`.`user_id`	= :user_id
 		");
 	}
 
@@ -93,10 +93,10 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 
 	public function updateAPIUserData(TelegramUserData $telegramUserData){
 		$args = array(
+			':user_id'		=> $telegramUserData->getUserId(),
 			':username'		=> $telegramUserData->getUsername(),
 			':first_name'	=> $telegramUserData->getFirstName(),
-			':last_name'	=> $telegramUserData->getLastName(),
-			':telegram_id'	=> $telegramUserData->getAPISpecificId()
+			':last_name'	=> $telegramUserData->getLastName()
 		);
 
 		$this->executeInsertUpdateDelete($this->updateAPIUserDataQuery, $args, QueryApproach::ONE);
