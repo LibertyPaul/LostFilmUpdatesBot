@@ -178,12 +178,13 @@ class Webhook{
 
 	private static function validateFields($update){
 		return
-			isset($update)						&&
-			isset($update->message)				&&
-			isset($update->message->from)		&&
-			isset($update->message->from->id)	&&
-			isset($update->message->chat)		&&
-			isset($update->message->chat->id)	&&
+			isset($update)								&&
+			isset($update->message)						&&
+			isset($update->message->from)				&&
+			isset($update->message->from->id)			&&
+			isset($update->message->chat)				&&
+			isset($update->message->chat->id)			&&
+			$update->message->chat->type === 'private'	&&
 			(
 				isset($update->message->text) ||
 				isset($update->message->voice)
