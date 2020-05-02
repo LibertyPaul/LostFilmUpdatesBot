@@ -116,7 +116,8 @@ class ConversationStorage{
 		$conversation_serialized = serialize($this->conversation);
 		$res = $this->storage->setValue($this->user_id, $conversation_serialized);
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation was committed');
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation was committed.');
+		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation one-line: '.$this);
 	}
 
 	public function getConversation(){
@@ -145,7 +146,7 @@ class ConversationStorage{
 	}
 
 	public function getConversationSize(){
-		return count($this->conversation); // O(1)
+		return count($this->conversation);
 	}
 
 	private function insertMessage(IncomingMessage $incomingMessage, $position){
@@ -199,5 +200,14 @@ class ConversationStorage{
 		$this->commitConversation();
 		
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
+	}
+
+	public function __toString(){
+		$messageTexts = array();
+		foreach($this->conversation as $incomingMessage){
+			$messageTexts[] = $incomingMessage->getText();
+		}
+
+		return "[User: $this->user_id] : [".join('] --> [', $messageTexts)."]";
 	}
 }

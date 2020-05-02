@@ -5,6 +5,7 @@ namespace parser;
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Config.php');
+require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
 
 class ShowListFetcher{
 	private $requester;
@@ -18,6 +19,10 @@ class ShowListFetcher{
 		$this->tracer = new \Tracer(__CLASS__);
 	}
 
+	private static function isOnAir(int $status){
+		return $status !== 5;
+	}
+
 	public function fetchShowList(){
 		$URL = $this->config->getValue('Parser', 'ShowListURL', 'https://www.lostfilm.tv/ajaxik.php');
 		
@@ -27,7 +32,7 @@ class ShowListFetcher{
 			$customHeaders[] = $customHeader;
 		}
 
-		$showInfoList = array();
+		$showList = array();
 
 		$args = array(
 			'act' => 'serial',
@@ -80,26 +85,36 @@ class ShowListFetcher{
 				throw new \RuntimeException('Incorrect show info: data element is not found');
 			}
 
-			foreach($shows['data'] as $show){
-				$show['alias'] = trim($show['alias']);
+			foreach($shows['data'] as $showInfo){
+				$showInfo['alias'] = trim($showInfo['alias']);
 
-				if(empty($show['alias'])){
+				if(empty($showInfo['alias'])){
 					$this->tracer->logWarning(
 						'[DATA WARNING]', __FILE__, __LINE__,
 						'Alias is empty:'.PHP_EOL.
-						print_r($show, true)
+						print_r($showInfo, true)
 					);
 
 					continue;
 				}
 
-				$showInfoList[] = $show;
+				$show = new \DAL\Show(
+					null,
+					$showInfo['alias'],
+					$showInfo['title'],
+					$showInfo['title_orig'],
+					self::isOnAir(intval($showInfo['status'])),
+					new \DateTimeImmutable(),
+					new \DateTimeImmutable()
+				);
+
+				$showList[$showInfo['alias']] = $show;
 			}
 
 			$pos += count($shows['data']);
 		}while(count($shows['data']) > 0);
 
-		return $showInfoList;
+		return $showList;
 	}
 }
 

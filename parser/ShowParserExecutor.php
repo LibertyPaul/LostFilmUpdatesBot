@@ -12,178 +12,100 @@ require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-require_once(__DIR__.'/../core/Show.php');
+require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
+require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
 
 
 class ShowParserExecutor{
+	private $tracer;
 	private $showListFetcher;
-	private $pdo;
-	private $renewShowQuery;
+	private $showsAccess;
 
-	public function __construct($pdo, ShowListFetcher $showListFetcher){
+	public function __construct(\PDO $pdo, ShowListFetcher $showListFetcher){
 		$this->showListFetcher = $showListFetcher;
 		$this->tracer = new \Tracer(__CLASS__);
-		$this->pdo = $pdo;
+
+		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $pdo);
 	}
 
-	private static function isOnAir($status){
-		assert(is_int($status));
+	private static function aliasListToText(array $aliases){
+		$delimiter_pre = "[";
+		$delimiter_post = "]";
+		$delimiter = $delimiter_post.$delimiter_pre;
 		
-		if($status !== 5){
-			return 'Y';
-		}
-		else{
-			return 'N';
-		}
+		return $delimiter_pre.join($delimiter, $aliases).$delimiter_post;
 	}
 
-	private function remapShowList($showList){
-		$result = array();
-	
-		foreach($showList as $showInfo){
-			$show = new \core\Show(
-				$showInfo['alias'],
-				$showInfo['title'],
-				$showInfo['title_orig'],
-				self::isOnAir(intval($showInfo['status']))
+	private function handleNewShows(array $DBShowAliases, array $LFShows){
+		$newShowAliases = array_diff(array_keys($LFShows), $DBShowAliases);
+
+		foreach($newShowAliases as $newAlias){
+			$this->tracer->logEvent(
+				'[NEW SHOW]', __FILE__, __LINE__,
+				PHP_EOL.$LFShows[$newAlias]
 			);
 
-			assert(array_key_exists($showInfo['alias'], $result) === false);
-			$result[$showInfo['alias']] = $show;
+			try{
+				$show_id = $this->showsAccess->addShow($LFShows[$newAlias]);
+				$LFShows[$newAlias]->setId($show_id);
+			}
+			catch(\Throwable $ex){
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+				$this->tracer->logDebug(
+					'[NEW SHOW]', __FILE__, __LINE__,
+					"Falied to insert a show:".PHP_EOL.
+					$LFShows[$newAlias].PHP_EOL.
+					"My records: ".self::aliasListToText($DBShowAliases)
+				);
+			}
 		}
-
-		return $result;
 	}
 
-	private function getCurrentAliases(){
-		static $getCurrentAliasesQuery;
-		if(isset($getCurrentAliasesQuery) === false){
-			$getCurrentAliasesQuery = $this->pdo->prepare('SELECT `alias` FROM `shows`');
-		}
+	private function handleExistingShows(array $DBShowAliases, array $LFShows){
+		$existingShowAliases = array_intersect(array_keys($LFShows), $DBShowAliases);
 
-		$getCurrentAliasesQuery->execute();
-		return $getCurrentAliasesQuery->fetchAll(\PDO::FETCH_COLUMN, 0);
+		foreach($existingShowAliases as $existingAlias){
+			try{
+				$this->showsAccess->updateShow($LFShows[$existingAlias]);
+			}
+			catch(\PDOException $ex){
+				$this->tracer->logError(
+					'[DATABASE]', __FILE__, __LINE__,
+					"Unable to update show [$existingAlias]".PHP_EOL.$show
+				);
+
+				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+			}
+		}
 	}
 
-	private function addShow(\core\Show $show){
-		static $addShowQuery;
-		if(isset($addShowQuery) === false){
-			$addShowQuery = $this->pdo->prepare('
-				INSERT INTO `shows` (
-					alias,
-					title_ru,
-					title_en,
-					onAir,
-					firstAppearanceTime,
-					lastAppearanceTime
-				)
-				VALUES (
-					:alias,
-					:title_ru,
-					:title_en,
-					:onAir,
-					NOW(),
-					NOW()
-				)
-			');
-		}
-		
-		try{
-			$addShowQuery->execute(
-				array(
-					':alias'	=> $show->getAlias(),
-					':title_ru'	=> $show->getTitleRu(),
-					':title_en'	=> $show->getTitleEn(),
-					':onAir'	=> $show->getOnAir()
-				)
+	private function handleObsoleteShows(array $DBShowAliases, array $LFShows){
+		$obsoleteShowAliases = array_diff($DBShowAliases, array_keys($LFShows));
+
+		foreach($obsoleteShowAliases as $obsoleteAlias){
+			$this->tracer->logWarning(
+				'[OUTDATED SHOW]', __FILE__, __LINE__,
+				"Show $obsoleteAlias does not exist at LostFilm anymore."
 			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.$show);
-			throw $ex;
-		}
-	}
-
-	private function renewShow(\core\Show $show){
-		static $renewShowQuery;
-		
-		if(isset($renewShowQuery) === false){
-			$renewShowQuery = $this->pdo->prepare('
-				UPDATE `shows`
-				SET	`title_ru`				= :title_ru,
-					`title_en`				= :title_en,
-					`onAir`					= :onAir,
-					`lastAppearanceTime`	= NOW()
-				WHERE `alias` = :alias
-			');
-		}
-
-		try{
-			$renewShowQuery->execute(
-				array(
-					':alias'	=> $show->getAlias(),
-					':title_ru'	=> $show->getTitleRu(),
-					':title_en'	=> $show->getTitleEn(),
-					':onAir'	=> $show->getOnAir()
-				)
-			);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[DATABASE]', __FILE__, __LINE__, PHP_EOL.$show);
 		}
 	}
 
 	public function run(){
-		$parsedShowList = $this->showListFetcher->fetchShowList();
-		$parsedShowList = $this->remapShowList($parsedShowList);
-		$parsedAliasList = array_keys($parsedShowList);
+		$LFShows = $this->showListFetcher->fetchShowList();
 		
 		try{
-			$this->pdo->query('LOCK TABLES `shows` WRITE');
+			$this->showsAccess->lockShowsWrite();
+			$DBShowAliases = $this->showsAccess->getAliases();
 
-			$currentAliasList = $this->getCurrentAliases();
-
-			$newAliasList = array_diff($parsedAliasList, $currentAliasList);
-			foreach($newAliasList as $newAlias){
-				$this->tracer->logEvent(
-					'[NEW SHOW]', __FILE__, __LINE__,
-					PHP_EOL.$parsedShowList[$newAlias]
-				);
-
-				try{
-					$this->addShow($parsedShowList[$newAlias]);
-				}
-				catch(\Throwable $ex){
-					$delimiter_pre = "[";
-					$delimiter_post = "]";
-					$delimiter = $delimiter_post.$delimiter_pre;
-					$this->tracer->logDebug(
-						'[NEW SHOW]', __FILE__, __LINE__,
-						"Falied to insert a show [".$parsedShowList[$newAlias]."].".PHP_EOL.
-						"My records:"	.$delimiter_pre.join($delimiter, $currentAliasList)	.$delimiter_post.PHP_EOL.
-						"Site shows:"	.$delimiter_pre.join($delimiter, $parsedAliasList)	.$delimiter_post.PHP_EOL.
-						"Diff:"			.$delimiter_pre.join($delimiter, $newAliasList)		.$delimiter_post.PHP_EOL
-					);
-				}
-			}
-			
-			$sameAliasList = array_intersect($parsedAliasList, $currentAliasList);
-			foreach($sameAliasList as $sameAlias){
-				$this->renewShow($parsedShowList[$sameAlias]);
-			}
-
-			$outdatedAliasList = array_diff($currentAliasList, $parsedAliasList);
-			foreach($outdatedAliasList as $outdatedAlias){
-				$this->tracer->logWarning(
-					'[OUTDATED SHOW]', __FILE__, __LINE__,
-					"Show $outdatedAlias has become outdated"
-				);
-			}
+			$this->handleNewShows($DBShowAliases, $LFShows);
+			$this->handleExistingShows($DBShowAliases, $LFShows);
+			$this->handleObsoleteShows($DBShowAliases, $LFShows);
+		}
+		catch(\Throwable $ex){
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 		}
 		finally{
-			$this->pdo->query('UNLOCK TABLES');
+			$this->showsAccess->unlockTables();
 		}
 	}
 }

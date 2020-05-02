@@ -258,7 +258,6 @@ class TelegramAPI{
 			$this->tracer->logError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
 				"File download has failed. File id=[$file_id]".PHP_EOL.
-				$payload.PHP_EOL.
 				$result
 			);
 

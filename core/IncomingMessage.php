@@ -12,7 +12,7 @@ class IncomingMessage{
 
 	public function __construct(
 		\CommandSubstitutor\CoreCommand $coreCommand = null,
-		string $text,
+		string $text = null,
 		$rawMessage = null,
 		$update_id = null
 	){
