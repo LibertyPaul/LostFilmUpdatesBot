@@ -816,42 +816,94 @@ class UserController{
 		}
 	}
 
+	private function handleUnknownCommand(){
+		$this->conversationStorage->deleteConversation();
+
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+
+		$response = new DirectedOutgoingMessage(
+			$this->user,
+			new OutgoingMessage("Не знаю такой команды. Жми на $helpCoreCommand чтобы посмотреть список.")
+		);
+
+		return $response;
+	}
+
+	private function isCancelRequest(){
+		if($this->conversationStorage->getConversationSize() < 1){
+			throw new \LogicException("Conversation is empty.");
+		}
+
+		$lastCommand = $this->conversationStorage->getLastMessage()->getCoreCommand();
+
+		return
+			$lastCommand !== null &&
+			$lastCommand->getId() === \CommandSubstitutor\CoreCommandMap::Cancel;
+	}
+
+	private function isAddShowTentative(){
+		if($this->conversationStorage->getConversationSize() !== 1){
+			return false;
+		}
+
+		$initialMessage = $this->conversationStorage->getFirstMessage();
+
+		$text = trim($initialMessage->getText());
+
+		return
+			$initialMessage->getCoreCommand() === null	&&
+			strlen($text) > 0							&&
+			$text[0] != '/'								 ;
+	}
+
+	private function handleAddShowTentative(){
+		$assumedCommand = $this->commandSubstitutor->getCoreCommand(
+			\CommandSubstitutor\CoreCommandMap::AddShowTentative
+		);
+
+		$this->tracer->logfEvent(
+			'[o]', __FILE__, __LINE__,
+			'Bare text without a command [%s]. Assuming to be [%s].',
+			$this->conversationStorage->getFirstMessage()->getText(),
+			$assumedCommand->getText()
+		);
+
+		$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
+		$this->conversationStorage->prependMessage($assumedMessage);
+	}
+
+	private function handleCancelRequest(){
+		$assumedCommand = $this->commandSubstitutor->getCoreCommand(
+			\CommandSubstitutor\CoreCommandMap::Cancel
+		);
+
+		$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
+		$this->conversationStorage->prependMessage($assumedMessage);
+	}
+
 	public function processMessage(IncomingMessage $incomingMessage){
 		try{
 			$this->pdo->beginTransaction();
 			$this->conversationStorage->appendMessage($incomingMessage);
-			
-			// TODO: rebuild the conversation in case of cancel and use the main switch
-			$currentCommand = $incomingMessage->getCoreCommand();
-			if($currentCommand !== null){
-				if($currentCommand->getId() === \CommandSubstitutor\CoreCommandMap::Cancel){
-					$this->pdo->commit();
-					return $this->cancelRequest();
-				}
+
+			if($this->isCancelRequest()){
+				$this->handleCancelRequest();
+			}
+			elseif($this->isAddShowTentative()){
+				$this->handleAddShowTentative();
 			}
 
-			$initialMessage = $this->conversationStorage->getFirstMessage();
-
-			# Case when user just typed a show name
-			if($initialMessage->getCoreCommand() === null){
-				$assumedCommand = $this->commandSubstitutor->getCoreCommand(
-					\CommandSubstitutor\CoreCommandMap::AddShowTentative
-				);
-
-				$this->tracer->logfEvent(
-					'[o]', __FILE__, __LINE__,
-					'Bare text without a command [%s]. Assuming to be [%s].',
-					$initialMessage->getText(),
-					$assumedCommand->getText()
-				);
-
-				$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
-				$this->conversationStorage->prependMessage($assumedMessage);
+			$command = $this->conversationStorage->getFirstMessage()->getCoreCommand();
+			if($command !== null){
+				$commandID = $command->getId();
+			}
+			else{
+				$commandID = null;
 			}
 
 			$retVal = null;
 			
-			switch($this->conversationStorage->getFirstMessage()->getCoreCommand()->getId()){
+			switch($commandID){
 				case \CommandSubstitutor\CoreCommandMap::Start:
 					$retVal = $this->welcomeUser();
 					break;
@@ -906,6 +958,10 @@ class UserController{
 					$retVal = $this->broadcast();
 					break;
 
+				case null:
+					$retVal = $this->handleUnknownCommand();
+					break;
+
 				default:
 					$this->tracer->logError(
 						'[COMMAND]', __FILE__, __LINE__,
@@ -930,7 +986,4 @@ class UserController{
 		}
 	}
 }
-		
-		
-
 
