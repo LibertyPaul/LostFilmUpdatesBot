@@ -54,7 +54,7 @@ for element in "${elementsOrder[@]}"; do
 	echo "Copying $element..."
 	printf "/*    $element definition:    */\n\n" >> "$patch"
 	for f in $(find "$elementPath" -type f -name '*.sql' | sort); do
-		echo "$f "
+		echo "$f"
 		cat "$f" >> "$patch"
 		printf "\n" >> "$patch"
 	done

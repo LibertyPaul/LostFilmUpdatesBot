@@ -4,12 +4,8 @@ namespace parser;
 
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/Parser.php');
+require_once(__DIR__.'/SeriesAboutInfo.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
-
-abstract class SeriesStatus{
-	const Ready = 0;
-	const NotReady = 1;
-}
 
 class SeriesAboutParser extends Parser{
 	private $tracer;
@@ -48,31 +44,22 @@ class SeriesAboutParser extends Parser{
 	public function run(){
 		$expected_res = $this->singleRegexSearch(self::expected_tag_regex);
 		if(empty($expected_res) === false){
-			return array(
-				'status'	=> SeriesStatus::NotReady,
-				'why'		=> 1
-			);
+			return new SeriesAboutInfo(false, 1);
 		}
 
 		$title_ru_res = $this->singleRegexSearch(self::title_ru_regex);
 		if(empty($title_ru_res)){
-			return array(
-				'status'	=> SeriesStatus::NotReady,
-				'why'		=> 2
-			);
-		}
-
-		$title_en_res = $this->singleRegexSearch(self::title_en_regex);
-		if(empty($title_en_res)){
-			return array(
-				'status'	=> SeriesStatus::NotReady,
-				'why'		=> 3
-			);
+			return new SeriesAboutInfo(false, 2);
 		}
 
 		$mask = " \t\n\r\0\x0B\xC2\xA0"; # Standard trim list + &nbsp
-
 		$title_ru = trim($title_ru_res[1], $mask);
+
+		$title_en_res = $this->singleRegexSearch(self::title_en_regex);
+		if(empty($title_en_res)){
+			return new SeriesAboutInfo(false, 3, $title_ru);
+		}
+
 		$title_en = trim($title_en_res[1], $mask);
 
 		if($title_ru === $title_en){ 
@@ -81,18 +68,11 @@ class SeriesAboutParser extends Parser{
 
 			$nextLinkActive = $this->singleRegexSearch(self::discussion_tag);
 			if(empty($nextLinkActive)){
-				return array(
-					'status'	=> SeriesStatus::NotReady,
-					'why'		=> 4
-				);
+				return new SeriesAboutInfo(false, 4, $title_ru, $title_en);
 			}
 		}
 
-		return array(
-			'status'	=> SeriesStatus::Ready,
-			'title_ru'	=> $title_ru,
-			'title_en'	=> $title_en
-		);
+		return new SeriesAboutInfo(true, null, $title_ru, $title_en);
 	}
 }
 

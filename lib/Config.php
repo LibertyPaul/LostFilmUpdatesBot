@@ -44,11 +44,6 @@ class Config{
 			FROM `config`
 		');
 
-		$this->tracer->logEvent(
-			'[CONFIG]', __FILE__, __LINE__,
-			'Loading all `config` values at once.'
-		);
-
 		$getAllValuesQuery->execute();
 
 		while(($res = $getAllValuesQuery->fetch()) !== false){
@@ -59,20 +54,10 @@ class Config{
 			);
 		}
 		
-		$this->tracer->logEvent(
-			'[CONFIG]', __FILE__, __LINE__,
-			'All values were loaded.'
-		);
-
 		$this->allCached = true;
 	}
 
 	public function getValue($section, $item, $defaultValue = null){
-		$this->tracer->logDebug(
-			'[CONFIG GET]', __FILE__, __LINE__,
-			"Config::getValue(section=[$section], item=[$item])"
-		);
-
 		if(array_key_exists($section, $this->cachedValues)){
 			if(array_key_exists($item, $this->cachedValues[$section])){
 				$value = $this->cachedValues[$section][$item];
@@ -100,11 +85,6 @@ class Config{
 			return $defaultValue;
 		}
 
-		$this->tracer->logDebug(
-			'[CONFIG GET]', __FILE__, __LINE__,
-			'Cache miss, selecting from DB...'
-		);
-
 		$this->getValueQuery->execute(
 			array(
 				':section'	=> $section,
@@ -125,11 +105,6 @@ class Config{
 		}
 
 		$value = $result['value'];
-
-		$this->tracer->logDebug(
-			'[CONFIG GET]', __FILE__, __LINE__,
-			"Value was selected [$value]"
-		);
 
 		$this->cacheValue($section, $item, $value);
 

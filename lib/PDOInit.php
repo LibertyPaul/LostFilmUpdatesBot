@@ -50,7 +50,8 @@ class PDOInit{
 				\PDO::MYSQL_ATTR_INIT_COMMAND => sprintf(
 					"SET time_zone = '%s'",
 					date_default_timezone_get()
-				)
+				),
+				\PDO::MYSQL_ATTR_FOUND_ROWS => true
 			)
 		);
 		

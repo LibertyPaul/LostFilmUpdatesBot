@@ -178,12 +178,13 @@ class Webhook{
 
 	private static function validateFields($update){
 		return
-			isset($update)						&&
-			isset($update->message)				&&
-			isset($update->message->from)		&&
-			isset($update->message->from->id)	&&
-			isset($update->message->chat)		&&
-			isset($update->message->chat->id)	&&
+			isset($update)								&&
+			isset($update->message)						&&
+			isset($update->message->from)				&&
+			isset($update->message->from->id)			&&
+			isset($update->message->chat)				&&
+			isset($update->message->chat->id)			&&
+			$update->message->chat->type === 'private'	&&
 			(
 				isset($update->message->text) ||
 				isset($update->message->voice)
@@ -217,10 +218,11 @@ class Webhook{
 		
 		$update = json_decode($postData);
 		if($update === null){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				'Unable to parse JSON update: '.json_last_error_msg().PHP_EOL.
-				'Raw JSON:'.PHP_EOL.
+				"Unable to parse JSON update: [%s]\n".
+				'Raw JSON: [%s]',
+				json_last_error_msg(),
 				$postData
 			);
 

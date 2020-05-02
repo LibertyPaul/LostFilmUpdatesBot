@@ -5,9 +5,6 @@ namespace parser;
 require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-class FullSeasonWasFoundException extends \Exception{}
-
-
 class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
@@ -20,7 +17,19 @@ class SeriesParser extends Parser{
 
 	public function loadSrc($path, $requestHeaders = array()){
 		parent::loadSrc($path, $requestHeaders);
-		$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
+
+		# Sometimes LF produces invalid XML: ' & ' instead of ' &amp; '
+		$pos = strpos($this->pageSrc, ' & ');
+		if ($pos !== false){
+			$this->tracer->logfWarning(
+				'[RSS]', __FILE__, __LINE__,
+				'Invalid XML token was found as pos. %d (first of, there may be more entries)',
+				$pos
+			);
+
+			$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
+		}
+
 		try{
 			$this->rssData = new \SimpleXMLElement($this->pageSrc);
 		}
@@ -31,36 +40,38 @@ class SeriesParser extends Parser{
 		}
 	}
 
-	private static function isUsualSeriesLink($link){
-		if(strpos($link, '/additional/') !== false){
+	private static function isUsualSeriesLink($URL){
+		if(strpos($URL, '/additional/') !== false){
 			return false;
 		}
 
-		if(strpos($link, 'details.php') !== false){
+		if(strpos($URL, 'details.php') !== false){
 			return false;
 		}
 
 		return true;
 	}
 	
-	private function parseLink($link){
+	private function parseURL($URL){
 		$regexp = '/https:\/\/[\w\.]*?lostfilm\.t(v|w\/mr)\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
-		$matchesRes = preg_match($regexp, $link, $matches);
+		$matchesRes = preg_match($regexp, $URL, $matches);
 		if($matchesRes === false){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[ERROR]', __FILE__, __LINE__,
-				'preg_match has failed with code: '.preg_last_error().PHP_EOL.
-				"Link: '$link'"
+				'preg_match has failed with code: [%s]'.PHP_EOL.
+				'Link: [%s]',
+				preg_last_error(),
+				$URL
 			);
 
-			throw new \RuntimeException('preg_match has failed');
+			throw new \RuntimeException('Unable to parse URL [$URL]');
 		}
 
 		if($matchesRes === 0){
 			$this->tracer->logError(
 				'[DATA ERROR]', __FILE__, __LINE__,
-				"Link '$link' doesn't match pattern"
+				"Link '$URL' doesn't match pattern"
 			);
 
 			throw new \Throwable("Link doesn't match pattern");
@@ -69,7 +80,7 @@ class SeriesParser extends Parser{
 		assert($matchesRes === 1);
 
 		return array(
-			'link'			=> $matches[0],
+			'URL'			=> $matches[0],
 			'alias'			=> $matches[2],
 			'seasonNumber'	=> $matches[3],
 			'seriesNumber'	=> $matches[4]
@@ -79,7 +90,7 @@ class SeriesParser extends Parser{
 	public function run(){
 		assert($this->pageSrc !== null);
 
-		$result = array(); // [link, showAlias, seasonNumber, seriesNumber]
+		$result = array(); // [URL, showAlias, seasonNumber, seriesNumber]
 		
 		foreach($this->rssData->channel->item as $item){
 			if(self::isUsualSeriesLink($item->link) === false){
@@ -87,10 +98,7 @@ class SeriesParser extends Parser{
 			}
 
 			try{
-				$result[] = $this->parseLink($item->link);
-			}
-			catch(FullSeasonWasFoundException $ex){
-				// mmmk, skipping
+				$result[] = $this->parseURL($item->link);
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);

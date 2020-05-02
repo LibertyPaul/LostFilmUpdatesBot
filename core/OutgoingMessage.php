@@ -16,23 +16,14 @@ class OutgoingMessage{
 	private $nextMessage = null;
 
 	public function __construct(
-		$text,
+		string $text,
 		MarkupType $markupType = null,
-		$enableURLExpand = false,
+		bool $enableURLExpand = false,
 		array $responseOptions = null,
 		array $inlineOptions = null,
-		$pushDisabled = false
+		bool $pushDisabled = false
 	){
-		# Text verification
-		if(is_string($text)){
-			$this->text = $text;
-		}
-		else{
-			throw new \InvalidArgumentException(
-				'Incorrect text type (string was expected): '
-				.gettype($text)
-			);
-		}
+		$this->text = $text;
 
 		# Markup Flag verification
 		if($markupType === null){
@@ -41,16 +32,7 @@ class OutgoingMessage{
 
 		$this->markupType = $markupType;
 
-		# URL Expand Flag verification
-		if(is_bool($enableURLExpand) === false){
-			throw new \InvalidArgumentException(
-				'Incorrect enableURLExpand type (bool was expected): '.
-				gettype($enableURLExpand)
-			);
-		}
-		else{
-			$this->enableURLExpand = $enableURLExpand;
-		}
+		$this->enableURLExpand = $enableURLExpand;
 
 		# Options presence verification
 		if($responseOptions !== null && $inlineOptions !== null){
@@ -93,14 +75,7 @@ class OutgoingMessage{
 			$this->inlineOptions = $inlineOptions;
 		}
 
-		if(is_bool($pushDisabled)){
-			$this->pushDisabled = $pushDisabled;
-		}
-		else{
-			throw new \InvalidArgumentException(
-				'Incorrect pushDisabled type (boolean was expected): '.gettype($pushDisabled)
-			);
-		}
+		$this->pushDisabled = $pushDisabled;
 	}
 
 	public function appendMessage(self $message){

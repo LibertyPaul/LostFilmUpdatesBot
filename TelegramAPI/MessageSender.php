@@ -10,14 +10,17 @@ require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserDataAccess.php');
+require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserData.php');
+
 class MessageSender implements \core\MessageSenderInterface{
+	private $telegramAPI;
 	private $tracer;
 	private $outgoingMessagesTracer;
-	private $telegramAPI;
 	private $commandSubstitutor;
-	private $getTelegramIdQuery;
+	private $telegramUserDataAccess;
 	private $sleepOn429CodeMs;
-
+	private $maxSendAttempts;
 	private $forwardingChat;
 	private $forwardingSilent;
 	private $forwardEverything;
@@ -31,6 +34,8 @@ class MessageSender implements \core\MessageSenderInterface{
 		$pdo = \BotPDO::getInstance();
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $pdo);
+
 		$config = new \Config($pdo);
 		$this->sleepOn429CodeMs = $config->getValue(
 			'Telegram API',
@@ -38,13 +43,11 @@ class MessageSender implements \core\MessageSenderInterface{
 			500
 		);
 
-		$this->maxSendAttempts = $config->getValue('Telegram API', 'Max Send Attempts', 5);
-
-		$this->getTelegramIdQuery = $pdo->prepare('
-			SELECT `telegram_id`
-			FROM `telegramUserData`
-			WHERE `user_id` = :user_id
-		');
+		$this->maxSendAttempts = $config->getValue(
+			'Telegram API',
+			'Max Send Attempts',
+			5
+		);
 
 		$this->forwardingChat = $config->getValue(
 			'TelegramAPI',
@@ -64,34 +67,19 @@ class MessageSender implements \core\MessageSenderInterface{
 		) === 'Y';
 	}
 
-	private function getTelegramId($user_id){
-		assert(is_int($user_id));
-
-		$this->getTelegramIdQuery->execute(
-			array(
-				':user_id' => $user_id
-			)
-		);
-
-		$res = $this->getTelegramIdQuery->fetch();
-		
-		if($res === false){
-			throw new \RuntimeException("Telegram Id was not found for user_id=[$used_id]");
-		}
-
-		return intval($res[0]);
-	}
-
-	public function send($user_id, \core\OutgoingMessage $message){
-		$telegram_id = $this->getTelegramId($user_id);
+	public function send(int $user_id, \core\OutgoingMessage $message){
+		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
 
 		$sendResult = \core\SendResult::Success;
 
 		while($message !== null){
-			$this->outgoingMessagesTracer->logEvent(
+			$this->outgoingMessagesTracer->logfEvent(
 				'[o]', __FILE__, __LINE__,
-				"Message to user_id=[$user_id], telegram_id=[$telegram_id]".
-				PHP_EOL.$message
+				"Message to user_id=[%d], telegram_id=[%d]".PHP_EOL.
+				"%s",
+				$telegramUserData->getUserId(),
+				$telegramUserData->getAPISpecificId(),
+				$message
 			);
 
 			$messageText = $this->commandSubstitutor->replaceCoreCommandsInText(
@@ -103,7 +91,7 @@ class MessageSender implements \core\MessageSenderInterface{
 			
 			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
-					$telegram_id,
+					$telegramUserData->getAPISpecificId(),
 					$messageText,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
@@ -112,10 +100,12 @@ class MessageSender implements \core\MessageSenderInterface{
 				);
 
 				if($result->getCode() === 429){
-					$this->tracer->logWarning(
+					$this->tracer->logfWarning(
 						'[TELEGRAM API]', __FILE__, __LINE__,
-						"Got 429 HTTP Response. Nap for {$this->sleepOn429CodeMs} ms."
+						"Got 429 HTTP Response. Nap for [%d] ms.",
+						$this->sleepOn429CodeMs
 					);
+
 					usleep($this->sleepOn429CodeMs);
 				}
 				else{
@@ -123,9 +113,10 @@ class MessageSender implements \core\MessageSenderInterface{
 				}
 			}
 
-			$this->outgoingMessagesTracer->logEvent(
+			$this->outgoingMessagesTracer->logfEvent(
 				'[o]', __FILE__, __LINE__,
-				'Returned code: '.$result->getCode()
+				'Returned code: [%d]',
+				$result->getCode()
 			);
 
 			if($result->getCode() >= 400){
@@ -138,16 +129,16 @@ class MessageSender implements \core\MessageSenderInterface{
 				if($APIResponse === null){
 					$this->tracer->logError(
 						'[o]', __FILE__, __LINE__,
-						'Failed to parse API response:'.PHP_EOL.
-						$APIResponseJSON
+						'Failed to parse API response:'
 					);
+
+					$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$APIResponseJSON);
 				}
 				else{
 					$messageId = intval($APIResponse->result->message_id);
-					$this->forwardIfApplicable($telegram_id, $messageId);
+					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
 				}
 			}
-
 
 			$message = $message->nextMessage();
 		}

@@ -20,11 +20,16 @@ $tracer->logEvent('[DEBUG]', __FILE__, __LINE__, 'Debug Webhook was started');
 
 
 $tracer->logDebug('[DEBUG]', __FILE__, __LINE__, 'Fetching POST data...');
-$updateJSON = file_get_contents(__DIR__.'/update.json');
+$messagePath = __DIR__.'/update.json';
+if(count($argv) > 1){
+	$messagePath = $argv[1];
+}
+
+$updateJSON = file_get_contents($messagePath);
 if($updateJSON === false){
-    $tracer->logError(
+    $tracer->logfError(
         '[o]', __FILE__, __LINE__,
-        'update.json was not found'
+        '[%s] was not found', $messagePath
     );  
 
     exit;
