@@ -53,19 +53,19 @@ class UserController{
 
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 
 		if($this->user->isJustRegistred() === false){
 			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
 			return new DirectedOutgoingMessage(
 				$this->user,
 				new OutgoingMessage(
-					"Мы ведь уже знакомы, правда?".PHP_EOL.
-					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand."
+					"Ты уже зарегистрирован(а).".PHP_EOL.
+					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand.".PHP_EOL.
+					"Список команд: $helpCoreCommand."
 				)
 			);
 		}
-
-		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 
 		$welcomingText =
 			'Привет!'.PHP_EOL.
