@@ -52,6 +52,11 @@ function loadShows(){
 	return $?
 }
 
+function loadSeries(){
+	php "$selfDir/../parser/SeriesParserExecutor.php" > /dev/null
+	return $?
+}
+
 function sendMessages(){
 	local _incomingMessagesDir="$1"
 
@@ -96,6 +101,16 @@ echo -n "About to start sending messages. Press enter to continue ... "
 read x
 
 sendMessages "$incomingMessagesDir"
+
+echo -n "Loading latest series ... "
+loadSeries
+if [ $? -eq 0 ]; then
+	echo_green "Done."
+else
+	echo_red "Failed. Aborting."
+	exit 1
+fi
+
 
 echo -n "Sending latest notifications ... "
 sendNotifications
