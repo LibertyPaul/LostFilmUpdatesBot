@@ -11,6 +11,7 @@ require_once(__DIR__.'/SeriesParser.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/SeriesAboutParser.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
+require_once(__DIR__.'/../lib/LFSpecifics/LFSpecifics.php');
 
 require_once(__DIR__.'/../lib/DAL/Series/Series.php');
 require_once(__DIR__.'/../lib/DAL/Series/SeriesAccess.php');
@@ -51,7 +52,7 @@ class SeriesParserExecutor{
 			return;
 		}
 
-		$URL = self::makeURL(
+		$URL = \LFSpecifics::getSeriesPageURL(
 			$seriesMetaInfo['alias'],
 			intval($seriesMetaInfo['seasonNumber']),
 			intval($seriesMetaInfo['seriesNumber'])
@@ -142,16 +143,6 @@ class SeriesParserExecutor{
 				);
 			}
 		}
-	}
-
-	// Duplicate of NotificationDispatcher's one. TODO: move to another place both.
-	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
-		return sprintf(
-			'https://www.lostfilm.tv/series/%s/season_%d/episode_%d',
-			$showAlias,
-			$seasonNumber,
-			$seriesNumber
-		);
 	}
 
 	public function run(){

@@ -8,12 +8,18 @@ require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/DirectedOutgoingMessage.php');
 require_once(__DIR__.'/APIUserDataAccessFactory.php');
 
+require_once(__DIR__.'/../lib/LFSpecifics/LFSpecifics.php');
+
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
+require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
+require_once(__DIR__.'/../lib/DAL/Series/Series.php');
 
 class NotificationGenerator{
 	private $tracer;
 	private $config;
+	private $commandSubstitutor;
+	private $coreCommands;
 	private $APIUserDataAccessInterfaces;
 	
 	public function __construct(){
@@ -21,55 +27,46 @@ class NotificationGenerator{
 		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->config = new \Config($pdo);
+		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
+		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
+
 		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance($this->tracer);
 	}
 	
-	private function generateNewSeriesNotificationText(
-		string $showTitleRu,
-		int $season,
-		int $seriesNumber,
-		string $seriesTitle,
-		string $URL
-	){
+	private function generateNewSeriesNotificationText(\DAL\Show $show, \DAL\Series $series){
 		$template = 
 			'<b>%s</b>: <b>S%02dE%02d</b> "%s"'	.PHP_EOL.
 			'Серию можно скачать по ссылке:'	.PHP_EOL.
 			'%s'
 		;
 
-		$torAdvice = 'Если не получается зайти на LostFilm: /about_tor';
+		$URL = \LFSpecifics::getSeriesPageURL(
+			$show->getAlias(),
+			$series->getSeasonNumber(),
+			$series->getSeriesNumber()
+		);
 
 		if($this->config->getValue('Notifications', 'Include Tor Advice') === 'Y'){
+			$torAdviceCommnad = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AboutTor];
+			$torAdvice = "Если не получается зайти на LostFilm: $torAdviceCommnad";
 			$template .= PHP_EOL.PHP_EOL.$torAdvice;
 		}
 
 		return sprintf(
 			$template,
-			htmlspecialchars($showTitleRu),
-			$season,
-			$seriesNumber,
-			htmlspecialchars($seriesTitle),
+			htmlspecialchars($show->getTitleRu()),
+			$series->getSeasonNumber(),
+			$series->getSeriesNumber(),
+			htmlspecialchars($series->getTitleRu()),
 			$URL
 		);
 	}
 
-	public function newSeriesEvent(
-		string $title_ru,
-		int $season,
-		int $seriesNumber,
-		string $seriesTitle,
-		string $URL
-	){
-		$notificationText = $this->generateNewSeriesNotificationText(
-			$title_ru,
-			$season,
-			$seriesNumber,
-			$seriesTitle,
-			$URL
-		);
+	public function newSeriesEvent(\DAL\Show $show, \DAL\Series $series, string $messageFormat = "%s"){
+		$notificationText = $this->generateNewSeriesNotificationText($show, $series);
 
 		return new OutgoingMessage(
-			$notificationText,
+			sprintf($messageFormat, $notificationText),
 			new MarkupType(MarkupTypeEnum::HTML)
 		);
 	}

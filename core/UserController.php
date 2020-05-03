@@ -12,6 +12,8 @@ require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
 require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
+require_once(__DIR__.'/../lib/DAL/Series/SeriesAccess.php');
+require_once(__DIR__.'/../lib/DAL/Series/Series.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
 require_once(__DIR__.'/../lib/DAL/Tracks/TracksAccess.php');
@@ -27,8 +29,10 @@ class UserController{
 	private $tracer;
 	private $coreCommands;
 	private $commandSubstitutor;
+	private $notificationGenerator;
 
 	private $showsAccess;
+	private $seriesAccess;
 	private $usersAccess;
 	private $tracksAccess;
 
@@ -42,7 +46,10 @@ class UserController{
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
+		$this->notificationGenerator = new NotificationGenerator();
+
 		$this->showsAccess	= new \DAL\ShowsAccess($this->tracer, $this->pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $this->pdo);
 		$this->usersAccess	= new \DAL\UsersAccess($this->tracer, $this->pdo);
 		$this->tracksAccess	= new \DAL\TracksAccess($this->tracer, $this->pdo);
 	}
@@ -80,8 +87,7 @@ class UserController{
 		);
 
 		try{
-			$notificationGenerator = new NotificationGenerator();
-			$adminNotification = $notificationGenerator->newUserEvent($this->user);
+			$adminNotification = $this->notificationGenerator->newUserEvent($this->user);
 
 			if($adminNotification !== null){
 				$response->appendMessage($adminNotification);
@@ -151,8 +157,7 @@ class UserController{
 				);
 
 				try{
-					$notificationGenerator = new NotificationGenerator();
-					$adminNotification = $notificationGenerator->userLeftEvent($this->user);
+					$adminNotification = $this->notificationGenerator->userLeftEvent($this->user);
 					if($adminNotification !== null){
 						$userResponse->appendMessage($adminNotification);
 					}
@@ -349,7 +354,7 @@ class UserController{
 		);
 	}
 	
-	private function insertOrDeleteShow($showAction){
+	private function manageSubscription($showAction){
 		switch($this->conversationStorage->getConversationSize()){
 		# Show all available options
 		case 1:
@@ -482,12 +487,37 @@ class UserController{
 							break;
 					}
 
-					$messageText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
+					$resultText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
 					
-					return new DirectedOutgoingMessage(
-						$this->user,
-						new OutgoingMessage($messageText)
-					);
+					try{
+						if($showAction !== \DAL\ShowAction::Remove){
+							$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
+							if($lastSeries !== null){
+								$format = "$resultText\n\nПоследняя вышедшая серия:\n\n%s";
+
+								$resultMessage = new DirectedOutgoingMessage(
+									$this->user,
+									$this->notificationGenerator->newSeriesEvent(
+										$matchedShow,
+										$lastSeries,
+										$format
+									)
+								);
+							}
+						}
+						else{
+							$resultMessage = new DirectedOutgoingMessage(
+								$this->user,
+								new OutgoingMessage($resultText)
+							);
+						}
+					}
+					catch(\Throwable $ex){
+						$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+						throw $ex;
+					}
+					
+					return $resultMessage;
 				
 				default:
 					$showTitles = array();
@@ -873,6 +903,11 @@ class UserController{
 	}
 
 	private function handleCancelRequest(){
+		if($this->conversationStorage->getConversationSize() === 1){
+			# Nothing to cancel - no reason to prepend.
+			return;
+		}
+
 		$assumedCommand = $this->commandSubstitutor->getCoreCommand(
 			\CommandSubstitutor\CoreCommandMap::Cancel
 		);
@@ -933,17 +968,15 @@ class UserController{
 					break;
 					
 				case \CommandSubstitutor\CoreCommandMap::AddShow:
-					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::Add);
+					$retVal = $this->manageSubscription(\DAL\ShowAction::Add);
 					break;
 				
 				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
-					# TODO: Telegram rejects a keyboard with all shows (dont fit the limit).
-					# Need an alternative way to promps a choice.
-					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::Remove);
+					$retVal = $this->manageSubscription(\DAL\ShowAction::Remove);
 					break;
 
 				case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
-					$retVal = $this->insertOrDeleteShow(\DAL\ShowAction::AddTentative);
+					$retVal = $this->manageSubscription(\DAL\ShowAction::AddTentative);
 					break;
 
 				case \CommandSubstitutor\CoreCommandMap::GetShareButton:

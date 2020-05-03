@@ -47,6 +47,15 @@ class SeriesAccess extends CommonAccess{
 			AND 	`series`.`seriesNumber`	=	:seriesNumber
 		");
 
+		$this->getLastSeriesQuery = $this->pdo->prepare("
+			$selectFields
+			FROM `series`
+			WHERE `show_id` = :show_id
+			AND `ready` = 'Y'
+			ORDER BY `seasonNumber` DESC, `seriesNumber` DESC
+			LIMIT 1
+		");
+
 		$this->addSeriesQuery = $this->pdo->prepare("
 			INSERT INTO `series` (
 				`firstSeenAt`,
@@ -93,6 +102,14 @@ class SeriesAccess extends CommonAccess{
 		);
 
 		return $this->executeSearch($this->getSeriesByAliasSeasonSeriesQuery, $args, QueryApproach::ONE_IF_EXISTS);
+	}
+
+	public function getLastSeries(int $showID){
+		$args = array(
+			':show_id' => $showID
+		);
+
+		return $this->executeSearch($this->getLastSeriesQuery, $args, QueryApproach::ONE_IF_EXISTS);
 	}
 
 	public function addSeries(Series $series){

@@ -84,15 +84,6 @@ class NotificationDispatcher{
 		
 		return $nextDeliveryTime < $currentTime;
 	}
-	
-	private static function makeURL($showAlias, $seasonNumber, $seriesNumber){
-		return sprintf(
-			'https://www.lostfilm.tv/series/%s/season_%d/episode_%d',
-			$showAlias,
-			$seasonNumber,
-			$seriesNumber
-		);
-	}
 
 	public function run(){
 		$notifications = $this->notificationsQueueAccess->getPendingNotifications($this->maxRetryCount);
@@ -116,19 +107,7 @@ class NotificationDispatcher{
 				$series = $this->seriesAccess->getSeriesById($notification->getSeriesId());
 				$show = $this->showsAccess->getShowById($series->getShowId());
 
-				$url = self::makeURL(
-					$show->getAlias(),
-					$series->getSeasonNumber(),
-					$series->getSeriesNumber()
-				);
-
-				$outgoingMessage = $this->notificationGenerator->newSeriesEvent(
-					$show->getTitleRu(),
-					$series->getSeasonNumber(),
-					$series->getSeriesNumber(),
-					$series->getTitleRu(),
-					$url
-				);
+				$outgoingMessage = $this->notificationGenerator->newSeriesEvent($show, $series);
 				
 				if($user->isDeleted() === false){
 					$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
