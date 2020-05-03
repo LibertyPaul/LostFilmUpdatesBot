@@ -6,20 +6,23 @@ require_once(__DIR__.'/../../../lib/DAL/APIUserDataInterface/APIUserData.php');
 
 class TelegramUserData implements APIUserData{
 	private $userId;
-	private $telegramId;
+	private $chatId;
+	private $type;
 	private $username;
 	private $firstName;
 	private $lastName;
 
 	public function __construct(
 		int $userId,
-		int $telegramId,
+		int $chatId,
+		string $type,
 		string $username = null,
 		string $firstName,
 		string $lastName = null
 	){
 		$this->userId = $userId;
-		$this->telegramId = $telegramId;
+		$this->chatId = $chatId;
+		$this->setType($type);
 		$this->username = $username;
 		$this->firstName = $firstName;
 		$this->lastName = $lastName;
@@ -38,7 +41,29 @@ class TelegramUserData implements APIUserData{
 	}
 
 	public function getAPISpecificId(){
-		return $this->telegramId;
+		return $this->chatId;
+	}
+
+	public function setAPISpecificId(int $newAPISpecificId){
+		return $this->chatId = $newAPISpecificId;
+	}
+
+	public function getType(){
+		return $this->type;
+	}
+
+	public function setType(string $type){
+		switch($type){
+		case 'private':
+		case 'group':
+		case 'supergroup':
+			break;
+
+		default:
+			throw new \LogicException("Unknown Telegram chat type: [$type].");
+		}
+
+		$this->type = $type;
 	}
 
 	public function getUsername(){
@@ -56,8 +81,9 @@ class TelegramUserData implements APIUserData{
 	public function __toString(){
 		$result =
 			'+++++++++++++++[Telegram User Data]++++++++++++++'		.PHP_EOL.
-			sprintf('User Id:     [%d]', $this->getUserId())		.PHP_EOL.
-			sprintf('Telegram Id: [%d]', $this->getTelegramId())	.PHP_EOL.
+			sprintf('User ID:     [%d]', $this->getUserId())		.PHP_EOL.
+			sprintf('Chat ID:     [%d]', $this->getAPISpecificId())	.PHP_EOL.
+			sprintf('Type:        [%s]', $this->getType())			.PHP_EOL.
 			sprintf('Username:    [%s]', $this->getUsername())		.PHP_EOL.
 			sprintf('First Name:  [%s]', $this->getFirstName())		.PHP_EOL.
 			sprintf('Last Name:   [%s]', $this->getLastName())		.PHP_EOL.

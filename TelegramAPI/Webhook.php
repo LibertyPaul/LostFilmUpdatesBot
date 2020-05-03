@@ -95,7 +95,7 @@ class Webhook{
 		}
 	}
 
-	private function verifyPassword($password){
+	private function verifyPassword(string $password){
 		if($this->selfWebhookPassword === null){
 			$this->tracer->logNotice(
 				'[SECURITY]', __FILE__, __LINE__,
@@ -108,7 +108,7 @@ class Webhook{
 		return $password === $this->selfWebhookPassword;
 	}
 
-	private function respondFinal($reason){
+	private function respondFinal(int $reason){
 		switch($reason){
 			case WebhookReasons::OK:
 				$HTTPCode = 200;
@@ -184,10 +184,10 @@ class Webhook{
 			isset($update->message->from->id)			&&
 			isset($update->message->chat)				&&
 			isset($update->message->chat->id)			&&
-			$update->message->chat->type === 'private'	&&
 			(
-				isset($update->message->text) ||
-				isset($update->message->voice)
+				isset($update->message->text)	||
+				isset($update->message->voice)	||
+				isset($update->message->migrate_from_chat_id)
 			);
 	}
 
@@ -205,7 +205,42 @@ class Webhook{
 			isset($message->venue);
 	}
 
-	public function processUpdate($password, $postData){
+	private function forwardUpdate($update){
+		if(
+			$this->forwardingChat !== null	&&
+			isset($update->message)			&& # HotFix
+			$this->telegramAPI !== null
+		){
+			try{
+				$this->telegramAPI->forwardMessage(
+					$this->forwardingChat,
+					$update->message->chat->id,
+					$update->message->message_id,
+					$this->forwardingSilent
+				);
+			}
+			catch(\Throwable $ex){
+				$this->tracer->logException(
+					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
+					$ex
+				);
+			}
+		}
+		else{
+			$this->tracer->logfWarning(
+				'[o]', __FILE__, __LINE__,
+				'Unable to forward due to:'					.PHP_EOL.
+				'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
+				'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
+				'	isset($update->message):		[%d]'	.PHP_EOL,
+				$this->forwardingChat !== null,
+				$this->telegramAPI !== null,
+				isset($update->message)
+			);
+		}
+	}
+
+	public function processUpdate(string $password, string $postData){
 		if($this->verifyPassword($password) === false){
 			$this->tracer->logNotice(
 				'[SECURITY]', __FILE__, __LINE__,
@@ -237,39 +272,8 @@ class Webhook{
 				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
 				'Message is eligible for forwarding.'
 			);
-
-			if(
-				$this->forwardingChat !== null	&&
-				isset($update->message)			&& # HotFix
-				$this->telegramAPI !== null
-			){
-				try{
-					$this->telegramAPI->forwardMessage(
-						$this->forwardingChat,
-						$update->message->chat->id,
-						$update->message->message_id,
-						$this->forwardingSilent
-					);
-				}
-				catch(\Throwable $ex){
-					$this->tracer->logException(
-						'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
-						$ex
-					);
-				}
-			}
-			else{
-				$this->tracer->logfWarning(
-					'[o]', __FILE__, __LINE__,
-					'Unable to forward due to:'					.PHP_EOL.
-					'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
-					'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
-					'	isset($update->message):		[%d]'	.PHP_EOL,
-					$this->forwardingChat !== null,
-					$this->telegramAPI !== null,
-					isset($update->message)
-				);
-			}
+			
+			$this->forwardUpdate($update);
 		}
 
 		if(self::validateFields($update) === false){

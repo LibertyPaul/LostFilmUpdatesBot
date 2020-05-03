@@ -105,7 +105,7 @@ class TelegramAPI{
 		
 	
 	public function send(
-		int $telegram_id,
+		int $chat_id,
 		string $text,
 		\core\MarkupType $markupType,
 		bool $URLExpandEnabled,
@@ -114,7 +114,7 @@ class TelegramAPI{
 	){
 
 		$request = array(
-			'chat_id'	=> $telegram_id,
+			'chat_id'	=> $chat_id,
 			'text'		=> $text
 		);
 
@@ -170,7 +170,7 @@ class TelegramAPI{
 		);
 		
 		try{
-			$this->waitForVelocity($telegram_id);
+			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
 		catch(\HTTPRequester\HTTPException $HTTPException){

@@ -16,16 +16,17 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 		$selectFields = "
 			SELECT
 				`telegramUserData`.`user_id`,
-				`telegramUserData`.`telegram_id`,
+				`telegramUserData`.`chat_id`,
+				`telegramUserData`.`type`,
 				`telegramUserData`.`username`,
 				`telegramUserData`.`first_name`,
 				`telegramUserData`.`last_name`
 		";
 
-		$this->getAPIUserDataByTelegramIdQuery = $this->pdo->prepare("
+		$this->getAPIUserDataByChatIDQuery = $this->pdo->prepare("
 			$selectFields
 			FROM	`telegramUserData`
-			WHERE	`telegramUserData`.`telegram_id` = :telegram_id
+			WHERE	`telegramUserData`.`chat_id` = :chat_id
 		");
 
 		$this->getAPIUserDataByUserIdQuery = $this->pdo->prepare("
@@ -37,14 +38,16 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 		$this->addAPIUserDataQuery = $this->pdo->prepare("
 			INSERT INTO `telegramUserData` (
 				`telegramUserData`.`user_id`,
-				`telegramUserData`.`telegram_id`,
+				`telegramUserData`.`chat_id`,
+				`telegramUserData`.`type`,
 				`telegramUserData`.`username`,
 				`telegramUserData`.`first_name`,
 				`telegramUserData`.`last_name`
 			)
 			VALUES (
 				:user_id,
-				:telegram_id,
+				:chat_id,
+				:type,
 				:username,
 				:first_name,
 				:last_name
@@ -54,20 +57,22 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 		$this->updateAPIUserDataQuery = $this->pdo->prepare("
 			UPDATE `telegramUserData`
 			SET
-				`telegramUserData`.`username`	= :username,
-				`telegramUserData`.`first_name`	= :first_name,
-				`telegramUserData`.`last_name`	= :last_name
+				`chat_id`		= :chat_id,
+				`type`			= :type,
+				`username`		= :username,
+				`first_name`	= :first_name,
+				`last_name`		= :last_name
 			WHERE
-				`telegramUserData`.`user_id`	= :user_id
+				`user_id`		= :user_id
 		");
 	}
 
-	public function getAPIUserDataByTelegramId(int $telegram_id){
+	public function getAPIUserDataByChatID(int $chat_id){
 		$args = array(
-			':telegram_id' => $telegram_id
+			':chat_id' => $chat_id
 		);
 
-		return $this->executeSearch($this->getAPIUserDataByTelegramIdQuery, $args, QueryApproach::MANY);
+		return $this->executeSearch($this->getAPIUserDataByChatIDQuery, $args, QueryApproach::MANY);
 	}
 
 	public function getAPIUserDataByUserId(int $user_id){
@@ -81,7 +86,8 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 	public function addAPIUserData(TelegramUserData $telegramUserData){
 		$args = array(
 			':user_id'		=> $telegramUserData->getUserId(),
-			':telegram_id'	=> $telegramUserData->getAPISpecificId(),
+			':chat_id'		=> $telegramUserData->getAPISpecificId(),
+			':type'			=> $telegramUserData->getType(),
 			':username'		=> $telegramUserData->getUsername(),
 			':first_name'	=> $telegramUserData->getFirstName(),
 			':last_name'	=> $telegramUserData->getLastName()
@@ -94,6 +100,8 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 	public function updateAPIUserData(TelegramUserData $telegramUserData){
 		$args = array(
 			':user_id'		=> $telegramUserData->getUserId(),
+			':chat_id'		=> $telegramUserData->getAPISpecificId(),
+			':type'			=> $telegramUserData->getType(),
 			':username'		=> $telegramUserData->getUsername(),
 			':first_name'	=> $telegramUserData->getFirstName(),
 			':last_name'	=> $telegramUserData->getLastName()

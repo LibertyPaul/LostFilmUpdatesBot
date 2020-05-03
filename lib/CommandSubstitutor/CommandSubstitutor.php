@@ -128,7 +128,7 @@ class CommandSubstitutor{
 		return $coreCommandsAssociative;
 	}
 
-	public function replaceCoreCommandsInText($API, $text){
+	public function replaceCoreCommandsInText(string $API, string $text, string $format = "%s"){
 		$this->CoreToAPIMappingQuery->execute(
 			array(
 				':API' => $API
@@ -138,7 +138,7 @@ class CommandSubstitutor{
 		while($row = $this->CoreToAPIMappingQuery->fetch()){
 			$text = str_replace(
 				$row['coreCommandText'],
-				$row['APICommandsText'],
+				sprintf($format, $row['APICommandsText']),
 				$text
 			);
 		}

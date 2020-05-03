@@ -56,7 +56,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase{
 	}
 
 	public function testAccountCreation(){
-		$telegram_id = 100500;
+		$chat_id = 100500;
 		$username = '🇩 🇮 🇲 🇦 🇳 ';
 		$firstName = '🇩 🇮 🇲 🇦 🇳 ';
 		$lastName = '🇩 🇮 🇲 🇦 🇳 ';

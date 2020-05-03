@@ -24,6 +24,7 @@ class MessageSender implements \core\MessageSenderInterface{
 	private $forwardingChat;
 	private $forwardingSilent;
 	private $forwardEverything;
+	private $telegramBotName;
 
 	public function __construct(TelegramAPI $telegramAPI){
 		$this->telegramAPI = $telegramAPI;
@@ -65,17 +66,29 @@ class MessageSender implements \core\MessageSenderInterface{
 			'Forward Everything',
 			'N'
 		) === 'Y';
+
+		$this->telegramBotName = $config->getValue(
+			'TelegramAPI',
+			'Bot Name'
+		);
 	}
 
 	public function send(int $user_id, \core\OutgoingMessage $message){
 		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
+
+		if($telegramUserData->getType() === 'private'){
+			$commandSubstitutionFormat = "%s";
+		}
+		else{
+			$commandSubstitutionFormat = "%s@".$this->telegramBotName;
+		}
 
 		$sendResult = \core\SendResult::Success;
 
 		while($message !== null){
 			$this->outgoingMessagesTracer->logfEvent(
 				'[o]', __FILE__, __LINE__,
-				"Message to user_id=[%d], telegram_id=[%d]".PHP_EOL.
+				"Message to user_id=[%d], chat_id=[%d]".PHP_EOL.
 				"%s",
 				$telegramUserData->getUserId(),
 				$telegramUserData->getAPISpecificId(),
@@ -84,7 +97,8 @@ class MessageSender implements \core\MessageSenderInterface{
 
 			$messageText = $this->commandSubstitutor->replaceCoreCommandsInText(
 				'TelegramAPI',
-				$message->getText()
+				$message->getText(),
+				$commandSubstitutionFormat
 			);
 
 			$attempt = 0;

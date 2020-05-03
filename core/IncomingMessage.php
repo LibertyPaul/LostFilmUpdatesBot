@@ -4,23 +4,22 @@ namespace core;
 
 require_once(__DIR__.'/../lib/CommandSubstitutor/CoreCommand.php');
 
-
 class IncomingMessage{
 	private $coreCommand;
 	private $text;
 	private $update_id;
+	private $APIErrorCode;
 
 	public function __construct(
 		\CommandSubstitutor\CoreCommand $coreCommand = null,
 		string $text = null,
-		$rawMessage = null,
-		$update_id = null
+		int $update_id = null,
+		int $APIErrorCode = null
 	){
-		assert(is_string($text));
-
 		$this->coreCommand = $coreCommand;
 		$this->text = $text;
 		$this->update_id = $update_id;
+		$this->APIErrorCode = $APIErrorCode;
 	}
 
 	public function getCoreCommand(){
@@ -35,25 +34,37 @@ class IncomingMessage{
 		return $this->update_id;
 	}
 
+	public function getAPIErrorCode(){
+		return $this->APIErrorCode;
+	}
+
 	public function __toString(){
 		$update_id = $this->getUpdateId();
 		if($update_id === null){
-			$update_id = '';
+			$update_id = '<null>';
 		}
 
-		if($this->coreCommand === null){
+		if($this->getCoreCommand() === null){
 			$coreCommandStr = '<null>';
 		}
 		else{
-			$coreCommandStr = strval($this->coreCommand);
+			$coreCommandStr = strval($this->getCoreCommand());
 		}
 
-		$result  = '***********************************'				.PHP_EOL;
+		if($this->getAPIErrorCode() === null){
+			$APIErrorCodeStr = '<null>';
+		}
+		else{
+			$APIErrorCodeStr = $this->getAPIErrorCode();
+		}
+
+		$result  = '****************************************'			.PHP_EOL;
 		$result .= 'IncomingMessage:'									.PHP_EOL;
-		$result .= sprintf("\tCore Command: [%s]", $coreCommandStr)		.PHP_EOL;
-		$result .= sprintf("\tText:         [%s]", $this->getText())	.PHP_EOL;
-		$result .= sprintf("\tUpdate Id:    [%s]", $update_id)			.PHP_EOL;
-		$result .= '***********************************';
+		$result .= sprintf("\tCore Command:   [%s]", $coreCommandStr)	.PHP_EOL;
+		$result .= sprintf("\tText:           [%s]", $this->getText())	.PHP_EOL;
+		$result .= sprintf("\tUpdate Id:      [%s]", $update_id)		.PHP_EOL;
+		$result .= sprintf("\tAPI Error Code: [%s]", $APIErrorCodeStr)	.PHP_EOL;
+		$result .= '****************************************';
 		
 		return $result;
 	}

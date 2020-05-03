@@ -96,32 +96,21 @@ class UpdateHandler{
 		}
 	}
 
-	public function processIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
+	public function processIncomingMessage(\DAL\User $user, IncomingMessage $incomingMessage){
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
 			'Entered processIncomingMessage with message:'.PHP_EOL.
 			$incomingMessage
 		);
 
-		$loggedRequestId = $this->logIncomingMessage($user_id, $incomingMessage);
+		$loggedRequestId = $this->logIncomingMessage($user->getId(), $incomingMessage);
 
 		$this->tracer->logDebug(
 			'[o]', __FILE__, __LINE__,
 			"IncomingMessage was logged with id=[$loggedRequestId]"
 		);
 
-		try{
-			$user = $this->usersAccess->getUserById($user_id);
-			if($user->isDeleted()){
-				throw new \LogicException("Incoming update from a deleted user [$user_id]");
-			}
-
-			$userController = new UserController($user);
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
+		$userController = new UserController($user);
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing message ...');
 

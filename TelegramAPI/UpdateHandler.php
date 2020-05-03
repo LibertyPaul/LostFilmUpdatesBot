@@ -24,6 +24,7 @@ class UpdateHandler{
 	private $usersAccess;
 	private $telegramUserDataAccess;
 	private $telegramAPI;
+	private $telegramBotName;
 	
 	public function __construct(){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -40,8 +41,9 @@ class UpdateHandler{
 		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $this->pdo);
 		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $this->pdo);
 
+		$config = new \Config($this->pdo);
+
 		try{
-			$config = new \Config($this->pdo);
 			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 
@@ -58,6 +60,11 @@ class UpdateHandler{
 			$this->speechRecognizer = null;
 			$this->telegramAPI = null;
 		}
+
+		$this->telegramBotName = $config->getValue(
+			'TelegramAPI',
+			'Bot Name'
+		);
 	}
 
 	private static function normalizeUpdateFields($update){
@@ -66,14 +73,19 @@ class UpdateHandler{
 		if(isset($result->update_id)){
 			$result->update_id = intval($result->update_id);
 		}
+
 		$result->message->from->id = intval($result->message->from->id);
 		$result->message->chat->id = intval($result->message->chat->id);
+
+		if(isset($result->message->migrate_from_chat_id)){
+			$result->message->migrate_from_chat_id = intval($result->message->migrate_from_chat_id);
+		}
 
 		return $result;
 	}
 
-	private function getUserInfo(int $telegram_id){
-		$telegramUserDataList = $this->telegramUserDataAccess->getAPIUserDataByTelegramId($telegram_id);
+	private function getUserInfo(int $chat_id){
+		$telegramUserDataList = $this->telegramUserDataAccess->getAPIUserDataByChatID($chat_id);
 
 		foreach($telegramUserDataList as $telegramUserData){
 			$user = $this->usersAccess->getUserById($telegramUserData->getUserId());
@@ -91,7 +103,7 @@ class UpdateHandler{
 		return null;
 	}
 
-	private function createUser(int $telegram_id, string $username = null, string $first_name, string $last_name = null){
+	private function createUser(int $chat_id, string $type, string $username = null, string $first_name, string $last_name = null){
 		try{
 			$res = $this->pdo->beginTransaction();
 			if($res === false){
@@ -109,10 +121,13 @@ class UpdateHandler{
 			$user_id = $this->usersAccess->addUser($user);
 			$user->setId($user_id);
 			$user->setJustRegistred();
+
+			$this->tracer->logfDebug('[o]', __FILE__, __LINE__, "Created user:\n%s", $user);
 			
 			$telegramUserData = new \DAL\TelegramUserData(
 				$user_id,
-				$telegram_id,
+				$chat_id,
+				$type,
 				$username,
 				$first_name,
 				$last_name
@@ -142,18 +157,54 @@ class UpdateHandler{
 		}
 	}
 
-	private function createOrUpdateUser($chat){
-		$telegram_id = $chat->id;
-		$username	= isset($chat->username)	? $chat->username	: null;
-		$first_name	= isset($chat->first_name)	? $chat->first_name	: null;
-		$last_name	= isset($chat->last_name)	? $chat->last_name	: null;
+	private function createOrUpdateUser($message){
+		$chat = $message->chat;
 
-		$userInfo = $this->getUserInfo($telegram_id);
+		switch($chat->type){
+		case 'private':
+			$username	= isset($chat->username)	? $chat->username	: null;
+			$first_name	= isset($chat->first_name)	? $chat->first_name	: null;
+			$last_name	= isset($chat->last_name)	? $chat->last_name	: null;
+			$oldChatID	= null;
+			break;
 
-		if($userInfo === null){
-			$userInfo = $this->createUser($telegram_id, $username, $first_name, $last_name);
+		case 'group':
+		case 'supergroup':
+			$username	= null;
+			$first_name	= isset($chat->title) ? $chat->title : "Group $chatID";
+			$last_name	= null;
+			$oldChatID	= isset($message->migrate_from_chat_id)	? $message->migrate_from_chat_id : null;
+			break;
+
+		default:
+			throw new \RuntimeException("Unsupported chat type.");
+		}
+
+		if($oldChatID === null){
+			$currentChatID = $chat->id;
+			$newChatID = null;
 		}
 		else{
+			$currentChatID = $oldChatID;
+			$newChatID = $chat->id;
+		}
+
+		$userInfo = $this->getUserInfo($currentChatID);
+
+		if($userInfo === null){
+			if($newChatID !== null){
+				$currentChatID = $newChatID;
+			}
+
+			$userInfo = $this->createUser($currentChatID, $chat->type, $username, $first_name, $last_name);
+		}
+		else{
+			if($newChatID !== null){
+				$userInfo['telegramUserData']->setAPISpecificId($newChatID);
+			}
+			
+			$userInfo['telegramUserData']->setType($chat->type);
+
 			$this->telegramUserDataAccess->updateAPIUserData($userInfo['telegramUserData']);
 		}
 
@@ -200,36 +251,95 @@ class UpdateHandler{
 
 	private function extractUserCommand(string $rawText = null){
 		if($rawText === null){
-			return null;
+			return array(
+				'text' => null,
+				'botName' => null
+			);
 		}
 
 		$text = trim($rawText);
 		if(empty($text)){
-			return $rawText;
+			return array(
+				'text' => '',
+				'botName' => null
+			);
 		}
 
 		if($text[0] !== '/'){
-			return $rawText;
+			return array(
+				'text' => $text,
+				'botName' => null
+			);
 		}
 
-		$atPos = strpos($text, '@');
-		if($atPos !== false){
-			$text = substr($text, 0, $atPos);
-		}
+		$botName = null;
 
 		$spacePos = strpos($text, ' ');
 		if($spacePos !== false){
 			$text = substr($text, 0, $spacePos);
 		}
 
-		return $text;
+		$atPos = strpos($text, '@');
+		if($atPos !== false){
+			$botName = substr($text, $atPos + 1);
+			$text = substr($text, 0, $atPos);
+		}
+
+		return array(
+			'text'		=> $text,
+			'botName'	=> $botName
+		);
+	}
+
+	private function isAddressedToMe(string $chatType, $message, string $botName = null){
+		$res = false;
+
+		switch($chatType){
+		case 'private':
+			$res = true;
+			break;
+
+		case 'group':
+		case 'supergroup':
+			if(
+				isset($message->reply_to_message) &&
+				isset($message->reply_to_message->from) &&
+				isset($message->reply_to_message->from->username)
+			){
+				if($this->telegramBotName === $message->reply_to_message->from->username){
+					$res = true;
+				}
+			}
+
+			if($this->telegramBotName === $botName){
+				$res = true;
+			}
+
+			break;
+
+		default:
+			throw new \LogicException("Unknown Telegram chat type:".PHP_EOL.$telegramUserData);
+		}
+
+		if($res === false){
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
+				"Message is not addressed to me [%s][%s][%s]\n%s",
+				$chatType,
+				$botName,
+				$this->telegramBotName,
+				print_r($message, true)
+			);
+		}
+
+		return $res;
 	}
 
 	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
 		
 		try{
-			$userInfo = $this->createOrUpdateUser($update->message->chat);
+			$userInfo = $this->createOrUpdateUser($update->message);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
@@ -241,9 +351,19 @@ class UpdateHandler{
 				'[o]', __FILE__, __LINE__,
 				'Message->text is present'
 			);
+			
 			$text = $update->message->text;
 		}
 		elseif(isset($update->message->voice)){
+			if($userInfo['telegramUserData']->getType() !== 'private'){
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Voice messages are not supported in groups'
+				);
+
+				throw new \RuntimeException("Voice messages are not supported in groups");
+			}
+
 			$this->tracer->logDebug(
 				'[o]', __FILE__, __LINE__,
 				'Message->text is absent, but voice is present. Recognizing...'
@@ -271,18 +391,33 @@ class UpdateHandler{
 			throw new \RuntimeException('Both message->text and message->voice are absent');
 		}
 
-		$rawCommand = $this->extractUserCommand($text);
-		$command = $this->commandSubstitutor->convertAPIToCore('TelegramAPI', $rawCommand);
 
-		$commandText = $rawCommand;
-		if($command !== null){
-			$commandText = $command->getText();
+		$userCommand = $this->extractUserCommand($text);
+
+		$commandText = $userCommand['text'];
+		$botName = $userCommand['botName'];
+
+		$addressedToMe = $this->isAddressedToMe(
+			$userInfo['telegramUserData']->getType(),
+			$update->message,
+			$botName
+		);
+
+		if($addressedToMe === false){
+			return;
 		}
 
-		$this->tracer->logDebug(
-			'[COMMAND]', __FILE__, __LINE__,
-			sprintf('User command [%s] was mapped to [%s]', $rawCommand, $commandText)
-		);
+		$command = $this->commandSubstitutor->convertAPIToCore('TelegramAPI', $commandText);
+
+		if($command !== null){
+			$originalText = $commandText;
+			$commandText = $command->getText();
+
+			$this->tracer->logfDebug(
+				'[COMMAND]', __FILE__, __LINE__,
+				'User command [%s] was mapped to [%s]', $originalText, $commandText
+			);
+		}
 
 		$incomingMessage = new \core\IncomingMessage(
 			$command,
@@ -291,18 +426,8 @@ class UpdateHandler{
 		);
 
 		$coreHandler = new \core\UpdateHandler();
-		$coreHandler->processIncomingMessage($userInfo['user']->getId(), $incomingMessage);
+		$coreHandler->processIncomingMessage($userInfo['user'], $incomingMessage);
 
 	}
 
 }
-
-
-
-
-
-
-
-
-
-
