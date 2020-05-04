@@ -25,6 +25,10 @@ class UpdateHandler{
 	private $telegramUserDataAccess;
 	private $telegramAPI;
 	private $telegramBotName;
+
+	private $forwardingChat;
+	private $forwardingSilent;
+	private $forwardEverything;
 	
 	public function __construct(){
 		$this->tracer = new \Tracer(__CLASS__);
@@ -65,6 +69,23 @@ class UpdateHandler{
 			'TelegramAPI',
 			'Bot Name'
 		);
+
+		$this->forwardingChat = $config->getValue(
+			'TelegramAPI',
+			'Forwarding Chat'
+		);
+
+		$this->forwardingSilent = $config->getValue(
+			'TelegramAPI',
+			'Forwarding Silent',
+			'Y'
+		) === 'Y';
+
+		$this->forwardEverything = $config->getValue(
+			'TelegramAPI',
+			'Forward Everything',
+			'N'
+		) === 'Y';
 	}
 
 	private static function normalizeUpdateFields($update){
@@ -82,6 +103,55 @@ class UpdateHandler{
 		}
 
 		return $result;
+	}
+
+	private static function shouldBeForwarded($message){
+		return
+			isset($message->audio)		||
+			isset($message->document)	||
+			isset($message->game)		||
+			isset($message->photo)		||
+			isset($message->sticker)	||
+			isset($message->video)		||
+			isset($message->video_note)	||
+			isset($message->contact)	||
+			isset($message->location)	||
+			isset($message->venue);
+	}
+
+	private function forwardUpdate($update){
+		if(
+			$this->forwardingChat !== null	&&
+			isset($update->message)			&&
+			$this->telegramAPI !== null
+		){
+			try{
+				$this->telegramAPI->forwardMessage(
+					$this->forwardingChat,
+					$update->message->chat->id,
+					$update->message->message_id,
+					$this->forwardingSilent
+				);
+			}
+			catch(\Throwable $ex){
+				$this->tracer->logException(
+					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
+					$ex
+				);
+			}
+		}
+		else{
+			$this->tracer->logfWarning(
+				'[o]', __FILE__, __LINE__,
+				'Unable to forward due to:'					.PHP_EOL.
+				'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
+				'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
+				'	isset($update->message):		[%d]'	.PHP_EOL,
+				$this->forwardingChat !== null,
+				$this->telegramAPI !== null,
+				isset($update->message)
+			);
+		}
 	}
 
 	private function getUserInfo(int $chat_id){
@@ -103,11 +173,20 @@ class UpdateHandler{
 		return null;
 	}
 
-	private function createUser(int $chat_id, string $type, string $username = null, string $first_name, string $last_name = null){
+	private function createUser(
+		int $chat_id,
+		string $type,
+		string $username = null,
+		string $first_name,
+		string $last_name = null
+	){
 		try{
 			$res = $this->pdo->beginTransaction();
 			if($res === false){
-				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO beginTransaction has faied');
+				$this->tracer->logError(
+					'[PDO-MySQL]', __FILE__, __LINE__,
+					'PDO beginTransaction has faied'
+				);
 			}
 
 			$user = new \DAL\User(
@@ -122,7 +201,10 @@ class UpdateHandler{
 			$user->setId($user_id);
 			$user->setJustRegistred();
 
-			$this->tracer->logfDebug('[o]', __FILE__, __LINE__, "Created user:\n%s", $user);
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
+				"Created user:\n%s", $user
+			);
 			
 			$telegramUserData = new \DAL\TelegramUserData(
 				$user_id,
@@ -137,7 +219,10 @@ class UpdateHandler{
 
 			$res = $this->pdo->commit();
 			if($res === false){
-				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO commit has faied');
+				$this->tracer->logError(
+					'[PDO-MySQL]', __FILE__, __LINE__,
+					'PDO commit has faied'
+				);
 			}
 
 			return array(
@@ -150,7 +235,7 @@ class UpdateHandler{
 
 			$res = $this->pdo->rollBack();
 			if($res === false){
-				$this->tracer->logError('[PDO-MySQL]', __FILE__, __LINE__, 'PDO rollback has faied');
+				throw new \RuntimeException("PDO Rollback failed.", 0, $ex);
 			}
 
 			throw $ex;
@@ -337,6 +422,15 @@ class UpdateHandler{
 
 	public function handleUpdate($update){
 		$update = self::normalizeUpdateFields($update);
+		
+		if($this->forwardEverything	|| self::shouldBeForwarded($update->message)){
+			$this->tracer->logDebug(
+				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
+				'Message is eligible for forwarding.'
+			);
+			
+			$this->forwardUpdate($update);
+		}
 		
 		try{
 			$userInfo = $this->createOrUpdateUser($update->message);

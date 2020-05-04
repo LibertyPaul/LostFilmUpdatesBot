@@ -7,8 +7,6 @@ require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 
-require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
-
 
 abstract class WebhookReasons{
 	const OK				= 0;
@@ -25,15 +23,6 @@ class Webhook{
 	private $updateHandler;
 
 	private $selfWebhookPassword;
-
-	private $messageResendEnabled = false;
-	private $messageResendURL = null;
-
-	private $forwardingChat;
-	private $forwardingSilent;
-	private $forwardEverything;
-
-	private $telegramAPI;
 
 	public function __construct(UpdateHandler $updateHandler){
 		assert($updateHandler !== null);
@@ -52,47 +41,6 @@ class Webhook{
 
 		$config = new \Config(\BotPDO::getInstance());
 		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
-
-		$this->messageResendEnabled = $config->getValue('TelegramAPI', 'Message Resend Enabled');
-		if($this->messageResendEnabled === 'Y'){
-			$this->messageResendURL = $config->getValue('TelegramAPI', 'Message Resend URL');
-			if($this->messageResendURL === null){
-				$this->tracer->logWarning(
-					'[o]', __FILE__, __LINE__,
-					'Message resend is enabled, but no URL is set'
-				);
-
-				$this->messageResendEnabled = 'N';
-			}
-		}
-
-		$this->forwardingChat = $config->getValue(
-			'TelegramAPI',
-			'Forwarding Chat'
-		);
-
-		$this->forwardingSilent = $config->getValue(
-			'TelegramAPI',
-			'Forwarding Silent',
-			'Y'
-		) === 'Y';
-
-		$this->forwardEverything = $config->getValue(
-			'TelegramAPI',
-			'Forward Everything',
-			'N'
-		) === 'Y';
-
-		$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
-		try{
-			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
-			$HTTPRequester = $HTTPrequesterFactory->getInstance();
-			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-			$this->telegramAPI = null;
-		}
 	}
 
 	private function verifyPassword(string $password){
@@ -191,55 +139,6 @@ class Webhook{
 			);
 	}
 
-	private static function shouldBeForwarded($message){
-		return
-			isset($message->audio)		||
-			isset($message->document)	||
-			isset($message->game)		||
-			isset($message->photo)		||
-			isset($message->sticker)	||
-			isset($message->video)		||
-			isset($message->video_note)	||
-			isset($message->contact)	||
-			isset($message->location)	||
-			isset($message->venue);
-	}
-
-	private function forwardUpdate($update){
-		if(
-			$this->forwardingChat !== null	&&
-			isset($update->message)			&& # HotFix
-			$this->telegramAPI !== null
-		){
-			try{
-				$this->telegramAPI->forwardMessage(
-					$this->forwardingChat,
-					$update->message->chat->id,
-					$update->message->message_id,
-					$this->forwardingSilent
-				);
-			}
-			catch(\Throwable $ex){
-				$this->tracer->logException(
-					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
-					$ex
-				);
-			}
-		}
-		else{
-			$this->tracer->logfWarning(
-				'[o]', __FILE__, __LINE__,
-				'Unable to forward due to:'					.PHP_EOL.
-				'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
-				'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
-				'	isset($update->message):		[%d]'	.PHP_EOL,
-				$this->forwardingChat !== null,
-				$this->telegramAPI !== null,
-				isset($update->message)
-			);
-		}
-	}
-
 	public function processUpdate(string $password, string $postData){
 		if($this->verifyPassword($password) === false){
 			$this->tracer->logNotice(
@@ -266,15 +165,6 @@ class Webhook{
 		}
 
 		$this->logUpdate($update);
-		
-		if($this->forwardEverything	|| self::shouldBeForwarded($update->message)){
-			$this->tracer->logDebug(
-				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
-				'Message is eligible for forwarding.'
-			);
-			
-			$this->forwardUpdate($update);
-		}
 
 		if(self::validateFields($update) === false){
 			$this->tracer->logNotice(
@@ -290,9 +180,6 @@ class Webhook{
 		try{
 			$this->updateHandler->handleUpdate($update);
 			$this->respondFinal(WebhookReasons::OK);
-		}
-		catch(\core\DuplicateUpdateException $ex){
-			$this->respondFinal(WebhookReasons::duplicateUpdate);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);

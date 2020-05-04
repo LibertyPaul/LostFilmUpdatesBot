@@ -18,9 +18,6 @@ require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessageHistory.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
 
-
-class DuplicateUpdateException extends \RuntimeException{}
-
 class UpdateHandler{
 	private $tracer;
 	private $config;
