@@ -223,24 +223,31 @@ class UserController{
 		$getShareButtonCoreCommand	= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetShareButton];
 		$donateCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Donate];
 
+		if($this->user->isMuted()){
+			$muteOppositeState = 'Включить';
+		}
+		else{
+			$muteOppositeState = 'Выключить';
+		}
+
 		$helpText =
 			'LostFilm updates - бот, который оповещает '							.PHP_EOL.
 			'о новых сериях на https://lostfilm.tv/'								.PHP_EOL
 																					.PHP_EOL.
 			'Список команд:'														.PHP_EOL.
-			"$addShowCoreCommand - Добавить уведомления о сериале"					.PHP_EOL.
-			"$removeShowCoreCommand - Удалить уведомления о сериале"				.PHP_EOL.
-			"$getMyShowsCoreCommand - Показать, на что ты подписан"					.PHP_EOL.
-			"$muteCoreCommand - Выключить уведомления"								.PHP_EOL.
+			"$addShowCoreCommand - Подписаться на сериал"							.PHP_EOL.
+			"$removeShowCoreCommand - Отписаться от сериала"						.PHP_EOL.
+			"$getMyShowsCoreCommand - Показать подписки"							.PHP_EOL.
+			"$muteCoreCommand - $muteOppositeState уведомления"						.PHP_EOL.
 			"$cancelCoreCommand - Отменить команду"									.PHP_EOL.
 			"$helpCoreCommand - Показать это сообщение"								.PHP_EOL.
 			"$aboutTorCoreCommand - Как обойти блокировку LostFilm.tv"				.PHP_EOL.
-			"$donateCoreCommand - Задонатить пару баксов на доширак создателю"		.PHP_EOL.
-			"$getShareButtonCoreCommand - Поделиться контактом бота"				.PHP_EOL.
-			"$stopCoreCommand - Удалиться из контакт-листа бота"					.PHP_EOL
+			"$donateCoreCommand - Задонатить пару баксов на дошик"					.PHP_EOL.
+			"$getShareButtonCoreCommand - Поделиться ботом"							.PHP_EOL.
+			"$stopCoreCommand - Удалить аккаунт"									.PHP_EOL
 																					.PHP_EOL.
-			'Telegram/VK создателя: @libertypaul'									.PHP_EOL.
-			'Ну и электропочта есть, куда ж без неё: admin@libertypaul.ru'			.PHP_EOL.
+			'Telegram создателя: @libertypaul'										.PHP_EOL.
+			'Ну и электропочта: admin@libertypaul.ru'								.PHP_EOL.
 			'Исходники бота есть на GitHub: '												.
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
 																					.PHP_EOL.
