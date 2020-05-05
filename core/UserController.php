@@ -247,7 +247,7 @@ class UserController{
 			"$stopCoreCommand - Удалить аккаунт"									.PHP_EOL
 																					.PHP_EOL.
 			'Telegram создателя: @libertypaul'										.PHP_EOL.
-			'Ну и электропочта: admin@libertypaul.ru'								.PHP_EOL.
+			'Ну и электропочта: mailme@libertypaul.ru'								.PHP_EOL.
 			'Исходники бота есть на GitHub: '												.
 			'https://github.com/LibertyPaul/LostFilmUpdatesBot'						.PHP_EOL
 																					.PHP_EOL.
