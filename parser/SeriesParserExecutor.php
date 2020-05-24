@@ -67,7 +67,7 @@ class SeriesParserExecutor{
 			$this->tracer->logfError(
 				'[o]', __FILE__, __LINE__,
 				"Series page is not published: [%s]",
-				$seriesMetaInfo['URL']
+				$URL
 			);
 
 			return;

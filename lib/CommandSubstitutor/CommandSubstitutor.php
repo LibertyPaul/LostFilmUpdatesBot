@@ -4,123 +4,187 @@ namespace CommandSubstitutor;
 
 require_once(__DIR__.'/CoreCommand.php');
 require_once(__DIR__.'/APICommand.php');
+require_once(__DIR__.'/../QueryTraits/Approach.php');
 
 class CommandSubstitutor{	
-	private $APIToCoreQuery;
-	private $CoreToAPIQuery;
+	const API_NAME_KEY = 'API';
+	const CORE_COMMAND_ID_KEY = 'CoreCommandID';
+	const CORE_COMMAND_TEXT_KEY = 'CoreCommandText';
+	const API_COMMAND_ID_KEY = 'APICommandID';
+	const API_COMMAND_TEXT_KEY = 'APICommandText';
+
+	private $coreCommands;
+	private $mapping;
 
 	public function __construct(\PDO $pdo){
-		$this->APIToCoreQuery = $pdo->prepare('
-			SELECT `id`, `text`
-			FROM `coreCommands`
-			WHERE `id` = (
-				SELECT `coreCommandId`
-				FROM `APICommands`
-				WHERE `API` = :API
-				AND `text` = :text
-			)
-		');
-
-		$this->CoreToAPIQuery = $pdo->prepare('
-			SELECT `id`, `API`, `text`, `coreCommandId`
-			FROM `APICommands`
-			WHERE `API` = :API
-			AND `coreCommandId` = (
-				SELECT `id`
-				FROM `coreCommands`
-				WHERE `text` = :text
-			)
-			ORDER BY `priority`
-		');
-
-		$this->CoreByIdQuery = $pdo->prepare('
-			SELECT `id`, `text`
-			FROM `coreCommands`
-			WHERE `id` = :id
-		');
-
-		$this->CoreToAPIMappingQuery = $pdo->prepare("
-			SELECT cc.`text` AS coreCommandText, ac.`APICommands` AS APICommandsText
-			FROM `coreCommands` cc
-			JOIN (
-				SELECT
-					`coreCommandId`,
-					GROUP_CONCAT(
-						`text`
-						ORDER BY `priority`
-						SEPARATOR ' | '
-					) AS APICommands
-				FROM `APICommands`
-				WHERE `API` = :API
-				GROUP BY `coreCommandId`
-			) ac ON cc.`id` = ac.`coreCommandId`
-		");
-
-		$this->getAllCoreCommands = $pdo->prepare('
-			SELECT `id`, `text` FROM `coreCommands`
-		');
+		$this->reloadCache($pdo);
 	}
 
-	public function convertAPIToCore($API, $text){
-		$this->APIToCoreQuery->execute(
-			array(
-				':API' => $API,
-				':text' => $text
-			)
-		);
+	private function reloadCache(\PDO $pdo){
+		$loadCoreCommandsQuery = $pdo->prepare('
+			SELECT
+				`id`	AS '.self::CORE_COMMAND_ID_KEY.',
+				`text`	AS '.self::CORE_COMMAND_TEXT_KEY.'
+			FROM `coreCommands`
+		');
 
-		$row = $this->APIToCoreQuery->fetch();
-		if($row === false){
-			return null;
-		}
+		$loadMappingQuery = $pdo->prepare('
+			SELECT
+				ac.`API`	AS '.self::API_NAME_KEY.',
+				cc.`id`		AS '.self::CORE_COMMAND_ID_KEY.',
+				cc.`text`	AS '.self::CORE_COMMAND_TEXT_KEY.',
+				ac.`id`		AS '.self::API_COMMAND_ID_KEY.',
+				ac.`text`	AS '.self::API_COMMAND_TEXT_KEY.'
+			FROM `APICommands` ac
+			JOIN `coreCommands` cc ON ac.`coreCommandId` = cc.`id`
+		');
 
-		return new CoreCommand(intval($row['id']), strval($row['text']));
-	}
+		$loadCoreCommandsQuery->execute();
+		$coreCommands = $loadCoreCommandsQuery->fetchAll(\PDO::FETCH_ASSOC);
 
-	public function convertCoreToAPI($API, $text){
-		$this->CoreToAPIQuery->execute(
-			array(
-				':API' => $API,
-				':text' => $text
-			)
-		);
+		$loadMappingQuery->execute();
 
-		$result = array();
-		while($row = $this->CoreToAPIQuery->fetch()){
-			$result[] = new APICommand(
-				$row['id'],
-				$row['API'],
-				$row['text'],
-				$row['coreCommandId']
+		$rows = $loadMappingQuery->fetchAll(\PDO::FETCH_ASSOC);
+
+		$APIs = array_unique(array_column($rows, self::API_NAME_KEY));
+		$newMapping = array_fill_keys($APIs, array());
+
+		foreach($rows as $row){
+			$APIName = $row[self::API_NAME_KEY];
+
+			$newMapping[$APIName][] = array(
+				self::CORE_COMMAND_ID_KEY	=> intval($row[self::CORE_COMMAND_ID_KEY]),
+				self::CORE_COMMAND_TEXT_KEY	=> $row[self::CORE_COMMAND_TEXT_KEY],
+				self::API_COMMAND_ID_KEY	=> intval($row[self::API_COMMAND_ID_KEY]),
+				self::API_COMMAND_TEXT_KEY	=> $row[self::API_COMMAND_TEXT_KEY]
 			);
 		}
 
-		return $result;
+		$this->coreCommands = $coreCommands;
+		$this->mapping = $newMapping;
 	}
 
-	public function getCoreCommand($id){
-		$this->CoreByIdQuery->execute(
-			array(
-				':id' => $id
-			)
-		);
+	private function coreLookup(
+		\QueryTraits\Approach $approach,
+		int $coreCommandID = null,
+		string $coreCommandText = null
+	){
+		$res = array();
 
-		$row = $this->CoreByIdQuery->fetch();
-		if($row === false){
-			return null;
+		foreach($this->coreCommands as $row){
+			$match = (
+				(
+					$coreCommandID === null ||
+					$coreCommandID === $row[self::CORE_COMMAND_ID_KEY]
+				) &&
+				(
+					$coreCommandText === null ||
+					$coreCommandText === $row[self::CORE_COMMAND_TEXT_KEY]
+				)
+			);
+
+			if($match){
+				$res[] = $row;
+			}
 		}
 
-		return new CoreCommand(intval($row['id']), strval($row['text']));
+		$approach->verify(count($res));
+		return $approach->repack($res);
+	}
+
+	private function mappingLookup(
+		\QueryTraits\Approach $approach,
+		string $API,
+		int $coreCommandID = null,
+		string $coreCommandText = null,
+		int $APICommandID = null,
+		string $APICommandText = null
+	){
+		$res = array();
+
+		foreach($this->mapping[$API] as $row){
+			$match = (
+				(
+					$coreCommandID === null ||
+					$coreCommandID === $row[self::CORE_COMMAND_ID_KEY]
+				) &&
+				(
+					$coreCommandText === null ||
+					$coreCommandText === $row[self::CORE_COMMAND_TEXT_KEY]
+				) &&
+				(
+					$APICommandID === null ||
+					$APICommandID === $row[self::API_COMMAND_ID_KEY]
+				) &&
+				(
+					$APICommandText === null ||
+					$APICommandText === $row[self::API_COMMAND_TEXT_KEY]
+				)
+			);
+
+			if($match){
+				$res[] = $row;
+			}
+		}
+
+		$approach->verify(count($res));
+		return $approach->repack($res);
+	}
+
+	public function convertAPIToCore(string $API, string $text){
+		$res = $this->mappingLookup(
+			\QueryTraits\Approach::One(),
+			$API,
+			null,
+			null,
+			null,
+			$text
+		);
+
+		return new CoreCommand(
+			$res[self::CORE_COMMAND_ID_KEY],
+			$res[self::CORE_COMMAND_TEXT_KEY]
+		);
+	}
+
+
+	public function convertCoreToAPI(string $API, string $text){
+		$res = $this->mappingLookup(
+			\QueryTraits\Approach::One(),
+			$API,
+			null,
+			null,
+			null,
+			$text
+		);
+
+		return new APICommand(
+			$res[self::API_COMMAND_ID_KEY],
+			$res[self::API_NAME_KEY],
+			$res[self::API_COMMAND_TEXT_KEY],
+			$res[self::CORE_COMMAND_ID_KEY]
+		);
+	}
+
+	public function getCoreCommand(int $id){
+		$res = $this->coreLookup(
+			\QueryTraits\Approach::One(),
+			$id
+		);
+
+		return new CoreCommand(
+			$res[self::CORE_COMMAND_ID_KEY],
+			$row[self::CORE_COMMAND_TEXT_KEY]
+		);
 	}
 
 	public function getCoreCommandsAssociative(){
-		$this->getAllCoreCommands->execute();
-
+		$coreCommands = $this->coreLookup(\QueryTraits\Approach::Many());
 		$coreCommandsAssociative = array();
 
-		while($row = $this->getAllCoreCommands->fetch()){
-			$id = intval($row['id']);
-			$text = $row['text'];
+		foreach($coreCommands as $row){
+			$id = $row[self::CORE_COMMAND_ID_KEY];
+			$text = $row[self::CORE_COMMAND_TEXT_KEY];
 
 			$coreCommandsAssociative[$id] = $text;
 		}
@@ -128,22 +192,32 @@ class CommandSubstitutor{
 		return $coreCommandsAssociative;
 	}
 
-	public function replaceCoreCommandsInText(string $API, string $text, string $format = "%s"){
-		$this->CoreToAPIMappingQuery->execute(
-			array(
-				':API' => $API
-			)
-		);
-
-		while($row = $this->CoreToAPIMappingQuery->fetch()){
-			$text = str_replace(
-				$row['coreCommandText'],
-				sprintf($format, $row['APICommandsText']),
-				$text
-			);
+	public function replaceCoreCommands(
+		string $API,
+		/* string or array */ $haystack,
+		string $format = "%s"
+	){
+		if($haystack === null){
+			return null;
 		}
 
-		return $text;
+		if(is_array($haystack) === false && is_string($haystack) === false){
+			throw new \LogicException("Invalid haystack type: ".gettype($haystack));
+		}
+
+		$APIMapping = $this->mappingLookup(
+			\QueryTraits\Approach::Many(),
+			$API
+		);
+
+		$from	= array_column($APIMapping, self::CORE_COMMAND_TEXT_KEY);
+		$to		= array_column($APIMapping, self::API_COMMAND_TEXT_KEY);
+
+		foreach($to as $key => $value){
+			$to[$key] = sprintf($format, $to[$key]);
+		}
+
+		return str_replace($from, $to, $haystack);
 	}
 }
 

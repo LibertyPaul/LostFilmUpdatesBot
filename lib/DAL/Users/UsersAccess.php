@@ -82,7 +82,12 @@ class UsersAccess extends CommonAccess{
 			':id' => $id
 		);
 
-		return $this->executeSearch($this->getUserByIdQuery, $args, QueryApproach::ONE);
+		return $this->execute(
+			$this->getUserByIdQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function getActiveUsers(bool $excludeMuted){
@@ -90,7 +95,12 @@ class UsersAccess extends CommonAccess{
 			':excludeMuted' => $excludeMuted
 		);
 
-		return $this->executeSearch($this->getActiveUsersQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getActiveUsersQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getActiveUsersCount(bool $excludeMuted){
@@ -120,7 +130,13 @@ class UsersAccess extends CommonAccess{
 			':registration_time'	=> $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->executeInsertUpdateDelete($this->addUserQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->addUserQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
+
 		return $this->getLastInsertId();
 	}
 
@@ -135,6 +151,11 @@ class UsersAccess extends CommonAccess{
 			':mute'		=> $user->isMuted() ? 'Y' : 'N'
 		);
 
-		$this->executeInsertUpdateDelete($this->updateUserQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->updateUserQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 }

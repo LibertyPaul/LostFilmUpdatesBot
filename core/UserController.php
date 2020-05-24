@@ -362,6 +362,9 @@ class UserController{
 	}
 	
 	private function manageSubscription($showAction){
+		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
+		$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+
 		switch($this->conversationStorage->getConversationSize()){
 		# Show all available options
 		case 1:
@@ -401,8 +404,8 @@ class UserController{
 					$showTitles[] = $show->getFullTitle();
 				}
 
-				array_unshift($showTitles, '/cancel');
-				array_push($showTitles, '/cancel');
+				array_unshift($showTitles, $cancelCoreCommand);
+				array_push($showTitles, $cancelCoreCommand);
 				
 				return new DirectedOutgoingMessage(
 					$this->user,
@@ -468,7 +471,7 @@ class UserController{
 							break;
 
 						case \DAL\ShowAction::AddTentative:
-							$notFoundText = 'Не найдено подходящих названий. Жми на /add_show чтобы посмотреть в списке.';
+							$notFoundText = "Не найдено подходящих названий. Жми на $addShowCoreCommand чтобы посмотреть в списке.";
 							break;
 					}
 
@@ -532,8 +535,8 @@ class UserController{
 						$showTitles[] = $matchedShow->getFullTitle();
 					}
 
-					array_unshift($showTitles, '/cancel');
-					array_push($showTitles, '/cancel');
+					array_unshift($showTitles, $cancelCoreCommand);
+					array_push($showTitles, $cancelCoreCommand);
 
 					$this->repeatQuestion();
 					
@@ -727,6 +730,8 @@ class UserController{
 			);
 		}
 
+		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
+
 		switch($this->conversationStorage->getConversationSize()){
 		case 1:
 			return new DirectedOutgoingMessage(
@@ -743,7 +748,7 @@ class UserController{
 					'Пуш уведомление?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
-					array('Да', 'Нет', '/cancel')
+					array('Да', 'Нет', $cancelCoreCommand)
 				)
 			);
 
@@ -754,7 +759,7 @@ class UserController{
 					'Будет ли разметка?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
-					array('HTML', 'Telegram API Markup', 'Без разметки', '/cancel')
+					array('HTML', 'Telegram API Markup', 'Без разметки', $cancelCoreCommand)
 				)
 			);
 
@@ -765,7 +770,7 @@ class UserController{
 					'Превью ссылок?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
-					array('Да', 'Нет', '/cancel')
+					array('Да', 'Нет', $cancelCoreCommand)
 				)
 			);
 			
@@ -776,7 +781,7 @@ class UserController{
 					'Потревожить замьюченных?',
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
-					array('Да', 'Нет', '/cancel')
+					array('Да', 'Нет', $cancelCoreCommand)
 				)
 			);
 			

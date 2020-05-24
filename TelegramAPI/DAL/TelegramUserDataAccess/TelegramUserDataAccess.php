@@ -72,7 +72,12 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':chat_id' => $chat_id
 		);
 
-		return $this->executeSearch($this->getAPIUserDataByChatIDQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getAPIUserDataByChatIDQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getAPIUserDataByUserId(int $user_id){
@@ -80,7 +85,12 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':user_id' => $user_id
 		);
 
-		return $this->executeSearch($this->getAPIUserDataByUserIdQuery, $args, QueryApproach::ONE);
+		return $this->execute(
+			$this->getAPIUserDataByUserIdQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function addAPIUserData(TelegramUserData $telegramUserData){
@@ -93,7 +103,13 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':last_name'	=> $telegramUserData->getLastName()
 		);
 
-		$this->executeInsertUpdateDelete($this->addAPIUserDataQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->addAPIUserDataQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
+
 		return $this->getLastInsertId();
 	}
 
@@ -107,6 +123,11 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':last_name'	=> $telegramUserData->getLastName()
 		);
 
-		$this->executeInsertUpdateDelete($this->updateAPIUserDataQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->updateAPIUserDataQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 }

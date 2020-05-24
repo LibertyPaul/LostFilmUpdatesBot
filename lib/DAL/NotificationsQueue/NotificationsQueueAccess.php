@@ -56,7 +56,12 @@ class NotificationsQueueAccess extends CommonAccess{
 			':maxRetryCount' => $maxRetryCount
 		);
 
-		return $this->executeSearch($this->getPendingNotificationsQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getPendingNotificationsQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function updateNotification(Notification $notification){
@@ -71,6 +76,11 @@ class NotificationsQueueAccess extends CommonAccess{
 			':lastDeliveryAttemptTime'	=> $notification->getLastDeliveryAttemptTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->executeInsertUpdateDelete($this->updateNotificationQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->updateNotificationQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 }

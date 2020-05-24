@@ -44,7 +44,7 @@ class TelegramAPI{
 			if($res !== true){
 				$this->tracer->logError(
 					'[PHP]', __FILE__, __LINE__,
-					'time_nanosleep has failed'.PHP_EOL.print_r($res)
+					'time_nanosleep has failed'.PHP_EOL.print_r($res, true)
 				);
 			}
 		}

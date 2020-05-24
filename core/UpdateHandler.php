@@ -53,6 +53,22 @@ class UpdateHandler{
 			$loggedMessageId = $this->messagesHistoryAccess->addMessageHistory($messageHistory);
 
 		}
+		catch(\DAL\MessagesHistoryDuplicateUpdateIdException $ex){
+			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logDebug(
+				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
+				$incomingMessage
+			);
+			
+			$conflictingMessage = $this->messagesHistoryAccess->getByUpdateId($incomingMessage->getUpdateId());
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
+				'MessagesHistory ID was substituted to existing one [%d]',
+				$conflictingMessage->getId()
+			);
+
+			return $conflictingMessage->getId();
+		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logDebug(

@@ -95,10 +95,15 @@ class MessageSender implements \core\MessageSenderInterface{
 				$message
 			);
 
-			$messageText = $this->commandSubstitutor->replaceCoreCommandsInText(
+			$messageText = $this->commandSubstitutor->replaceCoreCommands(
 				'TelegramAPI',
 				$message->getText(),
 				$commandSubstitutionFormat
+			);
+			
+			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
+				'TelegramAPI',
+				$message->getResponseOptions()
 			);
 
 			$attempt = 0;
@@ -109,7 +114,7 @@ class MessageSender implements \core\MessageSenderInterface{
 					$messageText,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
-					$message->getResponseOptions(),
+					$responseOptions,
 					$message->getInlineOptions()
 				);
 

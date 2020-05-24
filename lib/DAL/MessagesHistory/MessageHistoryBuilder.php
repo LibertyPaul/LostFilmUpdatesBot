@@ -32,7 +32,7 @@ class MessageHistoryBuilder implements DAOBuilderInterface{
 
 		$messageHistory = new MessageHistory(
 			intval($row['id']),
-			\DateTimeImmutable::createFromFormat($dateTimeFormat, $row['createdStr']),
+			\DateTimeImmutable::createFromFormat($dateTimeFormat, $row['timeStr']),
 			$row['source'],
 			intval($row['user_id']),
 			$updateID,

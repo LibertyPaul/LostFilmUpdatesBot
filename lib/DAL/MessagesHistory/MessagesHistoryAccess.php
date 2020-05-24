@@ -6,6 +6,7 @@ require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/MessageHistoryBuilder.php');
 require_once(__DIR__.'/MessageHistory.php');
 
+class MessagesHistoryDuplicateUpdateIdException extends \RuntimeException{};
 
 class MessagesHistoryAccess extends CommonAccess{
 	private $addMessageHistoryQuery;
@@ -16,6 +17,24 @@ class MessagesHistoryAccess extends CommonAccess{
 			$pdo,
 			new MessageHistoryBuilder()
 		);
+
+		$selectFields = "
+			SELECT
+				`id`,
+				DATE_FORMAT(`time`, '".parent::dateTimeDBFormat."') AS timeStr,
+				`source`,
+				`user_id`,
+				`update_id`,
+				`text`,
+				`inResponseTo`,
+				`statusCode`
+		";
+
+		$this->getByUpdateIdQuery = $this->pdo->prepare("
+			$selectFields
+			FROM `messagesHistory`
+			WHERE `update_id` = :update_id 
+		");
 
 		$this->addMessageHistoryQuery = $this->pdo->prepare("
 			INSERT INTO `messagesHistory` (
@@ -37,7 +56,21 @@ class MessagesHistoryAccess extends CommonAccess{
 				:statusCode
 			)
 		");
+	}
 
+	public function getByUpdateId(int $updateId){
+		$args = array(
+			':update_id' => $updateId
+		);
+
+		$message = $this->execute(
+			$this->getByUpdateIdQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::One()
+		);
+
+		return $message;
 	}
 
 	public function addMessageHistory(MessageHistory $messageHistory){
@@ -55,7 +88,24 @@ class MessagesHistoryAccess extends CommonAccess{
 			':statusCode'	=> $messageHistory->getStatusCode()
 		);
 
-		$this->executeInsertUpdateDelete($this->addMessageHistoryQuery, $args, QueryApproach::ONE);
+		try{	
+			$this->execute(
+				$this->addMessageHistoryQuery,
+				$args,
+				\QueryTraits\Type::Write(),
+				\QueryTraits\Approach::One()
+			);
+		}
+		catch(DuplicateValueException $ex){
+			switch($ex->whichColumn()){
+			case 'update_id':
+				throw new MessagesHistoryDuplicateUpdateIdException("", 0, $ex);
+
+			default:
+				throw $ex;
+			}
+		}
+
 		return $this->getLastInsertId();
 	}
 }
