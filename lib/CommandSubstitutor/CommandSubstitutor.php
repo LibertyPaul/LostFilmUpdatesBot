@@ -42,6 +42,12 @@ class CommandSubstitutor{
 		$loadCoreCommandsQuery->execute();
 		$coreCommands = $loadCoreCommandsQuery->fetchAll(\PDO::FETCH_ASSOC);
 
+		foreach($coreCommands as $key => $command){
+			$codeCommandId = $coreCommands[$key][self::CORE_COMMAND_ID_KEY];
+			$codeCommandId = intval($codeCommandId);
+			$coreCommands[$key][self::CORE_COMMAND_ID_KEY] = $codeCommandId;
+		}
+
 		$loadMappingQuery->execute();
 
 		$rows = $loadMappingQuery->fetchAll(\PDO::FETCH_ASSOC);
@@ -133,13 +139,17 @@ class CommandSubstitutor{
 
 	public function convertAPIToCore(string $API, string $text){
 		$res = $this->mappingLookup(
-			\QueryTraits\Approach::One(),
+			\QueryTraits\Approach::OneIfExists(),
 			$API,
 			null,
 			null,
 			null,
 			$text
 		);
+
+		if($res === null){
+			return null;
+		}
 
 		return new CoreCommand(
 			$res[self::CORE_COMMAND_ID_KEY],
@@ -152,8 +162,6 @@ class CommandSubstitutor{
 		$res = $this->mappingLookup(
 			\QueryTraits\Approach::One(),
 			$API,
-			null,
-			null,
 			null,
 			$text
 		);
@@ -174,7 +182,7 @@ class CommandSubstitutor{
 
 		return new CoreCommand(
 			$res[self::CORE_COMMAND_ID_KEY],
-			$row[self::CORE_COMMAND_TEXT_KEY]
+			$res[self::CORE_COMMAND_TEXT_KEY]
 		);
 	}
 

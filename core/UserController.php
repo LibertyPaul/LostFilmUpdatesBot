@@ -1022,6 +1022,7 @@ class UserController{
 		catch(\Throwable $ex){
 			$this->pdo->rollBack();
 			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
+			$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$incomingMessage);
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(

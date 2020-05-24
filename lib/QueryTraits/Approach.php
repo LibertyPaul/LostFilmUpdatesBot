@@ -49,13 +49,13 @@ class Approach{
 		switch($this->approach){
 		case self::ONE:
 			if($rowsAffected !== 1){
-				throw new ApproachMismatchException($this->approach, $rowsAffected);
+				throw new ApproachMismatchException($this, $rowsAffected);
 			}
 			break;
 
 		case self::ONE_IF_EXISTS:
 			if($rowsAffected !== 0 && $rowsAffected !== 1){
-				throw new ApproachMismatchException($this->approach, $rowsAffected);
+				throw new ApproachMismatchException($this, $rowsAffected);
 			}
 			break;
 
