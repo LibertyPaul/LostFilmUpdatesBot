@@ -183,11 +183,12 @@ abstract class TracerBase{
 			$tag,
 			$file,
 			$line,
-			'%s, raised from %s:%s, reason: "%s"',
+			'%s, raised from %s:%s, reason: "%s"'.PHP_EOL."%s",
 			get_class($exception),
 			basename($exception->getFile()),
 			$exception->getLine(),
-			$exception->getMessage()
+			$exception->getMessage(),
+			print_r($exception->getTrace(), true)
 		);
 
 		if($exception->getPrevious() !== null){
