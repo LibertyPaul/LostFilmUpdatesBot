@@ -11,6 +11,7 @@ require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 require_once(__DIR__.'/../lib/SpeechRecognizer/SpeechRecognizer.php');
 require_once(__DIR__.'/TelegramAPI.php');
+require_once(__DIR__.'/TelegramSpecificData.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/DAL/TelegramUserDataAccess/TelegramUserDataAccess.php');
@@ -513,10 +514,16 @@ class UpdateHandler{
 			);
 		}
 
+		$telegramSpecificData = new TelegramSpecificData(
+			$update->message->message_id,
+			$update->update_id,
+			null
+		);
+
 		$incomingMessage = new \core\IncomingMessage(
 			$command,
 			$text,
-			$update->update_id
+			$telegramSpecificData
 		);
 
 		$coreHandler = new \core\UpdateHandler();

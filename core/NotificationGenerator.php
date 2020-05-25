@@ -67,6 +67,7 @@ class NotificationGenerator{
 
 		return new OutgoingMessage(
 			sprintf($messageFormat, $notificationText),
+			null,
 			new MarkupType(MarkupTypeEnum::HTML)
 		);
 	}

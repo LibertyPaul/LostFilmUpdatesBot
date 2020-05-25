@@ -3,23 +3,21 @@
 namespace core;
 
 require_once(__DIR__.'/../lib/CommandSubstitutor/CoreCommand.php');
+require_once(__DIR__.'/MessageAPISpecificData.php');
 
 class IncomingMessage{
 	private $coreCommand;
 	private $text;
-	private $update_id;
-	private $APIErrorCode;
+	private $APISpecificData;
 
 	public function __construct(
 		\CommandSubstitutor\CoreCommand $coreCommand = null,
 		string $text = null,
-		int $update_id = null,
-		int $APIErrorCode = null
+		MessageAPISpecificData $APISpecificData = null
 	){
 		$this->coreCommand = $coreCommand;
 		$this->text = $text;
-		$this->update_id = $update_id;
-		$this->APIErrorCode = $APIErrorCode;
+		$this->APISpecificData = $APISpecificData;
 	}
 
 	public function getCoreCommand(){
@@ -30,20 +28,11 @@ class IncomingMessage{
 		return $this->text;
 	}
 
-	public function getUpdateId(){
-		return $this->update_id;
-	}
-
-	public function getAPIErrorCode(){
-		return $this->APIErrorCode;
+	public function getAPISpecificData(){
+		return $this->APISpecificData;
 	}
 
 	public function __toString(){
-		$update_id = $this->getUpdateId();
-		if($update_id === null){
-			$update_id = '<null>';
-		}
-
 		if($this->getCoreCommand() === null){
 			$coreCommandStr = '<null>';
 		}
@@ -51,19 +40,11 @@ class IncomingMessage{
 			$coreCommandStr = strval($this->getCoreCommand());
 		}
 
-		if($this->getAPIErrorCode() === null){
-			$APIErrorCodeStr = '<null>';
-		}
-		else{
-			$APIErrorCodeStr = $this->getAPIErrorCode();
-		}
-
 		$result  = '****************************************'			.PHP_EOL;
 		$result .= 'IncomingMessage:'									.PHP_EOL;
 		$result .= sprintf("\tCore Command:   [%s]", $coreCommandStr)	.PHP_EOL;
 		$result .= sprintf("\tText:           [%s]", $this->getText())	.PHP_EOL;
-		$result .= sprintf("\tUpdate Id:      [%s]", $update_id)		.PHP_EOL;
-		$result .= sprintf("\tAPI Error Code: [%s]", $APIErrorCodeStr)	.PHP_EOL;
+		$result .= strval($this->APISpecificData)						.PHP_EOL;
 		$result .= '****************************************';
 		
 		return $result;

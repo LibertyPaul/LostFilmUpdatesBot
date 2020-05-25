@@ -133,6 +133,7 @@ class UserController{
 				$this->user,
 				new OutgoingMessage(
 					$lastChance,
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array($ANSWER_YES, $ANSWER_NO)
@@ -191,6 +192,7 @@ class UserController{
 					$this->user,
 					new OutgoingMessage(
 						"Давай конкретнее, либо $ANSWER_YES, либо $ANSWER_NO",
+						null,
 						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
 						array($ANSWER_YES, $ANSWER_NO)
@@ -277,6 +279,7 @@ class UserController{
 			$this->user,
 			new OutgoingMessage(
 				$aboutTor,
+				null,
 				new MarkupType(MarkupTypeEnum::HTML)
 			)
 		);
@@ -333,9 +336,9 @@ class UserController{
 
 		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
-		$outgoingMessage = new OutgoingMessage($messageParts[0], $markupType);
+		$outgoingMessage = new OutgoingMessage($messageParts[0], null, $markupType);
 		for($i = 1; $i < count($messageParts); ++$i){
-			$nextMessage = new OutgoingMessage($messageParts[$i], $markupType);
+			$nextMessage = new OutgoingMessage($messageParts[$i], null, $markupType);
 			$outgoingMessage->appendMessage($nextMessage);
 		}
 
@@ -411,6 +414,7 @@ class UserController{
 					$this->user,
 					new OutgoingMessage(
 						$text,
+						null,
 						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
 						$showTitles
@@ -544,6 +548,7 @@ class UserController{
 						$this->user,
 						new OutgoingMessage(
 							'Какой из этих ты имеешь в виду:',
+							null,
 							new MarkupType(MarkupTypeEnum::NoMarkup),
 							false,
 							$showTitles
@@ -563,6 +568,7 @@ class UserController{
 			$this->user,
 			new OutgoingMessage(
 				'Вот тебе кнопочка. Нажми и выбери чат в который отправить мой контакт.',
+				null,
 				new MarkupType(MarkupTypeEnum::NoMarkup),
 				false,
 				null,
@@ -618,6 +624,7 @@ class UserController{
 			$this->user,
 			new OutgoingMessage(
 				$phrase,
+				null,
 				new MarkupType(MarkupTypeEnum::NoMarkup),
 				false,
 				null,
@@ -704,6 +711,7 @@ class UserController{
 
 		$message = new OutgoingMessage(
 			$text,
+			null,
 			new MarkupType($markupType),
 			$URLExpand,
 			null,
@@ -736,6 +744,7 @@ class UserController{
 		case 1:
 			return new DirectedOutgoingMessage(
 				$this->user,
+				null,
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
@@ -746,6 +755,7 @@ class UserController{
 				$this->user,
 				new OutgoingMessage(
 					'Пуш уведомление?',
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет', $cancelCoreCommand)
@@ -757,6 +767,7 @@ class UserController{
 				$this->user,
 				new OutgoingMessage(
 					'Будет ли разметка?',
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('HTML', 'Telegram API Markup', 'Без разметки', $cancelCoreCommand)
@@ -768,6 +779,7 @@ class UserController{
 				$this->user,
 				new OutgoingMessage(
 					'Превью ссылок?',
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет', $cancelCoreCommand)
@@ -779,6 +791,7 @@ class UserController{
 				$this->user,
 				new OutgoingMessage(
 					'Потревожить замьюченных?',
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет', $cancelCoreCommand)
@@ -793,6 +806,7 @@ class UserController{
 				$example->appendMessage($result['message']);
 				$confirm = new OutgoingMessage(
 					'Отправляем?',
+					null,
 					new MarkupType(MarkupTypeEnum::NoMarkup),
 					false,
 					array('Да', 'Нет')
@@ -948,76 +962,79 @@ class UserController{
 				$commandID = null;
 			}
 
-			$retVal = null;
+			$response = null;
 			
 			switch($commandID){
-				case \CommandSubstitutor\CoreCommandMap::Start:
-					$retVal = $this->welcomeUser();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::Start:
+				$response = $this->welcomeUser();
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::Cancel:
-					$retVal = $this->cancelRequest();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::Cancel:
+				$response = $this->cancelRequest();
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::Stop:
-					$retVal = $this->deleteUser();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::Stop:
+				$response = $this->deleteUser();
+				break;
+			
+			case \CommandSubstitutor\CoreCommandMap::Help:
+				$response = $this->showHelp();
+				break;
+			
+			case \CommandSubstitutor\CoreCommandMap::AboutTor:
+				$response = $this->showAboutTor();
+				break;
+
+			case \CommandSubstitutor\CoreCommandMap::Mute:
+				$response = $this->toggleMute();
+				break;
+			
+			case \CommandSubstitutor\CoreCommandMap::GetMyShows:
+				$response = $this->showUserShows();
+				break;
 				
-				case \CommandSubstitutor\CoreCommandMap::Help:
-					$retVal = $this->showHelp();
-					break;
-				
-				case \CommandSubstitutor\CoreCommandMap::AboutTor:
-					$retVal = $this->showAboutTor();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::AddShow:
+				$response = $this->manageSubscription(\DAL\ShowAction::Add);
+				break;
+			
+			case \CommandSubstitutor\CoreCommandMap::RemoveShow:
+				$response = $this->manageSubscription(\DAL\ShowAction::Remove);
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::Mute:
-					$retVal = $this->toggleMute();
-					break;
-				
-				case \CommandSubstitutor\CoreCommandMap::GetMyShows:
-					$retVal = $this->showUserShows();
-					break;
-					
-				case \CommandSubstitutor\CoreCommandMap::AddShow:
-					$retVal = $this->manageSubscription(\DAL\ShowAction::Add);
-					break;
-				
-				case \CommandSubstitutor\CoreCommandMap::RemoveShow:
-					$retVal = $this->manageSubscription(\DAL\ShowAction::Remove);
-					break;
+			case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
+				$response = $this->manageSubscription(\DAL\ShowAction::AddTentative);
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::AddShowTentative:
-					$retVal = $this->manageSubscription(\DAL\ShowAction::AddTentative);
-					break;
+			case \CommandSubstitutor\CoreCommandMap::GetShareButton:
+				$response = $this->getShareButton();
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::GetShareButton:
-					$retVal = $this->getShareButton();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::Donate:
+				$response = $this->getDonateOptions();
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::Donate:
-					$retVal = $this->getDonateOptions();
-					break;
+			case \CommandSubstitutor\CoreCommandMap::Broadcast:
+				$response = $this->broadcast();
+				break;
 
-				case \CommandSubstitutor\CoreCommandMap::Broadcast:
-					$retVal = $this->broadcast();
-					break;
+			case null:
+				$response = $this->handleUnknownCommand();
+				break;
 
-				case null:
-					$retVal = $this->handleUnknownCommand();
-					break;
-
-				default:
-					$this->tracer->logError(
-						'[COMMAND]', __FILE__, __LINE__,
-						'Unknown command:'.PHP_EOL.
-						print_r($this->conversationStorage->getFirstMessage(), true)
-					);
-					throw new \LogicException('Unknown command');
+			default:
+				$this->tracer->logError(
+					'[COMMAND]', __FILE__, __LINE__,
+					'Unknown command:'.PHP_EOL.
+					print_r($this->conversationStorage->getFirstMessage(), true)
+				);
+				throw new \LogicException('Unknown command');
 			}
 
+			$incomingMessageAPIData = $incomingMessage->getAPISpecificData();
+			$response->getOutgoingMessage()->setRequestAPISpecificData($incomingMessageAPIData);
+
 			$this->pdo->commit();
-			return $retVal;
+			return $response;
 		}
 		catch(\Throwable $ex){
 			$this->pdo->rollBack();

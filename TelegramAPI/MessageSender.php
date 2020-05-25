@@ -107,11 +107,26 @@ class MessageSender implements \core\MessageSenderInterface{
 			);
 
 			$attempt = 0;
+
+			$telegramSpecificData = $message->getRequestAPISpecificData();
+			if($telegramSpecificData instanceof TelegramSpecificData){
+				$request_message_id = $telegramSpecificData->getMessageId();
+			}
+			else{
+				$this->tracer->logfError(
+					'[o]', __FILE__, __LINE__,
+					'Request API Specific data is of unknown type: [%s]',
+					gettype($telegramSpecificData)
+				);
+
+				$request_message_id = null;
+			}
 			
 			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
 					$telegramUserData->getAPISpecificId(),
 					$messageText,
+					$request_message_id,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
 					$responseOptions,

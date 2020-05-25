@@ -39,12 +39,14 @@ class UpdateHandler{
 
 	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
 		try{
+			$externalId = $incomingMessage->getAPISpecificData()->getUniqueMessageId();
+
 			$messageHistory = new \DAL\MessageHistory(
 				null,
 				new \DateTimeImmutable(),
 				'User',
 				$user_id,
-				$incomingMessage->getUpdateId(),
+				$externalId,
 				$incomingMessage->getText(),
 				null,
 				null
@@ -53,14 +55,14 @@ class UpdateHandler{
 			$loggedMessageId = $this->messagesHistoryAccess->addMessageHistory($messageHistory);
 
 		}
-		catch(\DAL\MessagesHistoryDuplicateUpdateIdException $ex){
+		catch(\DAL\MessagesHistoryDuplicateExternalIdException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
 			$this->tracer->logDebug(
 				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
 				$incomingMessage
 			);
 			
-			$conflictingMessage = $this->messagesHistoryAccess->getByUpdateId($incomingMessage->getUpdateId());
+			$conflictingMessage = $this->messagesHistoryAccess->getByUpdateId($externalId);
 			$this->tracer->logfDebug(
 				'[o]', __FILE__, __LINE__,
 				'MessagesHistory ID was substituted to existing one [%d]',

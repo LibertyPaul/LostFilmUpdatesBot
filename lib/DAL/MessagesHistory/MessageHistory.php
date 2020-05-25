@@ -7,7 +7,7 @@ class MessageHistory{
 	private $time;
 	private $source;
 	private $userId;
-	private $updateId;
+	private $externalId;
 	private $text;
 	private $inResponseTo;
 	private $statusCode;
@@ -17,7 +17,7 @@ class MessageHistory{
 		\DateTimeInterface $time,
 		string $source,
 		int $userId,
-		int $updateId = null,
+		int $externalId = null,
 		string $text,
 		int $inResponseTo = null,
 		int $statusCode = null
@@ -30,7 +30,7 @@ class MessageHistory{
 		$this->source = $source;
 
 		$this->userId = $userId;
-		$this->updateId = $updateId;
+		$this->externalId = $externalId;
 		$this->text = substr($text, 0, 5000);
 		$this->inResponseTo = $inResponseTo;
 		$this->statusCode = $statusCode;
@@ -52,8 +52,8 @@ class MessageHistory{
 		return $this->userId;
 	}
 
-	public function getUpdateId(){
-		return $this->updateId;
+	public function getExternalId(){
+		return $this->externalId;
 	}
 
 	public function getText(){
@@ -78,7 +78,7 @@ class MessageHistory{
 			sprintf('Time:           [%s]', $timeStr)					.PHP_EOL.
 			sprintf('Source:         [%s]', $this->getSource())			.PHP_EOL.
 			sprintf('User ID:        [%d]', $this->getUserId())			.PHP_EOL.
-			sprintf('Update ID:      [%d]', $this->getUpdateId())		.PHP_EOL.
+			sprintf('External ID:    [%d]', $this->getExternalId())		.PHP_EOL.
 			sprintf('In Response To: [%d]', $this->getInResponseTo())	.PHP_EOL.
 			sprintf('Status Code:    [%d]', $this->getStatusCode())		.PHP_EOL.
 			'Text:'														.PHP_EOL.

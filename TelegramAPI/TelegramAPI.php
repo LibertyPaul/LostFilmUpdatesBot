@@ -107,6 +107,7 @@ class TelegramAPI{
 	public function send(
 		int $chat_id,
 		string $text,
+		?int $replyToId,
 		\core\MarkupType $markupType,
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
@@ -117,6 +118,10 @@ class TelegramAPI{
 			'chat_id'	=> $chat_id,
 			'text'		=> $text
 		);
+
+		if($replyToId !== null){
+			$request['reply_to_message_id'] = $replyToId;
+		}
 
 		switch($markupType->get()){
 			case \core\MarkupTypeEnum::NoMarkup:

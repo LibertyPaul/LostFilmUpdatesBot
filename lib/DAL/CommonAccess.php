@@ -9,7 +9,7 @@ require_once(__DIR__.'/../QueryTraits/Approach.php');
 
 class ConstraintViolationException extends \RuntimeException{};
 class DuplicateValueException extends ConstraintViolationException{
-	public function whichColumn(): string{
+	public function getConstrainingIndexName(): string{
 		return $this->getMessage();
 	}
 };
@@ -28,7 +28,7 @@ abstract class CommonAccess{
 		$this->DAOBuilder = $DAOBuilder;
 	}
 
-	private function get23000Column(string $errorMessage){
+	private function get23000IndexName(string $errorMessage){
 		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\d+' for key '(\w+)'/";
 		$matches = array();
 		
@@ -81,8 +81,8 @@ abstract class CommonAccess{
 
 			switch($ex->getCode()){
 			case 23000:
-				$column = $this->get23000Column($ex->getMessage());
-				throw new DuplicateValueException($column, 0, $ex);
+				$indexName = $this->get23000IndexName($ex->getMessage());
+				throw new DuplicateValueException($indexName, 0, $ex);
 
 			default:
 				throw new \RuntimeException("Failed to execute query.", 0, $ex);
