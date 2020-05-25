@@ -520,16 +520,17 @@ class UserController{
 								);
 							}
 						}
-						else{
-							$resultMessage = new DirectedOutgoingMessage(
-								$this->user,
-								new OutgoingMessage($resultText)
-							);
-						}
 					}
 					catch(\Throwable $ex){
 						$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 						throw $ex;
+					}
+
+					if($resultMessage === null){
+						$resultMessage = new DirectedOutgoingMessage(
+							$this->user,
+							new OutgoingMessage($resultText)
+						);
 					}
 					
 					return $resultMessage;

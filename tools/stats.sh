@@ -39,7 +39,3 @@ readonly query="																								\
 
 echo "[Bot Stats:]"
 "$selfDir/DBQuery.sh" "$as" "$query" | grep -oP "^$resultToken: \K.*\$"
-
-echo ""
-echo "[Logs:]"
-ls -l "$selfDir/../logs"
