@@ -502,6 +502,7 @@ class UserController{
 					}
 
 					$resultText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
+					$resultMessage = null;
 					
 					try{
 						if($showAction !== \DAL\ShowAction::Remove){

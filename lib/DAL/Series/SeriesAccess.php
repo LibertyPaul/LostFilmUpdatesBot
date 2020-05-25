@@ -122,7 +122,7 @@ class SeriesAccess extends CommonAccess{
 			$this->getLastSeriesQuery,
 			$args, 
 			\QueryTraits\Type::Read(),
-			QueryTraits\Approach::OneIfExists()
+			\QueryTraits\Approach::OneIfExists()
 		);
 	}
 
