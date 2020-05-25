@@ -109,7 +109,11 @@ class MessageSender implements \core\MessageSenderInterface{
 			$attempt = 0;
 
 			$telegramSpecificData = $message->getRequestAPISpecificData();
-			if($telegramSpecificData instanceof TelegramSpecificData){
+
+			if($telegramUserData->getType() === 'private'){
+				$request_message_id = null;
+			}
+			elseif($telegramSpecificData instanceof TelegramSpecificData){
 				$request_message_id = $telegramSpecificData->getMessageId();
 			}
 			else{
