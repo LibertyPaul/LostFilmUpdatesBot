@@ -95,6 +95,11 @@ class Tracer extends TracerBase{
 		assert(fclose($hFile));
 		
 		$this->write("<... Stored to standalone with id=[$id] ...>");
+
+		if($this->config->getCLIStdOutTrace() && strpos(php_sapi_name(), 'cli') !== false){
+			echo $text;
+		}
+
 	}
 
 	protected function write($text){
