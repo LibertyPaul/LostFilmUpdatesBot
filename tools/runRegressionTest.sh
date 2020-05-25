@@ -13,6 +13,11 @@ if [ $# -lt 1 ]; then
 	exit 1
 fi
 
+if [[ "$selfDir" =~ '/prod/' ]]; then
+	echo_red "Can't run this at Prod!"
+	exit 1
+fi
+
 readonly incomingMessagesDir="$1"
 
 function cleanUpDB(){

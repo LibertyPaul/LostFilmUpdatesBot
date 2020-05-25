@@ -8,11 +8,11 @@ require_once(__DIR__.'/MessageHistory.php');
 class MessageHistoryBuilder implements DAOBuilderInterface{
 
 	public function buildObjectFromRow(array $row, string $dateTimeFormat){
-		if($row['update_id'] !== null){
-			$updateID = intval($row['update_id']);
+		if($row['external_id'] !== null){
+			$external_id = intval($row['external_id']);
 		}
 		else{
-			$updateID = null;
+			$external_id = null;
 		}
 
 		if($row['inResponseTo'] !== null){
@@ -32,10 +32,10 @@ class MessageHistoryBuilder implements DAOBuilderInterface{
 
 		$messageHistory = new MessageHistory(
 			intval($row['id']),
-			\DateTimeImmutable::createFromFormat($dateTimeFormat, $row['createdStr']),
+			\DateTimeImmutable::createFromFormat($dateTimeFormat, $row['timeStr']),
 			$row['source'],
 			intval($row['user_id']),
-			$updateID,
+			$external_id,
 			$row['text'],
 			$inResponseTo,
 			$statusCode

@@ -1,9 +1,17 @@
 #!/bin/bash
 
 readonly selfDir="$(dirname "$0")"
+
+readonly patchStructurePath="$selfDir/patchStructure.sh"
+source "$patchStructurePath"
+if [ $? -ne 0 ]; then
+	echo "Unable to load [$patchStructurePath]. Aborting."
+	exit 1
+fi
+
 readonly coloredEchoPath="$selfDir/../tools/ColoredEcho.sh"
 source "$coloredEchoPath"
-if [ "$?" != "0" ]; then
+if [ $? -ne 0 ]; then
 	echo "Unable to load [$coloredEchoPath]. Aborting."
 	exit 1
 fi
@@ -29,26 +37,14 @@ else
 	patch="$(mktemp --suffix=.sql)"
 fi
 
-declare -a elementsOrder=(
-	database
-	data_before
-	constraints_drop
-	indexes_drop
-	tables
-	indexes_create
-	constraints_create
-	triggers
-	procedures
-	users
-	permissions
-	data_after
-	database_after
-)
-
-for element in "${elementsOrder[@]}"; do
+for element in "${patchStructure[@]}"; do
 	elementPath="./$path/$element"
 	if [ ! -d "$elementPath" ]; then
-		continue;
+		continue
+	fi
+
+	if [ "$(ls "$elementPath" | wc -l)" -eq 0 ]; then
+		continue
 	fi
 
 	echo "Copying $element..."
@@ -64,5 +60,5 @@ done
 
 echo "COMMIT;" >> "$patch"
 
-echo "Compiled. Stored in $patch"
+echo "Compiled. Stored in [$patch]."
 

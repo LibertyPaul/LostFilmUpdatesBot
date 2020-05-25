@@ -4,9 +4,11 @@ namespace core;
 
 require_once(__DIR__.'/InlineOption.php');
 require_once(__DIR__.'/MarkupType.php');
+require_once(__DIR__.'/MessageAPISpecificData.php');
 
 class OutgoingMessage{
 	private $text;
+	private $requestAPISpecificData;
 	private $markupType;
 	private $enableURLExpand;
 	private $responseOptions;
@@ -17,6 +19,7 @@ class OutgoingMessage{
 
 	public function __construct(
 		string $text,
+		MessageAPISpecificData $requestAPISpecificData = null,
 		MarkupType $markupType = null,
 		bool $enableURLExpand = false,
 		array $responseOptions = null,
@@ -24,6 +27,8 @@ class OutgoingMessage{
 		bool $pushDisabled = false
 	){
 		$this->text = $text;
+
+		$this->requestAPISpecificData = $requestAPISpecificData;
 
 		# Markup Flag verification
 		if($markupType === null){
@@ -95,6 +100,18 @@ class OutgoingMessage{
 		return $this->text;
 	}
 
+	public function getRequestAPISpecificData(){
+		return $this->requestAPISpecificData;
+	}
+
+	public function setRequestAPISpecificData(MessageAPISpecificData $requestAPISpecificData){
+		if($this->requestAPISpecificData !== null){
+			throw new \LogicException("RequestAPISpecificData is already set.");
+		}
+
+		$this->requestAPISpecificData = $requestAPISpecificData;
+	}
+
 	public function markupType(){
 		return $this->markupType;
 	}
@@ -125,15 +142,15 @@ class OutgoingMessage{
 		$inlineOptions = is_array($this->inlineOptions) ? $this->inlineOptions : array();
 		$inlineOptionsStr = join(PHP_EOL.PHP_EOL, $inlineOptions);
 
-		$result  = '***********************************'							.PHP_EOL;
-		$result .= 'OutgoingMessage:'												.PHP_EOL;
-		$result .= sprintf("\tmarkupType:		[%s]",	$this->markupType())		.PHP_EOL;
-		$result .= sprintf("\tURLExpandEnabled:	[%s]",	$enableURLExpandYN)			.PHP_EOL;
-		$result .= sprintf("\tPushDisabled:		[%s]",	$pushDisabledYN)			.PHP_EOL;
-		$result .= sprintf("\tText:				[%s]", 	$this->getText())			.PHP_EOL;
-		$result .= sprintf("\tResponse Options:	[%s]",	$responseOptionsStr)		.PHP_EOL;
-		$result .= "\tInlineOptions:"												.PHP_EOL;
+		$result  = '********[OutgoingMessage]**********'							.PHP_EOL;
+		$result .= sprintf("markupType:	        [%s]", $this->markupType())			.PHP_EOL;
+		$result .= sprintf("URLExpandEnabled:   [%s]", $enableURLExpandYN)			.PHP_EOL;
+		$result .= sprintf("PushDisabled:       [%s]", $pushDisabledYN)				.PHP_EOL;
+		$result .= sprintf("Text:               [%s]", $this->getText())			.PHP_EOL;
+		$result .= sprintf("Response Options:   [%s]", $responseOptionsStr)			.PHP_EOL;
+		$result .= "InlineOptions:"													.PHP_EOL;
 		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
+		$result .= strval($this->getRequestAPISpecificData())						.PHP_EOL;
 		$result .= '***********************************';
 		
 		return $result;

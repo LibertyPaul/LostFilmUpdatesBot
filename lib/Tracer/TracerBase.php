@@ -56,15 +56,15 @@ abstract class TracerBase{
 
 	private static function compileRecord(
 		int $level,
-		string $tag,
+		string $tag, # Obsolete
 		string $file,
 		int $line,
 		string $message
 	){
 		return sprintf(
-			"%s %s %s [%' 5d] %s:%s %s",
+			"%s %s [%' 5d] %s:%s %s",
 			TracerLevel::getNameByLevel($level),
-			$tag,
+			# $tag,
 			self::getDateMicro(),
 			getmypid(),
 			basename($file),
@@ -95,11 +95,11 @@ abstract class TracerBase{
 	}
 
 	private function log(
-			int $level,
-			string $tag,
-			string $file,
-			int	$line,
-			string $message = null
+		int $level,
+		string $tag,
+		string $file,
+		int	$line,
+		string $message = null
 	){
 		if(empty($message)){
 			$message = '~|___0^0___|~';
@@ -183,12 +183,17 @@ abstract class TracerBase{
 			$tag,
 			$file,
 			$line,
-			'%s, raised from %s:%s, reason: "%s"',
+			'%s, raised from %s:%s, reason: "%s"'.PHP_EOL."%s",
 			get_class($exception),
 			basename($exception->getFile()),
 			$exception->getLine(),
-			$exception->getMessage()
+			$exception->getMessage(),
+			print_r($exception->getTrace(), true)
 		);
+
+		if($exception->getPrevious() !== null){
+			$this->logException($tag, $file, $line, $exception->getPrevious());
+		}
 	}
 
 	public static function syslogCritical($tag, $file, $line, $format = null, ...$args){
