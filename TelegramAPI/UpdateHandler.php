@@ -477,6 +477,14 @@ class UpdateHandler{
 				"SpeechRecognition result: '$text'"
 			);
 		}
+		elseif(isset($update->message->migrate_from_chat_id)){
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				'Chat was converted.'
+			);
+
+			return;
+		}
 		else{
 			$this->tracer->logDebug(
 				'[o]', __FILE__, __LINE__,
