@@ -746,7 +746,6 @@ class UserController{
 		case 1:
 			return new DirectedOutgoingMessage(
 				$this->user,
-				null,
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
