@@ -18,8 +18,9 @@ abstract class CoreCommandMap{
 	const Stop				= 11;
 	const Broadcast			= 12;
 	const AddShowTentative	= 13;
+	const HandleAPIError	= 14;
 
-	const MAX				=13;
+	const MAX				= 14;
 }
 
 class CoreCommand{

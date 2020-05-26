@@ -1,0 +1,29 @@
+{
+    "update_id": 244039999,
+    "message": {
+        "message_id": 9999,
+        "from": {
+            "id": 123456,
+            "is_bot": false,
+            "first_name": "Ivan",
+            "last_name": "Poopkine",
+            "username": "Poopkine.V",
+            "language_code": "en"
+        },
+        "chat": {
+            "id": -464086927,
+            "title": "LFUB Group Playground",
+            "type": "group",
+            "all_members_are_administrators": true
+        },
+        "date": 1588526692,
+        "text": "\/cancel@LostfilmTestBot",
+        "entities": [
+            {
+                "offset": 0,
+                "length": 23,
+                "type": "bot_command"
+            }
+        ]
+    }
+}

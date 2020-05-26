@@ -47,6 +47,15 @@ class SeriesAccess extends CommonAccess{
 			AND 	`series`.`seriesNumber`	=	:seriesNumber
 		");
 
+		$this->getLastSeriesQuery = $this->pdo->prepare("
+			$selectFields
+			FROM `series`
+			WHERE `show_id` = :show_id
+			AND `ready` = 'Y'
+			ORDER BY `seasonNumber` DESC, `seriesNumber` DESC
+			LIMIT 1
+		");
+
 		$this->addSeriesQuery = $this->pdo->prepare("
 			INSERT INTO `series` (
 				`firstSeenAt`,
@@ -82,7 +91,12 @@ class SeriesAccess extends CommonAccess{
 			':id' => $id
 		);
 
-		return $this->executeSearch($this->getSeriesByIdQuery, $args, QueryApproach::ONE);
+		return $this->execute(
+			$this->getSeriesByIdQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function getSeriesByAliasSeasonSeries(string $alias, int $seasonNumber, int $seriesNumber){
@@ -92,7 +106,24 @@ class SeriesAccess extends CommonAccess{
 			':seriesNumber'	=> $seriesNumber
 		);
 
-		return $this->executeSearch($this->getSeriesByAliasSeasonSeriesQuery, $args, QueryApproach::ONE_IF_EXISTS);
+		return $this->execute(
+			$this->getSeriesByAliasSeasonSeriesQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::OneIfExists());
+	}
+
+	public function getLastSeries(int $showID){
+		$args = array(
+			':show_id' => $showID
+		);
+
+		return $this->execute(
+			$this->getLastSeriesQuery,
+			$args, 
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::OneIfExists()
+		);
 	}
 
 	public function addSeries(Series $series){
@@ -110,7 +141,13 @@ class SeriesAccess extends CommonAccess{
 			':ready'			=> $series->isReady() ? 'Y' : 'N'
 		);
 
-		$this->executeInsertUpdateDelete($this->addSeriesQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->addSeriesQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
+
 		return $this->getLastInsertId();
 	}
 
@@ -126,7 +163,12 @@ class SeriesAccess extends CommonAccess{
 			':id'		=> $series->getId()
 		);
 
-		$this->executeInsertUpdateDelete($this->updateSeriesQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->updateSeriesQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function lockSeriesWriteShowsRead(){

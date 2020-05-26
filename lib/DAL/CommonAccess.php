@@ -3,21 +3,16 @@
 namespace DAL;
 
 require_once(__DIR__.'/DAOBuilderInterface.php');
+require_once(__DIR__.'/../QueryTraits/Type.php');
+require_once(__DIR__.'/../QueryTraits/Approach.php');
 
-abstract class QueryApproach{
-	const MIN			= 1;
 
-	const ONE_IF_EXISTS	= 1;
-	const ONE			= 2;
-	const MANY			= 3;
-
-	const MAX			= 3;
-
-	static public function validate(int $approach){
-		assert($approach >= self::MIN);
-		assert($approach <= self::MAX);
+class ConstraintViolationException extends \RuntimeException{};
+class DuplicateValueException extends ConstraintViolationException{
+	public function getConstrainingIndexName(): string{
+		return $this->getMessage();
 	}
-}
+};
 
 abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
@@ -33,9 +28,45 @@ abstract class CommonAccess{
 		$this->DAOBuilder = $DAOBuilder;
 	}
 
-	protected function executeSearch(\PDOStatement $query, array $args, int $approach){
-		QueryApproach::validate($approach);
+	private function get23000IndexName(string $errorMessage){
+		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\d+' for key '(\w+)'/";
+		$matches = array();
+		
+		$matchesRes = preg_match($regexp, $errorMessage, $matches);
+		if($matchesRes === false){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				'preg_match has failed with code: [%s]'.PHP_EOL.
+				'Message: [%s]',
+				preg_last_error(),
+				$errorMessage
+			);
 
+			return null;
+		}
+
+		if($matchesRes === 0){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				'23000 error text does not match the pattern'.PHP_EOL.
+				'Message: [%s]',
+				$errorMessage
+			);
+
+			return null;
+		}
+
+		assert($matchesRes === 1);
+
+		return $matches[1];
+	}
+
+	protected function execute(
+		\PDOStatement $query,
+		array $args,
+		\QueryTraits\Type $type,
+		\QueryTraits\Approach $approach
+	){
 		try{
 			$query->execute($args);
 		}
@@ -48,114 +79,39 @@ abstract class CommonAccess{
 				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
 			);
 
-			throw new \RuntimeException("Failed to execute query");
+			switch($ex->getCode()){
+			case 23000:
+				$indexName = $this->get23000IndexName($ex->getMessage());
+				throw new DuplicateValueException($indexName, 0, $ex);
+
+			default:
+				throw new \RuntimeException("Failed to execute query.", 0, $ex);
+			}
+		}
+
+		try{
+			$approach->verify($query->rowCount());
+		}
+		catch(\QueryTraits\ApproachMismatchException $ex){
+			throw new \LogicException(
+				"Query Approach verification failed.".PHP_EOL.print_r($args, true),
+				0,
+				$ex
+			);
+		}
+
+		if($type->getType() === \QueryTraits\Type::WRITE){
+			return null;
 		}
 
 		$rows = $query->fetchAll();
-
-		switch($approach){
-			case QueryApproach::ONE:
-				switch(count($rows)){
-					case 0:
-						throw new \LogicException("The record was not found under condition".PHP_EOL.print_r($args, true));
-
-					case 1:
-						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
-
-					default:
-						throw new \LogicException(
-							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
-						);
-				}
-				break;
-
-			case QueryApproach::ONE_IF_EXISTS:
-				switch(count($rows)){
-					case 0:
-						return null;
-
-					case 1:
-						return $this->DAOBuilder->buildObjectFromRow($rows[0], self::dateTimeAppFormat);
-
-					default:
-						throw new \LogicException(
-							"Multiple records were found while one was expected.".PHP_EOL.print_r($args, true)
-						);
-				}
-				break;
-
-			case QueryApproach::MANY:
-				$objects = array();
-
-				foreach($rows as $row){
-					$objects[] = $this->DAOBuilder->buildObjectFromRow($row, self::dateTimeAppFormat);
-				}
-
-				return $objects;
-
-			default:
-				throw new \LogicException("Invalid Select Approach: [$approach].");
-		}
-	}
-
-	protected function executeInsertUpdateDelete(\PDOStatement $query, array $args, int $approach){
-		QueryApproach::validate($approach);
-
-		try{
-			$query->execute($args);
-		}
-		catch(\PDOException $ex){
-			$this->tracer->logException(
-				'[o]', __FILE__, __LINE__, $ex
-			);
-
-			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
-			);
-
-			throw new \RuntimeException("Failed to execute query");
+		$result = array();
+		
+		foreach($rows as $row){
+			$result[] = $this->DAOBuilder->buildObjectFromRow($row, self::dateTimeAppFormat);
 		}
 
-		$rowsAffected = $query->rowCount();
-
-		# TODO: Get rid of (almost) duplicate code
-		switch($approach){
-			case QueryApproach::ONE:
-				switch($rowsAffected){
-					case 0:
-						throw new \LogicException("Record was not found under condition".PHP_EOL.print_r($args, true));
-
-					case 1:
-						return null;
-
-					default:
-						throw new \LogicException(
-							"Multiple records were affected while one was expected.".PHP_EOL.print_r($args, true)
-						);
-				}
-				break;
-
-			case QueryApproach::ONE_IF_EXISTS:
-				switch($rowsAffected){
-					case 0:
-						return null;
-
-					case 1:
-						return null;
-
-					default:
-						throw new \LogicException(
-							"Multiple records were affected while one was expected.".PHP_EOL.print_r($args, true)
-						);
-				}
-				break;
-
-			case QueryApproach::MANY:
-				return null;
-
-			default:
-				throw new \LogicException("Invalid Select Approach: [$approach].");
-		}
+		return $approach->repack($result);
 	}
 
 	protected function getLastInsertId(){

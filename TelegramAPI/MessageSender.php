@@ -24,6 +24,7 @@ class MessageSender implements \core\MessageSenderInterface{
 	private $forwardingChat;
 	private $forwardingSilent;
 	private $forwardEverything;
+	private $telegramBotName;
 
 	public function __construct(TelegramAPI $telegramAPI){
 		$this->telegramAPI = $telegramAPI;
@@ -65,37 +66,74 @@ class MessageSender implements \core\MessageSenderInterface{
 			'Forward Everything',
 			'N'
 		) === 'Y';
+
+		$this->telegramBotName = $config->getValue(
+			'TelegramAPI',
+			'Bot Name'
+		);
 	}
 
 	public function send(int $user_id, \core\OutgoingMessage $message){
 		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
+
+		if($telegramUserData->getType() === 'private'){
+			$commandSubstitutionFormat = "%s";
+		}
+		else{
+			$commandSubstitutionFormat = "%s@".$this->telegramBotName;
+		}
 
 		$sendResult = \core\SendResult::Success;
 
 		while($message !== null){
 			$this->outgoingMessagesTracer->logfEvent(
 				'[o]', __FILE__, __LINE__,
-				"Message to user_id=[%d], telegram_id=[%d]".PHP_EOL.
+				"Message to user_id=[%d], chat_id=[%d]".PHP_EOL.
 				"%s",
 				$telegramUserData->getUserId(),
 				$telegramUserData->getAPISpecificId(),
 				$message
 			);
 
-			$messageText = $this->commandSubstitutor->replaceCoreCommandsInText(
+			$messageText = $this->commandSubstitutor->replaceCoreCommands(
 				'TelegramAPI',
-				$message->getText()
+				$message->getText(),
+				$commandSubstitutionFormat
+			);
+			
+			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
+				'TelegramAPI',
+				$message->getResponseOptions()
 			);
 
 			$attempt = 0;
+
+			$telegramSpecificData = $message->getRequestAPISpecificData();
+
+			if($telegramUserData->getType() === 'private'){
+				$request_message_id = null;
+			}
+			elseif($telegramSpecificData instanceof TelegramSpecificData){
+				$request_message_id = $telegramSpecificData->getMessageId();
+			}
+			else{
+				$this->tracer->logfError(
+					'[o]', __FILE__, __LINE__,
+					'Request API Specific data is of unknown type: [%s]',
+					gettype($telegramSpecificData)
+				);
+
+				$request_message_id = null;
+			}
 			
 			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
 				$result = $this->telegramAPI->send(
 					$telegramUserData->getAPISpecificId(),
 					$messageText,
+					$request_message_id,
 					$message->markupType(),
 					$message->URLExpandEnabled(),
-					$message->getResponseOptions(),
+					$responseOptions,
 					$message->getInlineOptions()
 				);
 

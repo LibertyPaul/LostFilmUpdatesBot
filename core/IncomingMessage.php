@@ -3,24 +3,21 @@
 namespace core;
 
 require_once(__DIR__.'/../lib/CommandSubstitutor/CoreCommand.php');
-
+require_once(__DIR__.'/MessageAPISpecificData.php');
 
 class IncomingMessage{
 	private $coreCommand;
 	private $text;
-	private $update_id;
+	private $APISpecificData;
 
 	public function __construct(
 		\CommandSubstitutor\CoreCommand $coreCommand = null,
 		string $text = null,
-		$rawMessage = null,
-		$update_id = null
+		MessageAPISpecificData $APISpecificData = null
 	){
-		assert(is_string($text));
-
 		$this->coreCommand = $coreCommand;
 		$this->text = $text;
-		$this->update_id = $update_id;
+		$this->APISpecificData = $APISpecificData;
 	}
 
 	public function getCoreCommand(){
@@ -31,29 +28,24 @@ class IncomingMessage{
 		return $this->text;
 	}
 
-	public function getUpdateId(){
-		return $this->update_id;
+	public function getAPISpecificData(){
+		return $this->APISpecificData;
 	}
 
 	public function __toString(){
-		$update_id = $this->getUpdateId();
-		if($update_id === null){
-			$update_id = '';
-		}
-
-		if($this->coreCommand === null){
+		if($this->getCoreCommand() === null){
 			$coreCommandStr = '<null>';
 		}
 		else{
-			$coreCommandStr = strval($this->coreCommand);
+			$coreCommandStr = strval($this->getCoreCommand());
 		}
 
-		$result  = '***********************************'				.PHP_EOL;
+		$result  = '****************************************'			.PHP_EOL;
 		$result .= 'IncomingMessage:'									.PHP_EOL;
-		$result .= sprintf("\tCore Command: [%s]", $coreCommandStr)		.PHP_EOL;
-		$result .= sprintf("\tText:         [%s]", $this->getText())	.PHP_EOL;
-		$result .= sprintf("\tUpdate Id:    [%s]", $update_id)			.PHP_EOL;
-		$result .= '***********************************';
+		$result .= sprintf("\tCore Command:   [%s]", $coreCommandStr)	.PHP_EOL;
+		$result .= sprintf("\tText:           [%s]", $this->getText())	.PHP_EOL;
+		$result .= strval($this->APISpecificData)						.PHP_EOL;
+		$result .= '****************************************';
 		
 		return $result;
 	}

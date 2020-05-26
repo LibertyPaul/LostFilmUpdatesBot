@@ -44,7 +44,7 @@ class TelegramAPI{
 			if($res !== true){
 				$this->tracer->logError(
 					'[PHP]', __FILE__, __LINE__,
-					'time_nanosleep has failed'.PHP_EOL.print_r($res)
+					'time_nanosleep has failed'.PHP_EOL.print_r($res, true)
 				);
 			}
 		}
@@ -105,8 +105,9 @@ class TelegramAPI{
 		
 	
 	public function send(
-		int $telegram_id,
+		int $chat_id,
 		string $text,
+		?int $replyToId,
 		\core\MarkupType $markupType,
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
@@ -114,9 +115,13 @@ class TelegramAPI{
 	){
 
 		$request = array(
-			'chat_id'	=> $telegram_id,
+			'chat_id'	=> $chat_id,
 			'text'		=> $text
 		);
+
+		if($replyToId !== null){
+			$request['reply_to_message_id'] = $replyToId;
+		}
 
 		switch($markupType->get()){
 			case \core\MarkupTypeEnum::NoMarkup:
@@ -170,7 +175,7 @@ class TelegramAPI{
 		);
 		
 		try{
-			$this->waitForVelocity($telegram_id);
+			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
 		catch(\HTTPRequester\HTTPException $HTTPException){

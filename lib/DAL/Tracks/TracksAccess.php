@@ -56,7 +56,12 @@ class TracksAccess extends CommonAccess{
 			':user_id' => $user_id
 		);
 
-		return $this->executeSearch($this->getTracksByUserQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getTracksByUserQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getTracksByShow(int $show_id){
@@ -64,7 +69,12 @@ class TracksAccess extends CommonAccess{
 			':show_id' => $show_id
 		);
 
-		return $this->executeSearch($this->getTracksByShowQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getTracksByShowQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function addTrack(Track $track){
@@ -74,7 +84,12 @@ class TracksAccess extends CommonAccess{
 			':created' => $track->getCreationTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->executeInsertUpdateDelete($this->addTrackQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->addTrackQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function deleteTrack(Track $track){
@@ -83,6 +98,11 @@ class TracksAccess extends CommonAccess{
 			':show_id' => $track->getShowId()
 		);
 
-		$this->executeInsertUpdateDelete($this->deleteTrackQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->deleteTrackQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 }

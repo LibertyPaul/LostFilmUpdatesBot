@@ -162,7 +162,12 @@ class ShowsAccess extends CommonAccess{
 			':id' => $id
 		);
 
-		return $this->executeSearch($this->getShowByIdQuery, $args, QueryApproach::ONE);
+		return $this->execute(
+			$this->getShowByIdQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function getShowByAlias(string $alias){
@@ -170,7 +175,12 @@ class ShowsAccess extends CommonAccess{
 			':alias' => $alias
 		);
 
-		return $this->executeSearch($this->getShowByAliasQuery, $args, QueryApproach::ONE_IF_EXISTS);
+		return $this->execute(
+			$this->getShowByAliasQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::OneIfExists()
+		);
 	}
 
 	public function getUserShows(int $user_id){
@@ -178,7 +188,12 @@ class ShowsAccess extends CommonAccess{
 			':user_id' => $user_id
 		);
 
-		return $this->executeSearch($this->getUserShowsQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getUserShowsQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getEligibleShows(int $user_id, int $action){
@@ -189,7 +204,12 @@ class ShowsAccess extends CommonAccess{
 			':showAction'	=> $action !== ShowAction::Remove
 		);
 
-		return $this->executeSearch($this->getEligibleShowsQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getEligibleShowsQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getEligibleShowByTitle(int $user_id, string $title, int $action){
@@ -201,7 +221,12 @@ class ShowsAccess extends CommonAccess{
 			':showAction'	=> $action !== ShowAction::Remove
 		);
 
-		return $this->executeSearch($this->getEligibleShowByTitleQuery, $args, QueryApproach::ONE_IF_EXISTS);
+		return $this->execute(
+			$this->getEligibleShowByTitleQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::OneIfExists()
+		);
 	}
 
 	public function getEligibleShowsWithScore(int $user_id, string $title, int $action){
@@ -213,12 +238,21 @@ class ShowsAccess extends CommonAccess{
 			':showAction'	=> $action !== ShowAction::Remove
 		);
 
-		return $this->executeSearch($this->getEligibleShowsWithScoreQuery, $args, QueryApproach::MANY);
+		return $this->execute(
+			$this->getEligibleShowsWithScoreQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
 	}
 
 	public function getAliases(){
 		$args = array();
-		$shows = $this->executeSearch($this->getAllQuery, $args, QueryApproach::MANY);
+		$shows = $this->execute(
+			$this->getAllQuery,
+			$args,
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many());
 
 		$aliases = array();
 		
@@ -243,7 +277,12 @@ class ShowsAccess extends CommonAccess{
 			':lastAppearanceTime'	=> $show->getLastAppearanceTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->executeInsertUpdateDelete($this->addShowQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->addShowQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 
 		return $this->getLastInsertId();
 	}
@@ -257,7 +296,12 @@ class ShowsAccess extends CommonAccess{
 			':alias'				=> $show->getAlias()
 		);
 
-		$this->executeInsertUpdateDelete($this->updateShowQuery, $args, QueryApproach::ONE);
+		$this->execute(
+			$this->updateShowQuery,
+			$args,
+			\QueryTraits\Type::Write(),
+			\QueryTraits\Approach::One()
+		);
 	}
 
 	public function lockShowsWrite(){
