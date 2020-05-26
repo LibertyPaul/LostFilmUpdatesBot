@@ -156,6 +156,10 @@ class TelegramAPI{
 			);
 		}
 
+		if(array_key_exists('keyboard', $request['reply_markup'])){
+			$request['reply_markup']['selective'] = true;
+		}
+
 		$requestJSON = json_encode($request, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
 		if($requestJSON === false){
 			$this->tracer->logError(
