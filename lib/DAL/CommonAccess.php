@@ -29,7 +29,7 @@ abstract class CommonAccess{
 	}
 
 	private function get23000IndexName(string $errorMessage){
-		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\d+' for key '(\w+)'/";
+		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/";
 		$matches = array();
 		
 		$matchesRes = preg_match($regexp, $errorMessage, $matches);
