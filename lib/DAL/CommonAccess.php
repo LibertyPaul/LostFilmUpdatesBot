@@ -71,20 +71,20 @@ abstract class CommonAccess{
 			$query->execute($args);
 		}
 		catch(\PDOException $ex){
-			$this->tracer->logException(
-				'[o]', __FILE__, __LINE__, $ex
-			);
-
-			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
-			);
-
 			switch($ex->getCode()){
 			case 23000:
 				$indexName = $this->get23000IndexName($ex->getMessage());
 				throw new DuplicateValueException($indexName, 0, $ex);
 
 			default:
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
+				);
+
+				$this->tracer->logException(
+					'[o]', __FILE__, __LINE__, $ex
+				);
+
 				throw new \RuntimeException("Failed to execute query.", 0, $ex);
 			}
 		}

@@ -49,6 +49,14 @@ class ShowParserExecutor{
 				$show_id = $this->showsAccess->addShow($LFShows[$newAlias]);
 				$LFShows[$newAlias]->setId($show_id);
 			}
+			catch(\DAL\DuplicateValueException $ex){
+				$this->tracer->logfError(
+					'[o]', __FILE__, __LINE__,
+					'Conflicting show title (%s): "%s". Failed to add.',
+					$ex->getConstrainingIndexName(),
+					$newAlias
+				);
+			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
 				$this->tracer->logDebug(
