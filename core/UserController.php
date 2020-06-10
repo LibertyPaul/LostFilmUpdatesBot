@@ -60,30 +60,35 @@ class UserController{
 
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
-		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 
 		if($this->user->isJustRegistred() === false){
-			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
-			return new DirectedOutgoingMessage(
-				$this->user,
-				new OutgoingMessage(
-					"Ты уже зарегистрирован(а).".PHP_EOL.
-					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand.".PHP_EOL.
-					"Список команд: $helpCoreCommand."
-				)
-			);
+			$tracks = $this->tracksAccess->getTracksByUser($this->user->getId());
+
+			$responseText = "Ты уже зарегистрирован(а).".PHP_EOL;
+
+			if(empty($tracks)){
+				$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+				$responseText .= "Чтобы подписаться на сериал - жми на $addShowCoreCommand.".PHP_EOL;
+			}
+			else{
+				$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
+				$responseText .= "Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand.".PHP_EOL;
+			}
+
+		}
+		else{
+			$responseText =
+				'Привет!'.PHP_EOL.
+				'Я - бот LostFilm updates.'.PHP_EOL.
+				'Я оповещу тебя о выходе новых серий на LostFilm.TV.'.PHP_EOL.PHP_EOL;
 		}
 
-		$welcomingText =
-			'Привет!'.PHP_EOL.
-			'Я - бот LostFilm updates.'.PHP_EOL.
-			'Моя задача - оповестить тебя о выходе новых серий '.
-			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
-			"Чтобы узнать что я умею - жми на $helpCoreCommand";
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+		$responseText .= "Список команд: $helpCoreCommand.";
 
 		$response = new DirectedOutgoingMessage(
 			$this->user,
-			new OutgoingMessage($welcomingText)
+			new OutgoingMessage($responseText)
 		);
 
 		try{

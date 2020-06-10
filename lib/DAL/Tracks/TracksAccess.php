@@ -24,7 +24,7 @@ class TracksAccess extends CommonAccess{
 			SELECT
 				`tracks`.`user_id`,
 				`tracks`.`show_id`,
-				DATE_FORMAT(`tracks`.`created`, '".parent::dateTimeDBFormat."') AS createdStr,
+				DATE_FORMAT(`tracks`.`created`, '".parent::dateTimeDBFormat."') AS createdStr
 		";
 
 		$this->getTracksByUserQuery = $this->pdo->prepare("
