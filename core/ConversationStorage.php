@@ -80,8 +80,13 @@ class ConversationStorage{
 			if($incomingMessage instanceof IncomingMessage === false){
 				$this->tracer->logfError(
 					'[o]', __FILE__, __LINE__,
-					'Got invalid object from memcache [%s][%s]',
-					gettype($incomingMessage),
+					'Got invalid object from memcache [%s]',
+					gettype($incomingMessage)
+				);
+
+				$this->tracer->logDebug(
+					'[o]', __FILE__, __LINE__,
+					'Erroneous object:'.PHP_EOL.
 					strval($incomingMessage)
 				);
 

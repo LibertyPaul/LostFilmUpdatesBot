@@ -33,14 +33,7 @@ class SeriesParser extends Parser{
 			$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
 		}
 
-		try{
-			$this->rssData = new \SimpleXMLElement($this->pageSrc);
-		}
-		catch(\RuntimeException $ex){
-			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
-			throw $ex;
-		}
+		$this->rssData = new \SimpleXMLElement($this->pageSrc);
 	}
 
 	private static function isUsualSeriesLink($URL){
@@ -105,7 +98,7 @@ class SeriesParser extends Parser{
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError(
+				$this->tracer->logDebug(
 					'[PARSE ERROR]', __FILE__, __LINE__,
 					PHP_EOL.print_r($item, true)
 				);
