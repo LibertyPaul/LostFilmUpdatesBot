@@ -74,7 +74,7 @@ class SeriesParser extends Parser{
 				"Link '$URL' doesn't match pattern"
 			);
 
-			throw new \Throwable("Link doesn't match pattern");
+			throw new \RuntimeException("Link doesn't match pattern");
 		}
 
 		assert($matchesRes === 1);

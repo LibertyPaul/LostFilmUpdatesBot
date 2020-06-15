@@ -35,7 +35,7 @@ class Show{
 
 	public function setId(int $id){
 		if($this->id !== null){
-			throw new \Throwable("Trying to change an existing Show ID: [$this->{id}] --> [$id].");
+			throw new \LogicException("Trying to change an existing Show ID: [$this->{id}] --> [$id].");
 		}
 
 		$this->id = $id;
