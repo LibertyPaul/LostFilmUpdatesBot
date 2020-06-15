@@ -10,8 +10,11 @@ require_once(__DIR__.'/TelegramUserDataBuilder.php');
 
 class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
-		parent::__construct($tracer, $pdo, new TelegramUserDataBuilder());
+	public function __construct(\PDO $pdo){
+		parent::__construct(
+			$pdo,
+			new TelegramUserDataBuilder()
+		);
 
 		$selectFields = "
 			SELECT

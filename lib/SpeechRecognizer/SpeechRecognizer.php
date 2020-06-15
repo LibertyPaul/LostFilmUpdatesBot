@@ -2,7 +2,7 @@
 
 namespace SpeechRecognizer;
 
-require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/TracerFactory.php');
 require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/../HTTPRequester/HTTPRequesterInterface.php');
 
@@ -21,10 +21,11 @@ class SpeechRecognizer{
 
 	public function __construct(
 		\Config $config,
-		\HTTPRequester\HTTPRequesterInterface $HTTPRequester
+		\HTTPRequester\HTTPRequesterInterface $HTTPRequester,
+		\PDO $pdo
 	){
 		$this->HTTPRequester = $HTTPRequester;
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 		$APIKey = $config->getValue('SpeechRecognizer', 'API Key', '');
 		$this->APIURL = "https://speech.googleapis.com/v1/speech:recognize?key=$APIKey";
 	}

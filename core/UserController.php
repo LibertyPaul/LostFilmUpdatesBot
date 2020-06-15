@@ -7,7 +7,7 @@ require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
@@ -37,21 +37,25 @@ class UserController{
 	private $tracksAccess;
 
 	public function __construct(\DAL\User $user){
-		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 		$this->config = new \Config($this->pdo);
 		$this->user = $user;
-		$this->conversationStorage = new ConversationStorage($user->getId());
+		$this->conversationStorage = new ConversationStorage(
+			$user->getId(),
+			$this->config,
+			$this->pdo
+		);
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
 		$this->notificationGenerator = new NotificationGenerator();
 
-		$this->showsAccess	= new \DAL\ShowsAccess($this->tracer, $this->pdo);
-		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $this->pdo);
-		$this->usersAccess	= new \DAL\UsersAccess($this->tracer, $this->pdo);
-		$this->tracksAccess	= new \DAL\TracksAccess($this->tracer, $this->pdo);
+		$this->showsAccess	= new \DAL\ShowsAccess($this->pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
+		$this->usersAccess	= new \DAL\UsersAccess($this->pdo);
+		$this->tracksAccess	= new \DAL\TracksAccess($this->pdo);
 	}
 
 	private function repeatQuestion(){
@@ -60,30 +64,35 @@ class UserController{
 
 	private function welcomeUser(){
 		$this->conversationStorage->deleteConversation();
-		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
 
 		if($this->user->isJustRegistred() === false){
-			$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
-			return new DirectedOutgoingMessage(
-				$this->user,
-				new OutgoingMessage(
-					"Ты уже зарегистрирован(а).".PHP_EOL.
-					"Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand.".PHP_EOL.
-					"Список команд: $helpCoreCommand."
-				)
-			);
+			$tracks = $this->tracksAccess->getTracksByUser($this->user->getId());
+
+			$responseText = "Ты уже зарегистрирован(а).".PHP_EOL;
+
+			if(empty($tracks)){
+				$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
+				$responseText .= "Чтобы подписаться на сериал - жми на $addShowCoreCommand.".PHP_EOL;
+			}
+			else{
+				$getMyShowsCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::GetMyShows];
+				$responseText .= "Чтобы посмотреть свои подписки - жми на $getMyShowsCoreCommand.".PHP_EOL;
+			}
+
+		}
+		else{
+			$responseText =
+				'Привет!'.PHP_EOL.
+				'Я - бот LostFilm updates.'.PHP_EOL.
+				'Я оповещу тебя о выходе новых серий на LostFilm.TV.'.PHP_EOL.PHP_EOL;
 		}
 
-		$welcomingText =
-			'Привет!'.PHP_EOL.
-			'Я - бот LostFilm updates.'.PHP_EOL.
-			'Моя задача - оповестить тебя о выходе новых серий '.
-			'твоих любимых сериалов на сайте https://lostfilm.tv/'.PHP_EOL.PHP_EOL.
-			"Чтобы узнать что я умею - жми на $helpCoreCommand";
+		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
+		$responseText .= "Список команд: $helpCoreCommand.";
 
 		$response = new DirectedOutgoingMessage(
 			$this->user,
-			new OutgoingMessage($welcomingText)
+			new OutgoingMessage($responseText)
 		);
 
 		try{

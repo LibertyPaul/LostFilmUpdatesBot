@@ -1,0 +1,14 @@
+CREATE TABLE `ErrorDictionary`(
+	`id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	`level` ENUM('DEBUG', 'EVENT', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL') NOT NULL,
+	`source` VARCHAR(256) NOT NULL,
+	`line` INT UNSIGNED NOT NULL,
+	`text` VARCHAR(500) NOT NULL,
+	`fullText` TEXT NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE INDEX `idx1` (`level` ASC, `source` ASC, `line` ASC, `text` ASC)
+)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_bin;
+

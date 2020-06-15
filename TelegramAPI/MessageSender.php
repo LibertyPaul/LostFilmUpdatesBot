@@ -4,7 +4,7 @@ namespace TelegramAPI;
 
 require_once(__DIR__.'/../core/MessageSenderInterface.php');
 require_once(__DIR__.'/../core/OutgoingMessage.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/../core/BotPDO.php');
@@ -29,13 +29,13 @@ class MessageSender implements \core\MessageSenderInterface{
 	public function __construct(TelegramAPI $telegramAPI){
 		$this->telegramAPI = $telegramAPI;
 
-		$this->tracer = new \Tracer(__CLASS__);
-		$this->outgoingMessagesTracer = new \Tracer(__NAMESPACE__.'.OutgoingMessages');
-
 		$pdo = \BotPDO::getInstance();
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
+		$this->outgoingMessagesTracer = \TracerFactory::getTracer(__NAMESPACE__.'.OutgoingMessages', null, true, false);
+
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 
-		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $pdo);
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($pdo);
 
 		$config = new \Config($pdo);
 		$this->sleepOn429CodeMs = $config->getValue(

@@ -5,7 +5,7 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 
 
 abstract class WebhookReasons{
@@ -25,21 +25,27 @@ class Webhook{
 	private $selfWebhookPassword;
 
 	public function __construct(UpdateHandler $updateHandler){
-		assert($updateHandler !== null);
 		$this->updateHandler = $updateHandler;
 
+		$pdo = \BotPDO::getInstance();
+
 		try{
-			$this->tracer = new \Tracer(__CLASS__);
-			$this->incomingMessagesTracer = new \Tracer(__NAMESPACE__.'.IncomingData');
+			$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
+			$this->incomingMessagesTracer = \TracerFactory::getTracer(
+				__NAMESPACE__.'.IncomingData',
+				null,
+				true,
+				false
+			);
 		}
 		catch(\Throwable $ex){
-			TracerBase::syslogCritical(
+			\TracerCompiled::syslogCritical(
 				'[TRACER]', __FILE__, __LINE__,
 				'Unable to create Tracer instance'
 			);
 		}
 
-		$config = new \Config(\BotPDO::getInstance());
+		$config = new \Config($pdo);
 		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 	}
 

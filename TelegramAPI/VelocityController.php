@@ -2,7 +2,7 @@
 
 namespace TelegramAPI;
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../core/BotPDO.php');
 
@@ -14,12 +14,15 @@ class VelocityController{
 	private $maxMessagesFromBotPerSecond;
 	private $maxMessagesToUserPerSecond;
 
-	public function __construct(\KeyValueStorageInterface $storage){
-		assert($storage !== null);
-
-		$this->tracer = new \Tracer(__CLASS__);
+	public function __construct(
+		\KeyValueStorageInterface $storage,
+		\TracerBase $tracer
+	){
+		$this->tracer = $tracer;
 		$this->storage = $storage;
-		$config = new \Config(\BotPDO::getInstance());
+
+		$pdo = \BotPDO::getInstance();
+		$config = new \Config($pdo);
 
 		$this->maxMessagesFromBotPerSecond = $config->getValue(
 			'TelegramAPI',

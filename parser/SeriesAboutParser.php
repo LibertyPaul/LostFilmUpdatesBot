@@ -2,7 +2,7 @@
 
 namespace parser;
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/Parser.php');
 require_once(__DIR__.'/SeriesAboutInfo.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
@@ -15,12 +15,13 @@ class SeriesAboutParser extends Parser{
 	const title_ru_regex = '/<h1 class="title-ru">([\s\S]*?)<\/h1>/';
 	const title_en_regex = '/<div class="title-en">([\s\S]*?)<\/div>/';
 	
-
-
-	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		\PDO $pdo
+	){
 		parent::__construct($requester);
 
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
 	private function singleRegexSearch($regex){

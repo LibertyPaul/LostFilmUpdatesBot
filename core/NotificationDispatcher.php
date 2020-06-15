@@ -7,7 +7,7 @@ require_once(__DIR__.'/NotificationGenerator.php');
 require_once(__DIR__.'/MessageRouter.php');
 require_once(__DIR__.'/MessageRouterFactory.php');
 require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 
 require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Series/SeriesAccess.php');
@@ -24,9 +24,9 @@ class NotificationDispatcher{
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
 		
-		$this->tracer = new \Tracer(__CLASS__);
-		
 		$this->pdo = \BotPDO::getInstance();
+		
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 
 		$this->config = new \Config($this->pdo, \ConfigFetchMode::PER_REQUEST);
 		$this->maxRetryCount = $this->config->getValue(
@@ -35,10 +35,10 @@ class NotificationDispatcher{
 			5
 		);
 
-		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $this->pdo);
-		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $this->pdo);
-		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $this->pdo);
-		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->tracer, $this->pdo);
+		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($this->pdo);
+		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->pdo);
 	}
 
 	private static function eligibleToBeSent(\DAL\Notification $notification){

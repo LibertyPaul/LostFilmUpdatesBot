@@ -3,7 +3,7 @@
 namespace core;
 
 require_once(__DIR__.'/../lib/KeyValueStorage/MemcachedStorage.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/IncomingMessage.php');
@@ -36,13 +36,10 @@ class ConversationStorage{
 
 	const MEMCACHE_STORE_TIME = 86400; // 1 day
 
-	public function __construct($user_id){
-		$this->tracer = new \Tracer(__CLASS__);
-
-		assert(is_int($user_id));
+	public function __construct(int $user_id, \Config $config, \PDO $pdo){
 		$this->user_id = $user_id;
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
-		$config = new \Config(\BotPDO::getInstance());
 		$keyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
 		if($keyPrefix === null){
 			$this->tracer->logWarning(

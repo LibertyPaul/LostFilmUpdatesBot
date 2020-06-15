@@ -16,7 +16,6 @@ require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
 require_once(__DIR__.'/../lib/DAL/Series/Series.php');
 
 class NotificationGenerator{
-	private $tracer;
 	private $config;
 	private $commandSubstitutor;
 	private $coreCommands;
@@ -24,13 +23,12 @@ class NotificationGenerator{
 	
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
-		$this->tracer = new \Tracer(__CLASS__);
 
 		$this->config = new \Config($pdo);
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
-		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance($this->tracer);
+		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance();
 	}
 	
 	private function generateNewSeriesNotificationText(\DAL\Show $show, \DAL\Series $series){

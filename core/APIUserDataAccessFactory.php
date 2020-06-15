@@ -9,10 +9,10 @@ require_once(__DIR__.'/../TelegramAPI/DAL/TelegramUserDataAccess/TelegramUserDat
 class APIUserDataAccessFactory{
 	private static $instance;
 
-	private static function createTelegramAPIUserDataAccess(\Tracer $tracer){
+	private static function createTelegramAPIUserDataAccess(){
 		$pdo = \BotPDO::getInstance();
 		
-		$userDataAccess = new \DAL\TelegramUserDataAccess($tracer, $pdo);
+		$userDataAccess = new \DAL\TelegramUserDataAccess($pdo);
 		
 		if($userDataAccess instanceof \DAL\APIUserDataAccess == false){
 			throw new \LogicException(
@@ -23,10 +23,10 @@ class APIUserDataAccessFactory{
 		return $userDataAccess;
 	}
 
-	public static function getInstance(\Tracer $tracer){
+	public static function getInstance(){
 		if(isset($instance) === false){
 			$instance = array(
-				'TelegramAPI' => self::createTelegramAPIUserDataAccess($tracer)
+				'TelegramAPI' => self::createTelegramAPIUserDataAccess()
 			);
 		}
 
