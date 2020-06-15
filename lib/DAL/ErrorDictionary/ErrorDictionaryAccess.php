@@ -99,7 +99,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 				return $res->getId();
 			}
 
-			$args[':fullText'] = $record->getText();
+			$args[':fullText'] = substr($record->getText(), 0, 65000);
 
 			$this->execute(
 				$this->addErrorDictionaryRecordQuery,
