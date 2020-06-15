@@ -1,7 +1,6 @@
 [Default]
 StandaloneIfLargerThan=500000
 LoggingLevel=DEBUG
-LogStartedFinished=false
 CLIStdOutTrace=true
 
 [Custom.Config]

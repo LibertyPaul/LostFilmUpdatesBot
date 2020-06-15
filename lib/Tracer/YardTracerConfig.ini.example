@@ -1,4 +1,3 @@
 [Default]
 LoggingLevel=WARNING
-LogStartedFinished=false
 CLIStdOutTrace=false
