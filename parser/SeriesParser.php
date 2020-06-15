@@ -53,7 +53,7 @@ class SeriesParser extends Parser{
 	}
 	
 	private function parseURL($URL){
-		$regexp = '/https:\/\/[\w\.]*?lostfilm\.t(v|w\/mr)\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
+		$regexp = '/https:\/\/[\w\.]*?lostfilm\.[^\/]+(\/[^\/]+)?\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
 		$matchesRes = preg_match($regexp, $URL, $matches);
 		if($matchesRes === false){
