@@ -164,9 +164,15 @@ class TelegramAPI{
 
 		$requestJSON = json_encode($request, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
 		if($requestJSON === false){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				'json_encode has failed on:'.PHP_EOL.
+				'json_encode has failed: [%s].',
+				json_last_error_msg()
+			);
+
+			$this->tracer->logDebug(
+				'[JSON]', __FILE__, __LINE__,
+				'Erroneous object:'.PHP_EOL.
 				print_r($request, true)
 			);
 
@@ -221,10 +227,16 @@ class TelegramAPI{
 		$result = $this->HTTPRequester->request($requestProperties);
 
 		if($result->getCode() >= 400){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				'getFile call has failed. Response:'.PHP_EOL.
-				$result
+				'getFile call has failed with code [%d].',
+				$result->getCode()
+			);
+
+			$this->tracer->logDebug(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				'Error response body:'.PHP_EOL.
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to get file info');
@@ -232,10 +244,16 @@ class TelegramAPI{
 
 		$File = json_decode($result->getBody());
 		if($File === false){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse Telegram getFile response:".PHP_EOL.
-				$result
+				"Unable to parse Telegram getFile response: [%s].",
+				json_last_error_msg()
+			);
+
+			$this->tracer->logDebug(
+				'[JSON]', __FILE__, __LINE__,
+				'Erroneous JSON:'.PHP_EOL.
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to parse getFile response');
@@ -266,10 +284,17 @@ class TelegramAPI{
 		$result = $this->HTTPRequester->request($requestProperties);
 
 		if($result->getCode() >= 400){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				"File download has failed. File id=[$file_id]".PHP_EOL.
-				$result
+				'File download has failed with code [%d].',
+				$result->getCode()
+			);
+
+			$this->tracer->logfDebug(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				'File ID: [%d], Response:'.PHP_EOL.'%s',
+				$file_id,
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to download file');

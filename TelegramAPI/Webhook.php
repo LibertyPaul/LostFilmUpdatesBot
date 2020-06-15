@@ -95,7 +95,12 @@ class Webhook{
 				break;
 
 			default:
-				$this->tracer->logError('[UNKNOWN REASON]', __FILE__, __LINE__, $reason);
+				$this->tracer->logfError(
+					'[UNKNOWN REASON]', __FILE__, __LINE__,
+					'Failed with unknown reason: [%d].',
+					$reason
+				);
+
 				$text = 'hmm...';
 				$HTTPCode = 200;
 		}
@@ -160,9 +165,13 @@ class Webhook{
 		if($update === null){
 			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse JSON update: [%s]\n".
+				"Unable to parse JSON update: [%s]",
+				json_last_error_msg()
+			);
+
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
 				'Raw JSON: [%s]',
-				json_last_error_msg(),
 				$postData
 			);
 

@@ -213,9 +213,15 @@ class UserController{
 		default:
 			$this->tracer->logError(
 				'[USER CONTROLLER]', __FILE__, __LINE__,
-				'3rd message in /stop conversation'.PHP_EOL.
+				'3rd message in /stop conversation is impossible.'
+			);
+
+			$this->tracer->logDebug(
+				'[USER CONTROLLER]', __FILE__, __LINE__,
+				'Erroneous conversation:'.PHP_EOL.
 				print_r($this->conversationStorage->getConversation(), true)
 			);
+
 			$this->conversationStorage->deleteConversation();
 		}
 	}

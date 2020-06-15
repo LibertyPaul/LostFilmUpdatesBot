@@ -75,8 +75,14 @@ class SpeechRecognizer{
 		if($result->getCode() >= 400){
 			$this->tracer->logError(
 				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
-				'SpeechRecognition has failed. Response:'.PHP_EOL.
-				strval($result)
+				'SpeechRecognition has failed with code [%d].',
+				$result->getCode()
+			);
+
+			$this->tracer->logError(
+				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
+				'Erroneous response:'.PHP_EOL.
+				$result->getBody()
 			);
 
 			return Result::APIError;

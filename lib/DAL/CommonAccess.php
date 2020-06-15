@@ -27,10 +27,20 @@ abstract class CommonAccess{
 	}
 
 	private function get23000IndexName(string $errorMessage){
-		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/";
+		$regexps = array(
+			"/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/",
+			"/Integrity constraint violation: 1452 .*? FOREIGN KEY \(`(\w+)`\)/"	
+		);
+
 		$matches = array();
-		
-		$matchesRes = preg_match($regexp, $errorMessage, $matches);
+
+		foreach($regexps as $regexp){
+			$matchesRes = preg_match($regexp, $errorMessage, $matches);
+			if($matchesRes !== false && $matchesRes > 0){
+				break;
+			}
+		}
+
 		if($matchesRes === false){
 			throw new \LogicException(
 				sprintf(
@@ -45,14 +55,12 @@ abstract class CommonAccess{
 		if($matchesRes === 0){
 			throw new \LogicException(
 				sprintf(
-					'23000 error text does not match the pattern'.PHP_EOL.
+					'23000 error text does not match any pattern'.PHP_EOL.
 					'Message: [%s]',
 					$errorMessage
 				)
 			);
 		}
-
-		assert($matchesRes === 1);
 
 		return $matches[1];
 	}
@@ -74,7 +82,7 @@ abstract class CommonAccess{
 					$indexName = $this->get23000IndexName($message);
 				}
 				catch(\Throwable $ex){
-					$indexName = "<unidentified: $message>"; #TODO: Ugly error suppression. Need to log it somehow.
+					$indexName = "<unidentified: $message>";
 				}
 
 				throw new DuplicateValueException($indexName, 0, $ex);
