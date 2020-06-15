@@ -88,7 +88,7 @@ abstract class CommonAccess{
 				throw new DuplicateValueException($indexName, 0, $ex);
 
 			default:
-				throw new \RuntimeException("Failed to execute query.", 0, $ex);
+				throw $ex;
 			}
 		}
 
