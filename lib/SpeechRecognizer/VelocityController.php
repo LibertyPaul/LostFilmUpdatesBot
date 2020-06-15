@@ -2,7 +2,7 @@
 
 namespace SpeechRecognizer;
 
-require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/TracerFactory.php');
 require_once(__DIR__.'/../KeyValueStorage/DBStorage.php');
 require_once(__DIR__.'/../Config.php');
 
@@ -12,11 +12,12 @@ class VelocityController{
 	private $maxRecognitionsPerUserPerWeek;
 	private $maxRecognitionsPerBotPerMonth;
 
-	public function __construct(\Config $config, \DBStorage $storage){
-		assert($config !== null);
-		assert($storage !== null);
-
-		$this->tracer = new \Tracer(__CLASS__);
+	public function __construct(
+		\Config $config,
+		\DBStorage $storage,
+		\PDO $pdo
+	){
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 		$this->storage = $storage;
 
 		$this->maxSearchesPerUserPerWeek = $config->getValue(

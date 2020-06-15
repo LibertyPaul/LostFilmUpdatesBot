@@ -40,12 +40,11 @@ class IncomingMessage{
 			$coreCommandStr = strval($this->getCoreCommand());
 		}
 
-		$result  = '****************************************'			.PHP_EOL;
-		$result .= 'IncomingMessage:'									.PHP_EOL;
-		$result .= sprintf("\tCore Command:   [%s]", $coreCommandStr)	.PHP_EOL;
-		$result .= sprintf("\tText:           [%s]", $this->getText())	.PHP_EOL;
+		$result  = '***************[IncomingMessage]***************'	.PHP_EOL;
+		$result .= sprintf("Core Command:   [%s]", $coreCommandStr)		.PHP_EOL;
+		$result .= sprintf("Text:           [%s]", $this->getText())	.PHP_EOL;
 		$result .= strval($this->APISpecificData)						.PHP_EOL;
-		$result .= '****************************************';
+		$result .= '***********************************************';
 		
 		return $result;
 	}

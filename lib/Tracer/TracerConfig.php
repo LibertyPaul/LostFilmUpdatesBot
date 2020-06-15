@@ -5,11 +5,10 @@ require_once(__DIR__.'/TracerLevel.php');
 class TracerConfig{
 	private $standaloneIfLargerThan = 5000;
 	private $loggingLevel = TracerLevel::Debug;
-	private $logStartedFinished = false;
 	private $CLIStdOutTrace = false;
 	private $LinuxGroup = Null;
 
-	public function __construct($configIniPath, $traceName){
+	public function __construct(string $configIniPath, string $traceName = null){
 		if(file_exists($configIniPath)){
 			$configIni = $this->parseIniFile($configIniPath);
 
@@ -21,6 +20,7 @@ class TracerConfig{
 			}
 
 			if(
+				$traceName !== null &&
 				isset($configIni["Custom.$traceName"]) &&
 				is_array($configIni["Custom.$traceName"])
 			){
@@ -29,7 +29,7 @@ class TracerConfig{
 		}
 	}
 
-	private function parseIniFile($configIniPath){
+	private function parseIniFile(string $configIniPath): array{
 		$data = parse_ini_file($configIniPath, true, INI_SCANNER_RAW);
 		if($data === false){	
 			throw new \RuntimeException("Unable to parse ini file [$configIniPath]");
@@ -63,24 +63,6 @@ class TracerConfig{
 			$this->loggingLevel = \TracerLevel::getLevelByName($loggingLevel);
 		}
 
-		if(isset($configIniSection['LogStartedFinished'])){
-			$logStartedFinished = $configIniSection['LogStartedFinished'];
-			switch($logStartedFinished){
-				case 'true':
-					$this->logStartedFinished = true;
-					break;
-				
-				case 'false':
-					$this->logStartedFinished = false;
-					break;
-
-				default:
-					throw new \RuntimeException(
-						"Incorrect [LogStartedFinished] value: [$logStartedFinished]"
-					);
-			}
-		}
-
 		if(isset($configIniSection['CLIStdOutTrace'])){
 			switch($configIniSection['CLIStdOutTrace']){
 				case 'true':
@@ -104,40 +86,34 @@ class TracerConfig{
 
 	}
 
-	public function getStandaloneIfLargerThan(){
+	public function getStandaloneIfLargerThan(): int{
 		return $this->standaloneIfLargerThan;
 	}
 
-	public function getLoggingLevel(){
+	public function getLoggingLevel(): int{
 		return $this->loggingLevel;
 	}
 
-	public function getLogStartedFinished(){
-		return $this->logStartedFinished;
-	}
-
-	public function getCLIStdOutTrace(){
+	public function getCLIStdOutTrace(): bool{
 		return $this->CLIStdOutTrace;
 	}
 
-	public function getLinuxGroup(){
+	public function getLinuxGroup(): ?string{
 		return $this->LinuxGroup;
 	}
 
 	public function __toString(){
 		$standaloneIfLargerThanStr = $this->standaloneIfLargerThan;
 		$loggingLevelStr = \TracerLevel::getNameByLevel($this->loggingLevel);
-		$logStartedFinishedStr = $this->logStartedFinished ? 'Y' : 'N';
 		$CLIStdOutTraceStr = $this->CLIStdOutTrace ? 'Y' : 'N';
-		$LinuxGroupStr = $this->LinuxGroup !== null ? $this->LinuxGroup : '<Null>';
+		$LinuxGroupStr = $this->LinuxGroup ?? '<Null>';
 
-		$res  = '|------------[Tracer Config]------------|'					.PHP_EOL;
+		$res  = '|----------------[Tracer Config]----------------|'			.PHP_EOL;
 		$res .= "Standalone If Larger Than:  [$standaloneIfLargerThanStr]"	.PHP_EOL;
 		$res .= "Logging Level:              [$loggingLevelStr]"			.PHP_EOL;
-		$res .= "LogStarted Finished:        [$logStartedFinishedStr]"		.PHP_EOL;
 		$res .= "CLI StdOut Trace:           [$CLIStdOutTraceStr]"			.PHP_EOL;
 		$res .= "Linux Group:                [$LinuxGroupStr]"				.PHP_EOL;
-		$res .= '|---------------------------------------|';
+		$res .= '|-----------------------------------------------|';
 
 		return $res;
 	}

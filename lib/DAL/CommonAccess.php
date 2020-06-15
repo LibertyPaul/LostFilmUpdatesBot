@@ -18,12 +18,10 @@ abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
 	const dateTimeAppFormat = 'd.m.Y H:i:s.u';
 
-	protected $tracer;
 	protected $pdo;
 	protected $DAOBuilder;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo, DAOBuilderInterface $DAOBuilder){
-		$this->tracer = $tracer;
+	public function __construct(\PDO $pdo, DAOBuilderInterface $DAOBuilder){
 		$this->pdo = $pdo;
 		$this->DAOBuilder = $DAOBuilder;
 	}
@@ -34,26 +32,24 @@ abstract class CommonAccess{
 		
 		$matchesRes = preg_match($regexp, $errorMessage, $matches);
 		if($matchesRes === false){
-			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'preg_match has failed with code: [%s]'.PHP_EOL.
-				'Message: [%s]',
-				preg_last_error(),
-				$errorMessage
+			throw new \LogicException(
+				sprintf(
+					"preg_match has failed with code: [%s]".PHP_EOL.
+					'Message: [%s]',
+					preg_last_error(),
+					$errorMessage
+				)
 			);
-
-			return null;
 		}
 
 		if($matchesRes === 0){
-			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'23000 error text does not match the pattern'.PHP_EOL.
-				'Message: [%s]',
-				$errorMessage
+			throw new \LogicException(
+				sprintf(
+					'23000 error text does not match the pattern'.PHP_EOL.
+					'Message: [%s]',
+					$errorMessage
+				)
 			);
-
-			return null;
 		}
 
 		assert($matchesRes === 1);
@@ -73,18 +69,17 @@ abstract class CommonAccess{
 		catch(\PDOException $ex){
 			switch($ex->getCode()){
 			case 23000:
-				$indexName = $this->get23000IndexName($ex->getMessage());
+				$message = $ex->getMessage();
+				try{
+					$indexName = $this->get23000IndexName($message);
+				}
+				catch(\Throwable $ex){
+					$indexName = "<unidentified: $message>"; #TODO: Ugly error suppression. Need to log it somehow.
+				}
+
 				throw new DuplicateValueException($indexName, 0, $ex);
 
 			default:
-				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
-				);
-
-				$this->tracer->logException(
-					'[o]', __FILE__, __LINE__, $ex
-				);
-
 				throw new \RuntimeException("Failed to execute query.", 0, $ex);
 			}
 		}
@@ -121,5 +116,17 @@ abstract class CommonAccess{
 		}
 		
 		return $id;
+	}
+
+	protected function startTransaction(){
+		$this->pdo->beginTransaction();
+	}
+
+	protected function commit(){
+		$this->pdo->commit();
+	}
+
+	protected function rollback(){
+		$this->pdo->rollBack();
 	}
 }

@@ -5,7 +5,7 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../core/InlineOption.php');
 require_once(__DIR__.'/../core/MarkupType.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/VelocityController.php');
 require_once(__DIR__.'/VelocityControllerFactory.php');
@@ -18,27 +18,29 @@ class TelegramAPI{
 
 	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
 	
-	public function __construct($botToken, \HTTPRequester\HTTPRequesterInterface $HTTPRequester){
-		assert(is_string($botToken));
+	public function __construct(
+		string $botToken,
+		\HTTPRequester\HTTPRequesterInterface $HTTPRequester,
+		\PDO $pdo
+	){
 		$this->botToken = $botToken;
 		$this->HTTPRequester = $HTTPRequester;
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(
-			__CLASS__
+			__CLASS__,
+			$this->tracer
 		);
 	}
 
-	private function getBaseMethodURL($method){
-		assert(is_string($method));
+	private function getBaseMethodURL(string $method){
 		return sprintf('https://api.telegram.org/bot%s/%s', $this->botToken, $method);
 	}
 	
-	private function getDownloadFileURL($file_path){
-		assert(is_string($file_path));
+	private function getDownloadFileURL(string $file_path){
 		return sprintf('https://api.telegram.org/file/bot%s/%s', $this->botToken, $file_path);
 	}
 
-	private function waitForVelocity($user_id){
+	private function waitForVelocity(int $user_id){
 		while($this->velocityController->isSendingAllowed($user_id) === false){
 			$res = time_nanosleep(0, 500000000); // 0.5s
 			if($res !== true){

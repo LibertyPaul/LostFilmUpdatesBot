@@ -1,12 +1,12 @@
 <?php
 namespace ExceptionHandler;
 
-require_once(__DIR__.'/Tracer/Tracer.php');
+require_once(__DIR__.'/Tracer/TracerFactory.php');
 
-function exception_handler($ex){
+function exception_handler(\Throwable $ex){
 	static $tracer;
 	if(isset($tracer) === false){
-		$tracer = new \Tracer(__NAMESPACE__);
+		$tracer = \TracerFactory::getTracer(__NAMESPACE__, null, true, false);
 	}
 
 	$tracer->logException('[UNCAUGHT EXCEPTION]', __FILE__, __LINE__, $ex);
@@ -16,12 +16,9 @@ function exception_handler($ex){
 
 $res = set_exception_handler('ExceptionHandler\exception_handler');
 if($res === null){
-	$res = set_exception_handler('ExceptionHandler\exception_handler');
-	if($res === null){// yep, this is one proper way to check for success
-		TracerBase::syslogCritical(
-			'[EXCEPTION CATCHER]', __FILE__, __LINE__,
-			'Unable to set exception handler'
-		);
-	}
+	\TracerCompiled::syslogCritical(
+		'[EXCEPTION CATCHER]', __FILE__, __LINE__,
+		'Unable to set exception handler'
+	);
 }
 

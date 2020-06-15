@@ -3,16 +3,19 @@
 namespace parser;
 
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 
 class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
 	
-	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		\PDO $pdo
+	){
 		parent::__construct($requester, null);
 
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
 	public function loadSrc($path, $requestHeaders = array()){

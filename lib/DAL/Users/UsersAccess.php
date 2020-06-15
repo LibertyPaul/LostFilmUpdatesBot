@@ -10,9 +10,8 @@ class UsersAccess extends CommonAccess{
 	private $getUserByIdQuery;
 	private $addUserQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new UserBuilder()
 		);
@@ -140,7 +139,7 @@ class UsersAccess extends CommonAccess{
 		return $this->getLastInsertId();
 	}
 
-	public function updateUser($user){
+	public function updateUser(User $user){
 		if($user->getId() === null){
 			throw new \LogicException("Updating user with empty id");
 		}

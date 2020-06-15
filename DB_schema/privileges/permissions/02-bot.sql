@@ -13,3 +13,5 @@ GRANT SELECT							ON `&&db_name`.`series`				TO '&&bot_db_user'@'&&bot_db_host'
 GRANT SELECT							ON `&&db_name`.`APICommands`		TO '&&bot_db_user'@'&&bot_db_host';
 GRANT SELECT							ON `&&db_name`.`config`				TO '&&bot_db_user'@'&&bot_db_host';
 GRANT SELECT, INSERT, UPDATE, DELETE	ON `&&db_name`.`tracks`				TO '&&bot_db_user'@'&&bot_db_host';
+GRANT SELECT, INSERT, UPDATE, DELETE	ON `&&db_name`.`ErrorDictionary`	TO '&&bot_db_user'@'&&bot_db_host';
+GRANT SELECT, INSERT, UPDATE, DELETE	ON `&&db_name`.`ErrorYard`			TO '&&bot_db_user'@'&&bot_db_host';

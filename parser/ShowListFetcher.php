@@ -2,7 +2,7 @@
 
 namespace parser;
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
@@ -12,11 +12,15 @@ class ShowListFetcher{
 	private $tracer;
 	private $config;
 	
-	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester, \Config $config){
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		\Config $config,
+		\PDO $pdo
+	){
 		$this->requester = $requester;
 		$this->config = $config;
 
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
 	private static function isOnAir(int $status){

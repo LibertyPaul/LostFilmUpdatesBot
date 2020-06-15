@@ -33,9 +33,8 @@ class ShowsAccess extends CommonAccess{
 	private $addShowQuery;
 	private $updateShowQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new ShowBuilder()
 		);

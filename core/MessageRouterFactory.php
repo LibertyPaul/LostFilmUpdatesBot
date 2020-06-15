@@ -6,7 +6,6 @@ require_once(__DIR__.'/MessageRouter.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../TelegramAPI/MessageSender.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 class MessageRouterFactory{
@@ -20,10 +19,10 @@ class MessageRouterFactory{
 			throw new \RuntimeException('[TelegramAPI][token] value does not exist');
 		}
 
-		$requesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
+		$requesterFactory = new \HTTPRequester\HTTPRequesterFactory($config, $pdo);
 		$requester = $requesterFactory->getInstance();
 
-		$telegramAPI = new \TelegramAPI\TelegramAPI($botToken, $requester);
+		$telegramAPI = new \TelegramAPI\TelegramAPI($botToken, $requester, $pdo);
 		$telegramAPISender = new \TelegramAPI\MessageSender($telegramAPI);
 		
 		if($telegramAPISender instanceof MessageSenderInterface === false){

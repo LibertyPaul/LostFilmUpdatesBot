@@ -10,7 +10,7 @@ require_once(__DIR__.'/IncomingMessage.php');
 require_once(__DIR__.'/MessageRouterFactory.php');
 require_once(__DIR__.'/UserController.php');
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 
 require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessagesHistoryAccess.php');
@@ -20,21 +20,17 @@ require_once(__DIR__.'/../lib/DAL/Users/User.php');
 
 class UpdateHandler{
 	private $tracer;
-	private $config;
 	private $messageRouter;
 
 	private $messagesHistoryAccess;
 	private $usersAccess;
 
-	public function __construct(){
-		$pdo = \BotPDO::getInstance();
-		$this->config = new \Config($pdo);
-
-		$this->tracer = new \Tracer(__CLASS__);
+	public function __construct(\PDO $pdo){
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
-		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($this->tracer, $pdo);
-		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $pdo);
+		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($pdo);
+		$this->usersAccess = new \DAL\UsersAccess($pdo);
 	}
 
 	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
@@ -56,7 +52,12 @@ class UpdateHandler{
 
 		}
 		catch(\DAL\MessagesHistoryDuplicateExternalIdException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logfError(
+				'[DB ERROR]', __FILE__, __LINE__,
+				'Unable to log the mesasge due to duplicate external_id: [%d]',
+				$externalId
+			);
+
 			$this->tracer->logDebug(
 				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
 				$incomingMessage

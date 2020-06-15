@@ -13,9 +13,8 @@ class SeriesAccess extends CommonAccess{
 
 	private $addSeriesQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new SeriesBuilder()
 		);

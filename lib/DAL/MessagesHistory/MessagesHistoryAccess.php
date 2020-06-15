@@ -11,9 +11,8 @@ class MessagesHistoryDuplicateExternalIdException extends \RuntimeException{};
 class MessagesHistoryAccess extends CommonAccess{
 	private $addMessageHistoryQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new MessageHistoryBuilder()
 		);
@@ -99,7 +98,7 @@ class MessagesHistoryAccess extends CommonAccess{
 		catch(DuplicateValueException $ex){
 			switch($ex->getConstrainingIndexName()){
 			case 'external_id':
-				throw new MessagesHistoryDuplicateExternalIdException("", 0, $ex);
+				throw new MessagesHistoryDuplicateExternalIdException("Constraint violation", 0, $ex);
 
 			default:
 				throw $ex;

@@ -7,7 +7,7 @@ require_once(__DIR__.'/ConversationStorage.php');
 require_once(__DIR__.'/BotPDO.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/../lib/Config.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/CommandSubstitutor/CommandSubstitutor.php');
 
 require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
@@ -37,21 +37,25 @@ class UserController{
 	private $tracksAccess;
 
 	public function __construct(\DAL\User $user){
-		$this->tracer = new \Tracer(__CLASS__);
 		$this->pdo = \BotPDO::getInstance();
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 		$this->config = new \Config($this->pdo);
 		$this->user = $user;
-		$this->conversationStorage = new ConversationStorage($user->getId());
+		$this->conversationStorage = new ConversationStorage(
+			$user->getId(),
+			$this->config,
+			$this->pdo
+		);
 
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
 		$this->notificationGenerator = new NotificationGenerator();
 
-		$this->showsAccess	= new \DAL\ShowsAccess($this->tracer, $this->pdo);
-		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $this->pdo);
-		$this->usersAccess	= new \DAL\UsersAccess($this->tracer, $this->pdo);
-		$this->tracksAccess	= new \DAL\TracksAccess($this->tracer, $this->pdo);
+		$this->showsAccess	= new \DAL\ShowsAccess($this->pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
+		$this->usersAccess	= new \DAL\UsersAccess($this->pdo);
+		$this->tracksAccess	= new \DAL\TracksAccess($this->pdo);
 	}
 
 	private function repeatQuestion(){

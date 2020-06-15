@@ -10,7 +10,7 @@ require_once(__DIR__.'/ShowListFetcher.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 
 require_once(__DIR__.'/ParserPDO.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 
 require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
 require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
@@ -23,9 +23,9 @@ class ShowParserExecutor{
 
 	public function __construct(\PDO $pdo, ShowListFetcher $showListFetcher){
 		$this->showListFetcher = $showListFetcher;
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
-		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($pdo);
 	}
 
 	private static function aliasListToText(array $aliases){
@@ -122,7 +122,7 @@ $requester = new \HTTPRequester\HTTPRequester();
 
 $pdo = ParserPDO::getInstance();
 $config = new \Config($pdo);
-$showListFetcher = new ShowListFetcher($requester, $config);
+$showListFetcher = new ShowListFetcher($requester, $config, $pdo);
 $showParserExecutor = new ShowParserExecutor($pdo, $showListFetcher);
 
 $showParserExecutor->run();

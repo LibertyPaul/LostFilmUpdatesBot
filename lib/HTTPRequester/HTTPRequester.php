@@ -6,15 +6,15 @@ require_once(__DIR__.'/HTTPResponse.php');
 require_once(__DIR__.'/CURLPool.php');
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/HTTPRequestProperties.php');
-require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/TracerFactory.php');
 
 class HTTPRequester implements HTTPRequesterInterface{
 	private $curlPool;
 	private $curl_multi = null;
-	private $tracer;
+	private $requestResponseTracer;
 
 	public function __construct(){
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->requestResponseTracer = \TracerFactory::getTracer(__CLASS__, null, true, false);
 		$this->curlPool = new CURLPool();
 	}
 
@@ -57,11 +57,6 @@ class HTTPRequester implements HTTPRequesterInterface{
 	private function executeCurl($curl){
 		$body = curl_exec($curl);
 		if($body === false){
-			$this->tracer->logError(
-				'[HTTP ERROR]', __FILE__, __LINE__, 
-				'curl_exec error: '.curl_error($curl)
-			);
-			
 			throw new HTTPException('curl_exec error: '.curl_error($curl));
 		}
 
@@ -82,10 +77,6 @@ class HTTPRequester implements HTTPRequesterInterface{
 				$request .= '?'.$payload;
 			}
 			else{
-				$this->tracer->logError(
-					'[GET]', __FILE__, __LINE__,
-					'Incorrect payload type: '.gettype($payload)
-				);
 				throw new \LogicException('Incorrect payload type: '.gettype($payload));
 			}
 		}
@@ -156,14 +147,14 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 		$this->setRequestOptions($curl, $requestProperties);
 
-		$this->tracer->logEvent(
+		$this->requestResponseTracer->logEvent(
 			'[REQUEST]', __FILE__, __LINE__,
 			PHP_EOL.strval($requestProperties).PHP_EOL
 		);
 		
 		$result = $this->executeCurl($curl);
 		
-		$this->tracer->logEvent(
+		$this->requestResponseTracer->logEvent(
 			'[RESPONSE]', __FILE__, __LINE__, 
 			PHP_EOL.strval($result).PHP_EOL
 		);
@@ -187,7 +178,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 			self::initializeCurl($curl);
 			$this->setRequestOptions($curl, $requestProperties);
 
-			$this->tracer->logEvent('[REQUEST]', __FILE__, __LINE__, strval($requestProperties));
+			$this->requestResponseTracer->logEvent('[REQUEST]', __FILE__, __LINE__, strval($requestProperties));
 
 			$requestHandles[$requestId] = $curl;
 
@@ -198,9 +189,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 			curl_multi_add_handle($this->getMultiCurl(), $curl);
 		}
 		
-		$this->tracer->logDebug('[MULTICURL]', __FILE__, __LINE__, 'Executing Multi Curl...');
 		$this->executeMultiCurl();
-		$this->tracer->logDebug('[MULTICURL]', __FILE__, __LINE__, 'Finished.');
 
 		$responses = array();
 

@@ -5,7 +5,7 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../core/IncomingMessage.php');
 require_once(__DIR__.'/../core/UpdateHandler.php');
 require_once(__DIR__.'/../core/BotPDO.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/stuff.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
@@ -25,6 +25,7 @@ class UpdateHandler{
 	private $usersAccess;
 	private $telegramUserDataAccess;
 	private $telegramAPI;
+	private $coreHandler;
 	private $telegramBotName;
 
 	private $forwardingChat;
@@ -32,33 +33,27 @@ class UpdateHandler{
 	private $forwardEverything;
 	
 	public function __construct(){
-		$this->tracer = new \Tracer(__CLASS__);
-		
-		try{
-			$this->pdo = \BotPDO::getInstance();
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-			throw $ex;
-		}
-
+		$this->pdo = \BotPDO::getInstance();
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
-		$this->usersAccess = new \DAL\UsersAccess($this->tracer, $this->pdo);
-		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->tracer, $this->pdo);
+		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
+		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->pdo);
 
 		$config = new \Config($this->pdo);
 
 		try{
-			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config);
+			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config, $this->pdo);
 			$HTTPRequester = $HTTPrequesterFactory->getInstance();
 
 			$this->speechRecognizer = new \SpeechRecognizer\SpeechRecognizer(
 				$config,
-				$HTTPRequester
+				$HTTPRequester,
+				$this->pdo
 			);
 
 			$telegramAPIToken = $config->getValue('TelegramAPI', 'token');
-			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester);
+			$this->telegramAPI = new TelegramAPI($telegramAPIToken, $HTTPRequester, $this->pdo);
+			$this->coreHandler = new \core\UpdateHandler($this->pdo);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
@@ -182,6 +177,7 @@ class UpdateHandler{
 		string $last_name = null
 	){
 		try{
+			# TODO: Move transaction stuff behind DAL
 			$res = $this->pdo->beginTransaction();
 			if($res === false){
 				$this->tracer->logError(
@@ -534,8 +530,7 @@ class UpdateHandler{
 			$telegramSpecificData
 		);
 
-		$coreHandler = new \core\UpdateHandler();
-		$coreHandler->processIncomingMessage($userInfo['user'], $incomingMessage);
+		$this->coreHandler->processIncomingMessage($userInfo['user'], $incomingMessage);
 
 	}
 

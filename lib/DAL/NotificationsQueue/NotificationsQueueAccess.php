@@ -9,9 +9,8 @@ class NotificationsQueueAccess extends CommonAccess{
 	private $getPendingNotificationsQuery;
 	private $updateNotificationQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new NotificationBuilder()
 		);
