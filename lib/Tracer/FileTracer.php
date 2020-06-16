@@ -1,13 +1,25 @@
 <?php
-require_once(__DIR__.'/TracerBase.php');
+require_once(__DIR__.'/TracerCompiled.php');
 
-class Tracer extends TracerBase{
+class FileTracer extends TracerCompiled{
+	private $traceName;
 	private $hFile = null;
 	const logsDir = __DIR__.'/../../logs';
 	const standaloneTracePath = self::logsDir.'/Standalone.log';
 
-	public function __construct($traceName){
-		parent::__construct($traceName);
+	public function __construct(string $traceName, TracerBase $nextTracer = null){
+		parent::__construct(
+			new TracerConfig(__DIR__.'/FileTracerConfig.ini', $traceName),
+			$nextTracer
+		);
+
+		if($traceName[0] === '-'){
+			$traceName = substr($traceName, 1);
+		}
+
+		$traceName = str_replace('\\', '.', $traceName);
+
+		$this->traceName = $traceName;
 	}
 
 	public function __destruct(){
@@ -18,11 +30,11 @@ class Tracer extends TracerBase{
 		}
 	}
 
-	private function createDirIfNotExists($dir){
+	private function createDirIfNotExists(string $dir){
 		$prev_umask = umask(0);
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
-				TracerBase::syslogCritical(
+				parent::syslogCritical(
 					'[SETUP]', __FILE__, __LINE__,
 					"logs dir is not a directory ($dir)"
 				);
@@ -44,7 +56,7 @@ class Tracer extends TracerBase{
 	}
 		
 
-	private function prepareTraceFile($path){
+	private function prepareTraceFile(string $path){
 		$prev_umask = umask(0);
 		$this->createDirIfNotExists(dirname($path));
 	
@@ -68,7 +80,7 @@ class Tracer extends TracerBase{
 				print_r(error_get_last(), true)
 			);
 
-			TracerBase::syslogCritical('[SETUP]', __FILE__, __LINE__, $errorDescription);
+			parent::syslogCritical('[SETUP]', __FILE__, __LINE__, $errorDescription);
 
 			throw new \Exception($errorDescription);
 		}
@@ -77,9 +89,7 @@ class Tracer extends TracerBase{
 		return $hFile;
 	}
 
-	protected function storeStandalone($text){
-		assert(is_string($text));
-
+	protected function storeStandalone(string $text){
 		$id = uniqid($this->traceName.'_');
 		
 		$hFile = $this->prepareTraceFile(self::standaloneTracePath);
@@ -102,9 +112,7 @@ class Tracer extends TracerBase{
 
 	}
 
-	protected function write($text){
-		assert(is_string($text));
-
+	protected function write(string $text){
 		if($this->hFile === null){
 			$this->hFile = $this->prepareTraceFile(self::logsDir.'/'.$this->traceName.'.log');
 		}

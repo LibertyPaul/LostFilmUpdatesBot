@@ -1,0 +1,3 @@
+[Default]
+LoggingLevel=WARNING
+CLIStdOutTrace=false

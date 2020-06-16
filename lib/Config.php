@@ -1,6 +1,6 @@
 <?php
 
-require_once(__DIR__.'/Tracer/Tracer.php');
+require_once(__DIR__.'/Tracer/TracerFactory.php');
 
 abstract class ConfigFetchMode{
 	const ALL_AT_ONCE = 0;
@@ -14,7 +14,7 @@ class Config{
 	private $allCached = false;
 
 	public function __construct(\PDO $pdo, $mode = ConfigFetchMode::ALL_AT_ONCE){
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
 		$this->getValueQuery = $pdo->prepare('
 			SELECT	`value`

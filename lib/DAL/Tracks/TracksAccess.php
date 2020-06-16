@@ -13,9 +13,8 @@ class TracksAccess extends CommonAccess{
 	private $addTrackQuery;
 	private $deleteTrackQuery;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo){
+	public function __construct(\PDO $pdo){
 		parent::__construct(
-			$tracer,
 			$pdo,
 			new TrackBuilder()
 		);
@@ -24,7 +23,7 @@ class TracksAccess extends CommonAccess{
 			SELECT
 				`tracks`.`user_id`,
 				`tracks`.`show_id`,
-				DATE_FORMAT(`tracks`.`created`, '".parent::dateTimeDBFormat."') AS createdStr,
+				DATE_FORMAT(`tracks`.`created`, '".parent::dateTimeDBFormat."') AS createdStr
 		";
 
 		$this->getTracksByUserQuery = $this->pdo->prepare("

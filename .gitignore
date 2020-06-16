@@ -5,6 +5,7 @@ DBCredentials/*.ini
 DBCredentials/SSL
 DB_schema/*.ini
 tools/data/
-lib/Tracer/TracerConfig.ini
+lib/Tracer/FileTracerConfig.ini
+lib/Tracer/YardTracerConfig.ini
 
 *.swp

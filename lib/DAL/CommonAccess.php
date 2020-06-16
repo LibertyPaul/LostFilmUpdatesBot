@@ -7,56 +7,64 @@ require_once(__DIR__.'/../QueryTraits/Type.php');
 require_once(__DIR__.'/../QueryTraits/Approach.php');
 
 
-class ConstraintViolationException extends \RuntimeException{};
-class DuplicateValueException extends ConstraintViolationException{
+class ConstraintViolationException extends \RuntimeException{
 	public function getConstrainingIndexName(): string{
 		return $this->getMessage();
 	}
-};
+}
+
+class DuplicateValueException extends ConstraintViolationException{};
+class ForeignKeyViolation extends ConstraintViolationException{};
+
 
 abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
 	const dateTimeAppFormat = 'd.m.Y H:i:s.u';
 
-	protected $tracer;
 	protected $pdo;
 	protected $DAOBuilder;
 
-	public function __construct(\Tracer $tracer, \PDO $pdo, DAOBuilderInterface $DAOBuilder){
-		$this->tracer = $tracer;
+	public function __construct(\PDO $pdo, DAOBuilderInterface $DAOBuilder){
 		$this->pdo = $pdo;
 		$this->DAOBuilder = $DAOBuilder;
 	}
 
 	private function get23000IndexName(string $errorMessage){
-		$regexp = "/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/";
-		$matches = array();
-		
-		$matchesRes = preg_match($regexp, $errorMessage, $matches);
-		if($matchesRes === false){
-			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'preg_match has failed with code: [%s]'.PHP_EOL.
-				'Message: [%s]',
-				preg_last_error(),
-				$errorMessage
-			);
+		$regexps = array(
+			"/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/",
+			"/Integrity constraint violation: 1452 .*? FOREIGN KEY \(`(\w+)`\)/"
+			# TODO: Map to correct exception type
+		);
 
-			return null;
+		$matches = array();
+
+		foreach($regexps as $regexp){
+			$matchesRes = preg_match($regexp, $errorMessage, $matches);
+			if($matchesRes !== false && $matchesRes > 0){
+				break;
+			}
+		}
+
+		if($matchesRes === false){
+			throw new \LogicException(
+				sprintf(
+					"preg_match has failed with code: [%s]".PHP_EOL.
+					'Message: [%s]',
+					preg_last_error(),
+					$errorMessage
+				)
+			);
 		}
 
 		if($matchesRes === 0){
-			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'23000 error text does not match the pattern'.PHP_EOL.
-				'Message: [%s]',
-				$errorMessage
+			throw new \LogicException(
+				sprintf(
+					'23000 error text does not match any pattern'.PHP_EOL.
+					'Message: [%s]',
+					$errorMessage
+				)
 			);
-
-			return null;
 		}
-
-		assert($matchesRes === 1);
 
 		return $matches[1];
 	}
@@ -71,21 +79,20 @@ abstract class CommonAccess{
 			$query->execute($args);
 		}
 		catch(\PDOException $ex){
-			$this->tracer->logException(
-				'[o]', __FILE__, __LINE__, $ex
-			);
-
-			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__, PHP_EOL.print_r($args, true)
-			);
-
 			switch($ex->getCode()){
 			case 23000:
-				$indexName = $this->get23000IndexName($ex->getMessage());
+				$message = $ex->getMessage();
+				try{
+					$indexName = $this->get23000IndexName($message);
+				}
+				catch(\Throwable $ex){
+					$indexName = "<unidentified: $message>";
+				}
+
 				throw new DuplicateValueException($indexName, 0, $ex);
 
 			default:
-				throw new \RuntimeException("Failed to execute query.", 0, $ex);
+				throw $ex;
 			}
 		}
 
@@ -121,5 +128,17 @@ abstract class CommonAccess{
 		}
 		
 		return $id;
+	}
+
+	protected function startTransaction(){
+		$this->pdo->beginTransaction();
+	}
+
+	protected function commit(){
+		$this->pdo->commit();
+	}
+
+	protected function rollback(){
+		$this->pdo->rollBack();
 	}
 }

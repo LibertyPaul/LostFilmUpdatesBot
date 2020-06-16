@@ -3,16 +3,19 @@
 namespace parser;
 
 require_once(__DIR__.'/Parser.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 
 class SeriesParser extends Parser{
 	private $tracer;
 	protected $rssData;
 	
-	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester){
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		\PDO $pdo
+	){
 		parent::__construct($requester, null);
 
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
 	public function loadSrc($path, $requestHeaders = array()){
@@ -30,14 +33,7 @@ class SeriesParser extends Parser{
 			$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
 		}
 
-		try{
-			$this->rssData = new \SimpleXMLElement($this->pageSrc);
-		}
-		catch(\RuntimeException $ex){
-			$this->tracer->logException('[XML ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logError('[XML ERROR]', __FILE__, __LINE__, PHP_EOL.$this->pageSrc);
-			throw $ex;
-		}
+		$this->rssData = new \SimpleXMLElement($this->pageSrc);
 	}
 
 	private static function isUsualSeriesLink($URL){
@@ -102,7 +98,7 @@ class SeriesParser extends Parser{
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logError(
+				$this->tracer->logDebug(
 					'[PARSE ERROR]', __FILE__, __LINE__,
 					PHP_EOL.print_r($item, true)
 				);

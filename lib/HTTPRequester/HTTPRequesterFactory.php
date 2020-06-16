@@ -5,7 +5,7 @@ namespace HTTPRequester;
 require_once(__DIR__.'/../Config.php');
 require_once(__DIR__.'/HTTPRequester.php');
 require_once(__DIR__.'/FakeHTTPRequester.php');
-require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/TracerFactory.php');
 
 
 class HTTPRequesterFactory{
@@ -13,8 +13,8 @@ class HTTPRequesterFactory{
 	private $undeliveredMessageStorage;
 	private $tracer;
 
-	public function __construct(\Config $config){
-		$this->tracer = new \Tracer(__CLASS__);
+	public function __construct(\Config $config, \PDO $pdo){
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
 		$res = $config->getValue('TelegramAPI', 'Perform Actual Send');
 		switch($res){

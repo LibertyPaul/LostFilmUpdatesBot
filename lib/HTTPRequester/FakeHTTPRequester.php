@@ -4,7 +4,7 @@ namespace HTTPRequester;
 
 require_once(__DIR__.'/HTTPRequesterInterface.php');
 require_once(__DIR__.'/HTTPResponse.php');
-require_once(__DIR__.'/../Tracer/Tracer.php');
+require_once(__DIR__.'/../Tracer/TracerFactory.php');
 
 class FakeHTTPRequester implements HTTPRequesterInterface{
 	private $destinationFilePath;
@@ -12,7 +12,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	
 	public function __construct($destinationFilePath){
 		$this->destinationFilePath = $destinationFilePath;
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, null, true, false);
 	}
 	
 	private function successResponse(){

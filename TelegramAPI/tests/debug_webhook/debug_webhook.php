@@ -13,9 +13,11 @@ require_once(__DIR__.'/../../../lib/Config.php');
 require_once(__DIR__.'/../../UpdateHandler.php');
 require_once(__DIR__.'/../../Webhook.php');
 
-require_once(__DIR__.'/../../../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../../../lib/Tracer/TracerFactory.php');
 
-$tracer = new \Tracer(__NAMESPACE__.'DebugWebhook');
+
+$pdo = \BotPDO::getInstance();
+$tracer = \TracerFactory::getTracer(__NAMESPACE__.'DebugWebhook', $pdo);
 $tracer->logEvent('[DEBUG]', __FILE__, __LINE__, 'Debug Webhook was started');
 
 
@@ -38,7 +40,7 @@ $tracer->logfDebug('[DEBUG]', __FILE__, __LINE__, 'Fetched [%d] bytes.', strlen(
 
 
 $tracer->logDebug('[DEBUG]', __FILE__, __LINE__, 'Creating Config object...');
-$config = new \Config(\BotPDO::getInstance());
+$config = new \Config($pdo);
 $tracer->logDebug('[DEBUG]', __FILE__, __LINE__, 'Config was created.');
 
 

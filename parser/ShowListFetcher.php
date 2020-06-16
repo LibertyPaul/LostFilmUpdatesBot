@@ -2,7 +2,7 @@
 
 namespace parser;
 
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/../lib/DAL/Shows/Show.php');
@@ -12,11 +12,15 @@ class ShowListFetcher{
 	private $tracer;
 	private $config;
 	
-	public function __construct(\HTTPRequester\HTTPRequesterInterface $requester, \Config $config){
+	public function __construct(
+		\HTTPRequester\HTTPRequesterInterface $requester,
+		\Config $config,
+		\PDO $pdo
+	){
 		$this->requester = $requester;
 		$this->config = $config;
 
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
 	private static function isOnAir(int $status){
@@ -65,24 +69,20 @@ class ShowListFetcher{
 			}
 
 			$shows = json_decode($showsJSON, true);
-			if($shows === false){
-				$this->tracer->logError(
+			if($shows === null){
+				$this->tracer->logfError(
 					'[JSON ERROR]', __FILE__, __LINE__,
-					'json_decode error: '.json_last_error_msg().PHP_EOL.
+					'json_decode error: [%s]',
+					json_last_error_msg()
+				);
+
+				$this->tracer->logDebug(
+					'[JSON ERROR]', __FILE__, __LINE__,
+					"Erroneous JSON:".PHP_EOL.
 					$showsJSON
 				);
 
 				throw new \RuntimeException('json_decode error: '.json_last_error_msg());
-			}
-
-			if(is_array($shows['data']) === false){
-				$this->tracer->logError(
-					'[DATA ERROR]', __FILE__, __LINE__,
-					'Incorrect show info'.PHP_EOL.
-					print_r($shows, true)
-				);
-
-				throw new \RuntimeException('Incorrect show info: data element is not found');
 			}
 
 			foreach($shows['data'] as $showInfo){

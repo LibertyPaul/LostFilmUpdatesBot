@@ -5,7 +5,7 @@ namespace TelegramAPI;
 require_once(__DIR__.'/../core/InlineOption.php');
 require_once(__DIR__.'/../core/MarkupType.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/VelocityController.php');
 require_once(__DIR__.'/VelocityControllerFactory.php');
@@ -18,27 +18,29 @@ class TelegramAPI{
 
 	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
 	
-	public function __construct($botToken, \HTTPRequester\HTTPRequesterInterface $HTTPRequester){
-		assert(is_string($botToken));
+	public function __construct(
+		string $botToken,
+		\HTTPRequester\HTTPRequesterInterface $HTTPRequester,
+		\PDO $pdo
+	){
 		$this->botToken = $botToken;
 		$this->HTTPRequester = $HTTPRequester;
-		$this->tracer = new \Tracer(__CLASS__);
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 		$this->velocityController = VelocityControllerFactory::getMemcachedBasedController(
-			__CLASS__
+			__CLASS__,
+			$this->tracer
 		);
 	}
 
-	private function getBaseMethodURL($method){
-		assert(is_string($method));
+	private function getBaseMethodURL(string $method){
 		return sprintf('https://api.telegram.org/bot%s/%s', $this->botToken, $method);
 	}
 	
-	private function getDownloadFileURL($file_path){
-		assert(is_string($file_path));
+	private function getDownloadFileURL(string $file_path){
 		return sprintf('https://api.telegram.org/file/bot%s/%s', $this->botToken, $file_path);
 	}
 
-	private function waitForVelocity($user_id){
+	private function waitForVelocity(int $user_id){
 		while($this->velocityController->isSendingAllowed($user_id) === false){
 			$res = time_nanosleep(0, 500000000); // 0.5s
 			if($res !== true){
@@ -162,9 +164,15 @@ class TelegramAPI{
 
 		$requestJSON = json_encode($request, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
 		if($requestJSON === false){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				'json_encode has failed on:'.PHP_EOL.
+				'json_encode has failed: [%s].',
+				json_last_error_msg()
+			);
+
+			$this->tracer->logDebug(
+				'[JSON]', __FILE__, __LINE__,
+				'Erroneous object:'.PHP_EOL.
 				print_r($request, true)
 			);
 
@@ -219,10 +227,16 @@ class TelegramAPI{
 		$result = $this->HTTPRequester->request($requestProperties);
 
 		if($result->getCode() >= 400){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				'getFile call has failed. Response:'.PHP_EOL.
-				$result
+				'getFile call has failed with code [%d].',
+				$result->getCode()
+			);
+
+			$this->tracer->logDebug(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				'Error response body:'.PHP_EOL.
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to get file info');
@@ -230,10 +244,16 @@ class TelegramAPI{
 
 		$File = json_decode($result->getBody());
 		if($File === false){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse Telegram getFile response:".PHP_EOL.
-				$result
+				"Unable to parse Telegram getFile response: [%s].",
+				json_last_error_msg()
+			);
+
+			$this->tracer->logDebug(
+				'[JSON]', __FILE__, __LINE__,
+				'Erroneous JSON:'.PHP_EOL.
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to parse getFile response');
@@ -264,10 +284,17 @@ class TelegramAPI{
 		$result = $this->HTTPRequester->request($requestProperties);
 
 		if($result->getCode() >= 400){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				"File download has failed. File id=[$file_id]".PHP_EOL.
-				$result
+				'File download has failed with code [%d].',
+				$result->getCode()
+			);
+
+			$this->tracer->logfDebug(
+				'[TELEGRAM API]', __FILE__, __LINE__,
+				'File ID: [%d], Response:'.PHP_EOL.'%s',
+				$file_id,
+				$result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to download file');

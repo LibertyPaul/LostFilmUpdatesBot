@@ -9,7 +9,7 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ $# -lt 1 ]; then
-	echo "Usage: $0 <Incoming Messages Dir>"
+	echo "Usage: $0 <Incoming Messages Dir> [--yes]"
 	exit 1
 fi
 
@@ -19,6 +19,11 @@ if [[ "$selfDir" =~ '/prod/' ]]; then
 fi
 
 readonly incomingMessagesDir="$1"
+if [ $# -gt 1 ] && [ "$2" == "--yes" ]; then
+	readonly confirmLaunch='N'
+else
+	readonly confirmLaunch='Y'
+fi
 
 function cleanUpDB(){
 	tables=(				\
@@ -29,6 +34,8 @@ function cleanUpDB(){
 		series				\
 		shows				\
 		users				\
+		ErrorYard			\
+		ErrorDictionary		\
 	)						;
 
 	for table in "${tables[@]}"; do
@@ -43,7 +50,7 @@ function cleanUpDB(){
 }
 
 function cleanUpLogs(){
-	rm "$selfDir/../logs/"*
+	rm -r "$selfDir/../logs/"
 	return $?
 }
 
@@ -102,8 +109,10 @@ else
 	exit 1
 fi
 
-echo -n "About to start sending messages. Press enter to continue ... "
-read x
+if [ "$confirmLaunch" == "Y" ]; then
+	echo -n "About to start sending messages. Press enter to continue ... "
+	read x
+fi
 
 sendMessages "$incomingMessagesDir"
 

@@ -10,8 +10,9 @@ class MessageRouterTest extends PHPUnit_Framework_TestCase{
 	private function getSenders(){
 		$messageSenders = array();
 
+		$pdo = BotPDO::getInstance();
 		$requester = new \HTTPRequester\FakeHTTPRequester('/tmp/MessageRouterTest.txt');
-		$telegramAPI = new \TelegramAPI\TelegramAPI('token', $requester);
+		$telegramAPI = new \TelegramAPI\TelegramAPI('token', $requester, $pdo);
 		$telegramAPISender = new \TelegramAPI\MessageSender($telegramAPI);
 
 		$messageSenders['TelegramAPI'] = $telegramAPISender;

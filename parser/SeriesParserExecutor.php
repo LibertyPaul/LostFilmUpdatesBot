@@ -8,7 +8,7 @@ require_once(__DIR__.'/../lib/ExceptionHandler.php');
 require_once(__DIR__.'/../lib/Config.php');
 require_once(__DIR__.'/ParserPDO.php');
 require_once(__DIR__.'/SeriesParser.php');
-require_once(__DIR__.'/../lib/Tracer/Tracer.php');
+require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
 require_once(__DIR__.'/SeriesAboutParser.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequester.php');
 require_once(__DIR__.'/../lib/LFSpecifics/LFSpecifics.php');
@@ -26,19 +26,22 @@ class SeriesParserExecutor{
 	private $showsAccess;
 	private $tracer;
 	
-	public function __construct(Parser $seriesParser, Parser $seriesAboutParser){
-		$this->seriesParser = $seriesParser;
-		$this->seriesAboutParser = $seriesAboutParser;
-
-		$this->tracer = new \Tracer(__CLASS__);
-		
+	public function __construct(){
 		$pdo = ParserPDO::getInstance();
+		$requester = new \HTTPRequester\HTTPRequester();
+
+		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
+
+		$this->seriesParser = new SeriesParser($requester, $pdo);
+		$this->seriesAboutParser = new SeriesAboutParser($requester, $pdo);
+
+		
 		$this->config = new \Config($pdo);
 		$maxShowNotReadyPeriodMins = $this->config->getValue('Parser', 'Max Show Not Ready Period Mins', 30);
 		$this->maxShowNotReadyPeriod = new \DateInterval('PT'.$maxShowNotReadyPeriodMins.'M');
 
-		$this->seriesAccess = new \DAL\SeriesAccess($this->tracer, $pdo);
-		$this->showsAccess = new \DAL\ShowsAccess($this->tracer, $pdo);
+		$this->seriesAccess = new \DAL\SeriesAccess($pdo);
+		$this->showsAccess = new \DAL\ShowsAccess($pdo);
 	}
 
 	private function processSeries(array $seriesMetaInfo){
@@ -185,10 +188,7 @@ class SeriesParserExecutor{
 }
 
 
-$requester = new \HTTPRequester\HTTPRequester();
-$parser = new SeriesParser($requester);
-$seriesAboutParser = new SeriesAboutParser($requester);
-$seriesParserExecutor = new SeriesParserExecutor($parser, $seriesAboutParser);
+$seriesParserExecutor = new SeriesParserExecutor();
 $seriesParserExecutor->run();
 
 

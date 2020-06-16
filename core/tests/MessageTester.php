@@ -13,13 +13,12 @@ class MessageTester{
 	private $updateHandler;
 	private $getResponseStatusQuery;
 
-	public function __construct($user_id){
-		assert(is_int($user_id));
+	public function __construct(int $user_id){
 		$this->user_id = $user_id;
 		$this->botOutputFile = tempnam(sys_get_temp_dir(), 'MessageTester_');
-		$this->updateHandler = new UpdateHandler();
-
 		$pdo = \BotPDO::getInstance();
+		$this->updateHandler = new UpdateHandler($pdo);
+
 		$this->getResponseStatusQuery = $pdo->prepare('
 			SELECT `statusCode`
 			FROM `messagesHistory`
