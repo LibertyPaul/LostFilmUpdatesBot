@@ -34,6 +34,8 @@ function cleanUpDB(){
 		series				\
 		shows				\
 		users				\
+		ErrorYard			\
+		ErrorDictionary		\
 	)						;
 
 	for table in "${tables[@]}"; do
