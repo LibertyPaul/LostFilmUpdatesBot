@@ -6,10 +6,10 @@ require_once(__DIR__.'/../DAL/ErrorYard/ErrorYardAccess.php');
 require_once(__DIR__.'/../DAL/ErrorDictionary/ErrorDictionaryAccess.php');
 
 class YardTracer extends TracerBase{
-	public function __construct(\PDO $pdo, TracerBase $nextTracer = null){
+	public function __construct(\PDO $pdo, TracerBase $secondTracer = null){
 		parent::__construct(
 			new TracerConfig(__DIR__.'/YardTracerConfig.ini'),
-			$nextTracer
+			$secondTracer
 		);
 
 		$this->errorDictionary = new \DAL\ErrorDictionaryAccess($pdo);

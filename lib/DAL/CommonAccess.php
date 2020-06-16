@@ -7,12 +7,15 @@ require_once(__DIR__.'/../QueryTraits/Type.php');
 require_once(__DIR__.'/../QueryTraits/Approach.php');
 
 
-class ConstraintViolationException extends \RuntimeException{};
-class DuplicateValueException extends ConstraintViolationException{
+class ConstraintViolationException extends \RuntimeException{
 	public function getConstrainingIndexName(): string{
 		return $this->getMessage();
 	}
-};
+}
+
+class DuplicateValueException extends ConstraintViolationException{};
+class ForeignKeyViolation extends ConstraintViolationException{};
+
 
 abstract class CommonAccess{
 	const dateTimeDBFormat = '%d.%m.%Y %H:%i:%S.%f';
@@ -29,7 +32,8 @@ abstract class CommonAccess{
 	private function get23000IndexName(string $errorMessage){
 		$regexps = array(
 			"/Integrity constraint violation: 1062 Duplicate entry '\w+' for key '(\w+)'/",
-			"/Integrity constraint violation: 1452 .*? FOREIGN KEY \(`(\w+)`\)/"	
+			"/Integrity constraint violation: 1452 .*? FOREIGN KEY \(`(\w+)`\)/"
+			# TODO: Map to correct exception type
 		);
 
 		$matches = array();

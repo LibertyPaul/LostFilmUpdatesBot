@@ -29,12 +29,18 @@ class ErrorYardAccess extends CommonAccess{
 			$selectFields
 			FROM    `ErrorYard`
 			WHERE	`ErrorYard`.`errorId` = :errorId
-			AND		`ErrorYard`.`firstAppearanceTime` BETWEEN NOW() AND NOW() - (
-				SELECT IFNULL(`value`, 24)
-				FROM `config`
-				WHERE `section` = 'ErrorYard'
-				AND `item` = 'Bucket Life Period'
-			)
+			AND		`ErrorYard`.`firstAppearanceTime` BETWEEN DATE_SUB(
+				NOW(),
+				INTERVAL IFNULL(
+					(
+						SELECT `value`
+						FROM `config`
+						WHERE `section` = 'ErrorYard'
+						AND `item` = 'Bucket Life Period Hours'
+					),
+					24
+				) HOUR
+			) AND NOW()
 			ORDER BY `ErrorYard`.`firstAppearanceTime` DESC
 			LIMIT 1
 			FOR UPDATE
