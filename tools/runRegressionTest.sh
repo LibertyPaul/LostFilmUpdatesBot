@@ -34,6 +34,8 @@ function cleanUpDB(){
 		series				\
 		shows				\
 		users				\
+		ErrorYard			\
+		ErrorDictionary		\
 	)						;
 
 	for table in "${tables[@]}"; do
@@ -48,7 +50,7 @@ function cleanUpDB(){
 }
 
 function cleanUpLogs(){
-	rm "$selfDir/../logs/"*
+	rm -r "$selfDir/../logs/"
 	return $?
 }
 
