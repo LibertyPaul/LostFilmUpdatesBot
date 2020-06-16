@@ -129,14 +129,12 @@ class UsersAccess extends CommonAccess{
 			':registration_time'	=> $user->getRegistrationTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->execute(
+		return $this->execute(
 			$this->addUserQuery,
 			$args,
 			\QueryTraits\Type::Write(),
 			\QueryTraits\Approach::One()
 		);
-
-		return $this->getLastInsertId();
 	}
 
 	public function updateUser(User $user){

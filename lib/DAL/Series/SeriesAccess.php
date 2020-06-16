@@ -140,14 +140,13 @@ class SeriesAccess extends CommonAccess{
 			':ready'			=> $series->isReady() ? 'Y' : 'N'
 		);
 
-		$this->execute(
+		return $this->execute(
 			$this->addSeriesQuery,
 			$args,
 			\QueryTraits\Type::Write(),
 			\QueryTraits\Approach::One()
 		);
 
-		return $this->getLastInsertId();
 	}
 
 	public function updateSeries(Series $series){

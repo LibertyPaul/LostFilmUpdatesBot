@@ -106,14 +106,12 @@ class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 			':last_name'	=> $telegramUserData->getLastName()
 		);
 
-		$this->execute(
+		return $this->execute(
 			$this->addAPIUserDataQuery,
 			$args,
 			\QueryTraits\Type::Write(),
 			\QueryTraits\Approach::One()
 		);
-
-		return $this->getLastInsertId();
 	}
 
 	public function updateAPIUserData(TelegramUserData $telegramUserData){
