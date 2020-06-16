@@ -112,8 +112,9 @@ class ErrorDictionaryAccess extends CommonAccess{
 			$this->rollback();
 			throw $ex;
 		}
-
+		
+		$errorId = $this->getLastInsertId();
 		$this->commit();
-		return $this->getLastInsertId();
+		return $errorId;
 	}
 }
