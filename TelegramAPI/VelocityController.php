@@ -22,7 +22,7 @@ class VelocityController{
 		$this->storage = $storage;
 
 		$pdo = \BotPDO::getInstance();
-		$config = new \Config($pdo);
+		$config = \Config::getConfig($pdo);
 
 		$this->maxMessagesFromBotPerSecond = $config->getValue(
 			'TelegramAPI',

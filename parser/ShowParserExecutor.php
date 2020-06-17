@@ -121,7 +121,7 @@ class ShowParserExecutor{
 $requester = new \HTTPRequester\HTTPRequester();
 
 $pdo = ParserPDO::getInstance();
-$config = new \Config($pdo);
+$config = \Config::getConfig($pdo);
 $showListFetcher = new ShowListFetcher($requester, $config, $pdo);
 $showParserExecutor = new ShowParserExecutor($pdo, $showListFetcher);
 

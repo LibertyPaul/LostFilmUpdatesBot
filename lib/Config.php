@@ -13,7 +13,7 @@ class Config{
 	private $tracer;
 	private $allCached = false;
 
-	public function __construct(\PDO $pdo, $mode = ConfigFetchMode::ALL_AT_ONCE){
+	private function __construct(\PDO $pdo, int $mode){
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
 		$this->getValueQuery = $pdo->prepare('
@@ -30,7 +30,17 @@ class Config{
 		}
 	}
 
-	private function cacheValue($section, $item, $value){
+	public static function getConfig(\PDO $pdo, int $mode = ConfigFetchMode::ALL_AT_ONCE){
+		static $config;
+
+		if(isset($config) === false){
+			$config = new self($pdo, $mode);
+		}
+
+		return $config;
+	}
+
+	private function cacheValue(string $section, string $item, string $value){
 		if(array_key_exists($section, $this->cachedValues) === false){
 			$this->cachedValues[$section] = array();
 		}
@@ -57,7 +67,7 @@ class Config{
 		$this->allCached = true;
 	}
 
-	public function getValue($section, $item, $defaultValue = null){
+	public function getValue(string $section, string $item, string $defaultValue = null): string{
 		if(array_key_exists($section, $this->cachedValues)){
 			if(array_key_exists($item, $this->cachedValues[$section])){
 				$value = $this->cachedValues[$section][$item];

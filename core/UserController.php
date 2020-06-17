@@ -39,7 +39,7 @@ class UserController{
 	public function __construct(\DAL\User $user){
 		$this->pdo = \BotPDO::getInstance();
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
-		$this->config = new \Config($this->pdo);
+		$this->config = \Config::getConfig($this->pdo);
 		$this->user = $user;
 		$this->conversationStorage = new ConversationStorage(
 			$user->getId(),

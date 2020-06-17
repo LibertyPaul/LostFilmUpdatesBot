@@ -24,7 +24,7 @@ class NotificationGenerator{
 	public function __construct(){
 		$pdo = \BotPDO::getInstance();
 
-		$this->config = new \Config($pdo);
+		$this->config = \Config::getConfig($pdo);
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
 
