@@ -45,6 +45,10 @@ class Approach{
 		return new Approach(self::MANY);
 	}
 
+	public function getApproach() : int{
+		return $this->approach;
+	}
+
 	public function verify(int $rowsAffected){
 		switch($this->approach){
 		case self::ONE:
