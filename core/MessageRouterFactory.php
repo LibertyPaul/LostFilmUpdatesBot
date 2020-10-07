@@ -13,7 +13,7 @@ class MessageRouterFactory{
 
 	private static function createTelegramAPISender(){
 		$pdo = \BotPDO::getInstance();
-		$config = new \Config($pdo);
+		$config = \Config::getConfig($pdo);
 		$botToken = $config->getValue('TelegramAPI', 'token');
 		if($botToken === null){
 			throw new \RuntimeException('[TelegramAPI][token] value does not exist');

@@ -88,7 +88,7 @@ class MessagesHistoryAccess extends CommonAccess{
 		);
 
 		try{	
-			$this->execute(
+			return $this->execute(
 				$this->addMessageHistoryQuery,
 				$args,
 				\QueryTraits\Type::Write(),
@@ -104,7 +104,5 @@ class MessagesHistoryAccess extends CommonAccess{
 				throw $ex;
 			}
 		}
-
-		return $this->getLastInsertId();
 	}
 }

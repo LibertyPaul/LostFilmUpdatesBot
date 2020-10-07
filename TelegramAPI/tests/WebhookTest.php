@@ -15,7 +15,7 @@ class WebhookTest extends \PHPUnit_Framework_TestCase{
 
 
 	public function __construct(){
-		$config = new \Config(\BotPDO::getInstance());
+		$config = \Config::getConfig(\BotPDO::getInstance());
 		$this->selfWebhookURL = $config->getValue('TelegramAPI', 'Webhook URL');
 		assert($this->selfWebhookURL !== null);
 

@@ -38,7 +38,7 @@ class ConfigTest extends PHPUnit_Framework_TestCase{
 			)
 		);
 
-		$config = new Config($pdo);
+		$config = \Config::getConfig($pdo);
 
 		$result = $config->getValue($section, $item);
 		$this->assertEquals($value, $result);

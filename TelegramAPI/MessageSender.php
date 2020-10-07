@@ -37,7 +37,8 @@ class MessageSender implements \core\MessageSenderInterface{
 
 		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($pdo);
 
-		$config = new \Config($pdo);
+		$config = \Config::getConfig($pdo);
+
 		$this->sleepOn429CodeMs = $config->getValue(
 			'Telegram API',
 			'Sleep On 429 Code ms',
