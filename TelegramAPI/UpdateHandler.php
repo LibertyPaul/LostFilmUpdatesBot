@@ -39,7 +39,7 @@ class UpdateHandler{
 		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
 		$this->telegramUserDataAccess = new \DAL\TelegramUserDataAccess($this->pdo);
 
-		$config = new \Config($this->pdo);
+		$config = \Config::getConfig($this->pdo);
 
 		try{
 			$HTTPrequesterFactory = new \HTTPRequester\HTTPRequesterFactory($config, $this->pdo);

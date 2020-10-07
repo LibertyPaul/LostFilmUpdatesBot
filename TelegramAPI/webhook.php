@@ -9,7 +9,6 @@ require_once(__DIR__.'/TelegramAPI.php');
 require_once(__DIR__.'/UpdateHandler.php');
 require_once(__DIR__.'/Webhook.php');
 require_once(__DIR__.'/../core/BotPDO.php');
-require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 $password = isset($_GET['password']) ? $_GET['password'] : null;
 $updateJSON = file_get_contents('php://input');

@@ -108,7 +108,12 @@ abstract class CommonAccess{
 		}
 
 		if($type->getType() === \QueryTraits\Type::WRITE){
-			return null;
+			if($approach->getApproach() === \QueryTraits\Approach::ONE){
+				return $this->getLastInsertId();
+			}
+			else{
+				return null;
+			}
 		}
 
 		$rows = $query->fetchAll();
@@ -121,7 +126,7 @@ abstract class CommonAccess{
 		return $approach->repack($result);
 	}
 
-	protected function getLastInsertId(){
+	private function getLastInsertId(){
 		$id = intval($this->pdo->lastInsertId());
 		if($this->pdo->errorCode() === 'IM001'){
 			throw new \RuntimeException("PDO driver does not support lastInsertId() method.");

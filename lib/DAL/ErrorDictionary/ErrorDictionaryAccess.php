@@ -101,20 +101,20 @@ class ErrorDictionaryAccess extends CommonAccess{
 
 			$args[':fullText'] = substr($record->getText(), 0, 65000);
 
-			$this->execute(
+			$errorId = $this->execute(
 				$this->addErrorDictionaryRecordQuery,
 				$args,
 				\QueryTraits\Type::Write(),
 				\QueryTraits\Approach::One()
 			);
+
+			$this->commit();
+
+			return $errorId;
 		}
 		catch(\Throwable $ex){
 			$this->rollback();
 			throw $ex;
 		}
-		
-		$errorId = $this->getLastInsertId();
-		$this->commit();
-		return $errorId;
 	}
 }

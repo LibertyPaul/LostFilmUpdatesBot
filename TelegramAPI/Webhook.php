@@ -45,7 +45,7 @@ class Webhook{
 			);
 		}
 
-		$config = new \Config($pdo);
+		$config = \Config::getConfig($pdo);
 		$this->selfWebhookPassword = $config->getValue('TelegramAPI', 'Webhook Password');
 	}
 

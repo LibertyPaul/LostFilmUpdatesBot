@@ -40,7 +40,7 @@ $tracer->logfDebug('[DEBUG]', __FILE__, __LINE__, 'Fetched [%d] bytes.', strlen(
 
 
 $tracer->logDebug('[DEBUG]', __FILE__, __LINE__, 'Creating Config object...');
-$config = new \Config($pdo);
+$config = \Config::getConfig($pdo);
 $tracer->logDebug('[DEBUG]', __FILE__, __LINE__, 'Config was created.');
 
 

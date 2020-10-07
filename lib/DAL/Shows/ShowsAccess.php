@@ -276,14 +276,12 @@ class ShowsAccess extends CommonAccess{
 			':lastAppearanceTime'	=> $show->getLastAppearanceTime()->format(parent::dateTimeAppFormat)
 		);
 
-		$this->execute(
+		return $this->execute(
 			$this->addShowQuery,
 			$args,
 			\QueryTraits\Type::Write(),
 			\QueryTraits\Approach::One()
 		);
-
-		return $this->getLastInsertId();
 	}
 
 	public function updateShow(Show $show){

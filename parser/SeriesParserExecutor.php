@@ -36,7 +36,7 @@ class SeriesParserExecutor{
 		$this->seriesAboutParser = new SeriesAboutParser($requester, $pdo);
 
 		
-		$this->config = new \Config($pdo);
+		$this->config = \Config::getConfig($pdo);
 		$maxShowNotReadyPeriodMins = $this->config->getValue('Parser', 'Max Show Not Ready Period Mins', 30);
 		$this->maxShowNotReadyPeriod = new \DateInterval('PT'.$maxShowNotReadyPeriodMins.'M');
 

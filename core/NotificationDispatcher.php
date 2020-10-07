@@ -28,7 +28,7 @@ class NotificationDispatcher{
 		
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 
-		$this->config = new \Config($this->pdo, \ConfigFetchMode::PER_REQUEST);
+		$this->config = \Config::getConfig($this->pdo, \ConfigFetchMode::PER_REQUEST);
 		$this->maxRetryCount = $this->config->getValue(
 			'Notification Dispatcher',
 			'Max Attempts Count',
