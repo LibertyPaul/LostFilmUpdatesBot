@@ -45,7 +45,7 @@ class Approach{
 		return new Approach(self::MANY);
 	}
 
-	public function getApproach() : int{
+	public function getApproach(): int{
 		return $this->approach;
 	}
 
