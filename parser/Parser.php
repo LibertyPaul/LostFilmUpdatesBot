@@ -18,7 +18,7 @@ abstract class Parser{
 		$this->pageSrc = null;
 	}
 	
-	public function loadSrc($url, $customHeaders = array()){
+	public function loadSrc(string $url, array $customHeaders = array()){
 		$requestProperties = new \HTTPRequester\HTTPRequestProperties(
 			\HTTPRequester\RequestType::Get,
 			\HTTPRequester\ContentType::TextHTML,

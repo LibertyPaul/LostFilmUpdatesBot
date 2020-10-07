@@ -57,7 +57,14 @@ class HTTPRequester implements HTTPRequesterInterface{
 	private function executeCurl($curl){
 		$body = curl_exec($curl);
 		if($body === false){
-			throw new HTTPException('curl_exec error: '.curl_error($curl));
+			$errno = curl_errno($curl);
+			switch($errno){
+				case \CURLE_OPERATION_TIMEOUTED:
+					throw new HTTPTimeoutException(curl_error($curl), $errno);
+
+				default:
+					throw new HTTPException('curl_exec error: '.curl_error($curl), $errno);
+			}
 		}
 
 		$code = intval(curl_getinfo($curl, \CURLINFO_HTTP_CODE));
