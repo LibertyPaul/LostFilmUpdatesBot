@@ -50,17 +50,12 @@ function cleanUpDB(){
 }
 
 function cleanUpLogs(){
-	rm -r "$selfDir/../logs/"
+	rm "$selfDir/../logs/"*
 	return $?
 }
 
 function loadShows(){
 	php "$selfDir/../parser/ShowParserExecutor.php" > /dev/null
-	if [ $? -ne 0 ]; then
-		return 1
-	fi
-
-	"$selfDir/DBQuery.sh" Owner "Update shows Set onAir = 'Y' Where 1 = 1;"
 	return $?
 }
 
@@ -79,6 +74,38 @@ function sendMessages(){
 
 function sendNotifications(){
 	php "$selfDir/../core/NotificationDispatcherExecutor.php" > /dev/null
+	return $?
+}
+
+function showErrorYard(){
+	cols="$(tput cols)"
+	if [ $? -ne 0 ]; then
+		echo "Failed to get terminal window size. Ignoring."
+	fi
+
+	textLength=999
+
+	if [ -n "$cols" ]; then
+		otherLength=20 # Approximately though
+		textLength=$(($cols - $otherLength - 5)) # -5 more just in case
+
+		if [ $textLength -lt 10 ]; then
+			textLength=10
+		fi
+	fi
+
+	"$selfDir/DBQuery.sh"								\
+		Owner 											\
+		"SELECT
+			ey.count,
+			ed.level,
+			SUBSTR(ed.text, 1, $textLength) AS text
+		FROM ErrorYard ey
+		JOIN ErrorDictionary ed ON ey.errorId = ed.id
+		ORDER BY ey.count DESC
+		LIMIT 10"										\
+		--horizontal									;
+
 	return $?
 }
 
@@ -135,6 +162,14 @@ else
 	exit 1
 fi
 
+echo "ErrorYard top 10 entries:"
+showErrorYard
+if [ $? -eq 0 ]; then
+	echo_green "Done."
+else
+	echo_red "Failed. Aborting."
+	exit 1
+fi
 
 
 

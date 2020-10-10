@@ -10,5 +10,5 @@ abstract class SendResult{
 }
 
 interface MessageSenderInterface{
-	public function send(int $user_id, OutgoingMessage $message);
+	public function send(int $user_id, OutgoingMessage $message): array;
 }

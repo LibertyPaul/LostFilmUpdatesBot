@@ -18,8 +18,8 @@ class SeriesParser extends Parser{
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
 
-	public function loadSrc($path, $requestHeaders = array()){
-		parent::loadSrc($path, $requestHeaders);
+	public function loadSrc(string $URL, array $requestHeaders = array()){
+		parent::loadSrc($URL, $requestHeaders);
 
 		# Sometimes LF produces invalid XML: ' & ' instead of ' &amp; '
 		$pos = strpos($this->pageSrc, ' & ');
@@ -36,7 +36,7 @@ class SeriesParser extends Parser{
 		$this->rssData = new \SimpleXMLElement($this->pageSrc);
 	}
 
-	private static function isUsualSeriesLink($URL){
+	private static function isUsualSeriesLink(?string $URL){
 		if(strpos($URL, '/additional/') !== false){
 			return false;
 		}
@@ -48,7 +48,7 @@ class SeriesParser extends Parser{
 		return true;
 	}
 	
-	private function parseURL($URL){
+	private function parseURL(?string $URL){
 		$regexp = '/https:\/\/[\w\.]*?lostfilm\.[^\/]+(\/[^\/]+)?\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
 		$matches = array();
 		$matchesRes = preg_match($regexp, $URL, $matches);

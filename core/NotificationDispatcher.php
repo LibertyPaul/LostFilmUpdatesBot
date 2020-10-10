@@ -110,15 +110,23 @@ class NotificationDispatcher{
 				$outgoingMessage = $this->notificationGenerator->newSeriesEvent($show, $series);
 				
 				if($user->isDeleted() === false){
-					$directredOutgoingMessage = new DirectedOutgoingMessage($user, $outgoingMessage);
-					$route = $this->messageRouter->route($directredOutgoingMessage->getUser());
-					$sendResult = $route->send($directredOutgoingMessage->getOutgoingMessage());
+					$sendResult = $this->messageRouter->getRoute($user)->send($outgoingMessage);
 				}
 				else{
-					$sendResult = SendResult::Fail;
+					$sendResult = array(SendResult::Fail);
 				}
 
-				$notification->applyDeliveryResult($sendResult === SendResult::Success ? 200 : 400);
+				if(count($sendResult) !== 1){
+					this->tracer->logfError(
+						'[o]', __FILE__, __LINE__,
+						'MessageSender returned incorrect number of results:'.PHP_EOL.
+						implode(', ', $sendResult)
+					);
+
+					$sendResult = array(SendResult::Fail); # To prevent excessive notifications
+				}
+
+				$notification->applyDeliveryResult($sendResult[0] === SendResult::Success ? 200 : 400); #TODO change code to internal status
 				$this->notificationsQueueAccess->updateNotification($notification);
 			}
 			catch(\PDOException $ex){

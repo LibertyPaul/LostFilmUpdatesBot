@@ -190,6 +190,14 @@ class TelegramAPI{
 			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
+		catch(\HTTPRequester\HTTPTimeoutException $ex){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				'Telegram API seems to be unavailable due to [%s]',
+				$ex
+			);
+
+		}
 		catch(\HTTPRequester\HTTPException $HTTPException){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
 			throw $HTTPException;
@@ -226,11 +234,11 @@ class TelegramAPI{
 
 		$result = $this->HTTPRequester->request($requestProperties);
 
-		if($result->getCode() >= 400){
-			$this->tracer->logfError(
+		if($result->isError()){
+			$this->tracer->logError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				'getFile call has failed with code [%d].',
-				$result->getCode()
+				'getFile call has failed:'.PHP_EOL.
+				$result
 			);
 
 			$this->tracer->logDebug(
@@ -283,18 +291,11 @@ class TelegramAPI{
 
 		$result = $this->HTTPRequester->request($requestProperties);
 
-		if($result->getCode() >= 400){
-			$this->tracer->logfError(
+		if($result->isError()){
+			$this->tracer->logError(
 				'[TELEGRAM API]', __FILE__, __LINE__,
-				'File download has failed with code [%d].',
-				$result->getCode()
-			);
-
-			$this->tracer->logfDebug(
-				'[TELEGRAM API]', __FILE__, __LINE__,
-				'File ID: [%d], Response:'.PHP_EOL.'%s',
-				$file_id,
-				$result->getBody()
+				'File download has failed:'.PHP_EOL.
+				$result
 			);
 
 			throw new \RuntimeException('Failed to download file');

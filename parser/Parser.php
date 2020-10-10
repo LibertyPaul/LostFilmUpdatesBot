@@ -4,6 +4,8 @@ namespace parser;
 
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 
+class SourceNotAvailableException extends \RuntimeException {}
+
 abstract class Parser{
 	protected $pageSrc;
 	protected $srcEncoding;
@@ -27,16 +29,20 @@ abstract class Parser{
 			$customHeaders
 		);
 		
-
-		$result = $this->requester->request($requestProperties);
+		try{
+			$result = $this->requester->request($requestProperties);
+		}
+		catch(\HTTPRequester\HTTPTimeoutException $ex){
+			throw new SourceNotAvailableException("timeout");
+		}
 		
-		if($result->getCode() !== 200){
+		if($result->isError()){
 			throw new \RuntimeException(
 				"HTTP call has failed:".PHP_EOL.
 				$result
 			);
 		}
-				
+
 		$this->pageSrc = $result->getBody();
 		
 		if($this->srcEncoding !== null){

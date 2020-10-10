@@ -61,7 +61,18 @@ class SeriesParserExecutor{
 			intval($seriesMetaInfo['seriesNumber'])
 		);
 
-		$this->seriesAboutParser->loadSrc($URL);
+		try{
+			$this->seriesAboutParser->loadSrc($URL);
+		}
+		catch(SourceNotAvailableException $ex){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				"Series page [%s] is not available at the moment due to [%s]",
+				$URL,
+				$ex
+			);
+		}
+
 		$seriesAboutInfo = $this->seriesAboutParser->run();
 		if (
 			$seriesAboutInfo->getTitleRu() === null ||
@@ -159,6 +170,14 @@ class SeriesParserExecutor{
 
 		try{
 			$this->seriesParser->loadSrc($rssURL, $customHeaders);
+		}
+		catch(SourceNotAvailableException $ex){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				"RSS [%s] is not available at the moment due to [%s]",
+				$rssURL,
+				$ex
+			);
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);

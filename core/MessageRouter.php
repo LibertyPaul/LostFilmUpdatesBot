@@ -23,7 +23,7 @@ class MessageRouter{
 		}
 	}
 
-	private function getMessageSender(string $API){
+	private function getMessageSender(string $API): MessageSenderInterface{
 		if(array_key_exists($API, $this->messageSenders) === false){
 			throw new \LogicException("Unknown API '$API'.");
 		}
@@ -32,7 +32,7 @@ class MessageRouter{
 	}
 		
 
-	public function route(\DAL\User $user){
+	public function getRoute(\DAL\User $user): MessageRoute{
 		$messageSender = $this->getMessageSender($user->getAPI());
 		$route = new MessageRoute($messageSender, $user->getId());
 		return $route;
