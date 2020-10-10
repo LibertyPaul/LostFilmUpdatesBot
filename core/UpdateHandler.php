@@ -145,7 +145,7 @@ class UpdateHandler{
 			
 				$result = $route->send($response->getOutgoingMessage());
 
-				assert(count($resut) > 1);
+				assert(count($result) > 1);
 
 				switch($result[0]){
 					case SendResult::Success:
