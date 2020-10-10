@@ -77,6 +77,19 @@ function sendNotifications(){
 	return $?
 }
 
+function showErrorYard(){
+	"$selfDir/DBQuery.sh"								\
+		Owner 											\
+		"SELECT ey.count, ed.level, ed.text				\
+		FROM ErrorYard ey								\
+		JOIN ErrorDictionary ed ON ey.errorId = ed.id	\
+		ORDER BY ey.count DESC							\
+		LIMIT 10"										\
+		--horizontal									;
+
+	return $?
+}
+
 echo -n "Cleaning up the DB ... "
 cleanUpDB
 if [ $? -eq 0 ]; then
@@ -130,6 +143,14 @@ else
 	exit 1
 fi
 
+echo "ErrorYard top 10 entries:"
+showErrorYard
+if [ $? -eq 0 ]; then
+	echo_green "Done."
+else
+	echo_red "Failed. Aborting."
+	exit 1
+fi
 
 
 
