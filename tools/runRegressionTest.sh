@@ -50,7 +50,7 @@ function cleanUpDB(){
 }
 
 function cleanUpLogs(){
-	rm -r "$selfDir/../logs/"
+	rm "$selfDir/../logs/"*
 	return $?
 }
 
