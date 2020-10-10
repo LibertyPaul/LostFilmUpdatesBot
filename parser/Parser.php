@@ -36,13 +36,13 @@ abstract class Parser{
 			throw new SourceNotAvailableException("timeout");
 		}
 		
-		if($result->isSuccess() !== 200){
+		if($result->isError()){
 			throw new \RuntimeException(
 				"HTTP call has failed:".PHP_EOL.
 				$result
 			);
 		}
-				
+
 		$this->pageSrc = $result->getBody();
 		
 		if($this->srcEncoding !== null){
