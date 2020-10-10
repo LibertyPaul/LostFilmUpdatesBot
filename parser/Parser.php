@@ -36,7 +36,7 @@ abstract class Parser{
 			throw new SourceNotAvailableException("timeout");
 		}
 		
-		if($result->getCode() !== 200){
+		if($result->isSuccess() !== 200){
 			throw new \RuntimeException(
 				"HTTP call has failed:".PHP_EOL.
 				$result

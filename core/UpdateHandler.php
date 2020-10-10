@@ -136,7 +136,7 @@ class UpdateHandler{
 
 		while($response !== null){
 			try{
-				$route = $this->messageRouter->route($response->getUser());
+				$route = $this->messageRouter->getRoute($response->getUser());
 
 				$this->tracer->logDebug(
 					'[o]', __FILE__, __LINE__,
@@ -145,7 +145,9 @@ class UpdateHandler{
 			
 				$result = $route->send($response->getOutgoingMessage());
 
-				switch($result){
+				assert(count($resut) > 1);
+
+				switch($result[0]){
 					case SendResult::Success:
 						$statusCode = 0;
 						break;

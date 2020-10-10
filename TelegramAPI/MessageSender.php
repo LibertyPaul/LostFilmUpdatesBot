@@ -74,7 +74,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		);
 	}
 
-	public function send(int $user_id, \core\OutgoingMessage $message){
+	public function send(int $user_id, \core\OutgoingMessage $message): array{
 		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
 
 		if($telegramUserData->getType() === 'private'){
@@ -84,7 +84,7 @@ class MessageSender implements \core\MessageSenderInterface{
 			$commandSubstitutionFormat = "%s@".$this->telegramBotName;
 		}
 
-		$sendResult = \core\SendResult::Success;
+		$results = array();
 
 		while($message !== null){
 			$this->outgoingMessagesTracer->logfEvent(
@@ -138,7 +138,7 @@ class MessageSender implements \core\MessageSenderInterface{
 					$message->getInlineOptions()
 				);
 
-				if($result->getCode() === 429){
+				if($result->isErrorTooFrequent()){
 					$this->tracer->logfWarning(
 						'[TELEGRAM API]', __FILE__, __LINE__,
 						"Got 429 HTTP Response. Nap for [%d] ms.",
@@ -152,17 +152,13 @@ class MessageSender implements \core\MessageSenderInterface{
 				}
 			}
 
-			$this->outgoingMessagesTracer->logfEvent(
-				'[o]', __FILE__, __LINE__,
-				'Returned code: [%d]',
-				$result->getCode()
-			);
+			if($result->isSuccess()){
+				$results[] = \core\SendResult::Success;
+				$this->outgoingMessagesTracer->logEvent(
+					'[o]', __FILE__, __LINE__,
+					'Success.'
+				);
 
-			if($result->getCode() >= 400){
-				$sendResult = \core\SendResult::Fail;
-			}
-
-			if($sendResult === \core\SendResult::Success){
 				$APIResponseJSON = $result->getBody();
 				$APIResponse = json_decode($APIResponseJSON);
 				if($APIResponse === null){
@@ -178,11 +174,14 @@ class MessageSender implements \core\MessageSenderInterface{
 					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
 				}
 			}
+			else{
+				$results[] = \core\SendResult::Fail;
+			}
 
 			$message = $message->nextMessage();
 		}
 
-		return $sendResult;
+		return $results;
 	}
 
 	private function forwardIfApplicable(int $userChatId, int $messageId){

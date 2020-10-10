@@ -70,19 +70,24 @@ class SpeechRecognizer{
 			json_encode($Request, JSON_FORCE_OBJECT)
 		);
 
-		$result = $this->HTTPRequester->request($requestProperties);
-
-		if($result->getCode() >= 400){
-			$this->tracer->logError(
-				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
-				'SpeechRecognition has failed with code [%d].',
-				$result->getCode()
+		try{
+			$result = $this->HTTPRequester->request($requestProperties);
+		}
+		catch(\HTTPRequester\HTTPTimeoutException $ex){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				'SpeechRecognition seems to be unavailable due to [%s]',
+				$ex
 			);
 
+			return Result::APIError;
+		}
+
+		if($result->isError()){
 			$this->tracer->logError(
 				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
-				'Erroneous response:'.PHP_EOL.
-				$result->getBody()
+				'SpeechRecognition has failed:'.PHP_EOL.
+				$result
 			);
 
 			return Result::APIError;

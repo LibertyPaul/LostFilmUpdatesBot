@@ -11,8 +11,16 @@ class HTTPResponse{
 		$this->body = $body;
 	}
 
-	public function getCode(){
-		return $this->code;
+	public function isSuccess(){
+		return $this->code >= 200 && $this->code < 300;
+	}
+
+	public function isError(){
+		return $this->code >= 400;
+	}
+
+	public function isErrorTooFrequent(){
+		return $this->code === 429;
 	}
 
 	public function getBody(){
@@ -29,8 +37,10 @@ class HTTPResponse{
 	}
 
 	public function __toString(){
-		$result = sprintf('HTTP Code: [%d], Response Body:', $this->getCode()).PHP_EOL;
+		$result  = sprintf('HTTP Code: [%d]', $this->code).PHP_EOL;
+		$result .= "Response Body:".PHP_EOL;
 		$result .= self::prettifyIfPossible($this->getBody());
+
 		return $result;
 	}
 }
