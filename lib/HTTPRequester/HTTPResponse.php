@@ -6,10 +6,7 @@ class HTTPResponse{
 	private $code;
 	private $body;
 
-	public function __construct($code, $body = null){
-		assert(is_int($code));
-		assert(is_string($body) || $body === null);
-
+	public function __construct(int $code, string $body = null){
 		$this->code = $code;
 		$this->body = $body;
 	}

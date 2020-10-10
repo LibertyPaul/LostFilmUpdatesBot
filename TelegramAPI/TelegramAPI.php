@@ -190,6 +190,14 @@ class TelegramAPI{
 			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
+		catch(\HTTPRequester\HTTPTimeoutException $ex){
+			$this->tracer->logfError(
+				'[o]', __FILE__, __LINE__,
+				'Telegram API seems to be unavailable due to [%s]',
+				$ex
+			);
+
+		}
 		catch(\HTTPRequester\HTTPException $HTTPException){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
 			throw $HTTPException;
