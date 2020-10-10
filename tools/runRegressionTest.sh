@@ -56,11 +56,6 @@ function cleanUpLogs(){
 
 function loadShows(){
 	php "$selfDir/../parser/ShowParserExecutor.php" > /dev/null
-	if [ $? -ne 0 ]; then
-		return 1
-	fi
-
-	"$selfDir/DBQuery.sh" Owner "Update shows Set onAir = 'Y' Where 1 = 1;"
 	return $?
 }
 
