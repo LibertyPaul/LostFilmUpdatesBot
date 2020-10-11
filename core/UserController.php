@@ -499,7 +499,8 @@ class UserController{
 					if($showAction !== \DAL\ShowAction::Remove){
 						$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
 						if($lastSeries !== null){
-							$format = "$resultText\n\nПоследняя вышедшая серия:\n\n%s";
+							$date = $lastSeries->getFirstSeenAt()->format('d.M.Y');
+							$format = "$resultText\n\nПоследняя вышедшая серия ($date):\n\n%s";
 
 							$resultMessage = new DirectedOutgoingMessage(
 								$this->user,
