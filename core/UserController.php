@@ -479,18 +479,16 @@ class UserController{
 				$matchedShow = $matchedShows[0];
 
 				$track = new \DAL\Track($this->user->getId(), $matchedShow->getId());
+				$this->tracksAccess->manageTrack($track, $showAction);
 
 				switch($showAction){
 					case \DAL\ShowAction::Add:
 					case \DAL\ShowAction::AddTentative:
 						$successText = 'добавлен';
-						$this->tracksAccess->addTrack($track);
-						
 						break;
 
 					case \DAL\ShowAction::Remove:
 						$successText = 'удален';
-						$this->tracksAccess->deleteTrack($track);
 						break;
 				}
 

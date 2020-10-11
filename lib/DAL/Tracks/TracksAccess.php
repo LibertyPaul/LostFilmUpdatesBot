@@ -104,4 +104,20 @@ class TracksAccess extends CommonAccess{
 			\QueryTraits\Approach::One()
 		);
 	}
+
+	public function manageTrack(Track $track, int $action){
+		switch($action){
+		case \DAL\ShowAction::Add:
+		case \DAL\ShowAction::AddTentative:
+			$this->addTrack($track);
+			break;
+
+		case \DAL\ShowAction::Remove:
+			$this->deleteTrack($track);
+			break;
+
+		default:
+			throw new \LogicException("Unknown action received [$action]");
+		}
+	}
 }
