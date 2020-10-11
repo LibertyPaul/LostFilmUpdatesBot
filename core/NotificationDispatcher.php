@@ -117,7 +117,7 @@ class NotificationDispatcher{
 				}
 
 				if(count($sendResult) !== 1){
-					this->tracer->logfError(
+					$this->tracer->logfError(
 						'[o]', __FILE__, __LINE__,
 						'MessageSender returned incorrect number of results:'.PHP_EOL.
 						implode(', ', $sendResult)
