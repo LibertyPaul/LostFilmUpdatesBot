@@ -9,7 +9,7 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ $# -lt 1 ]; then
-	echo "Usage: $0 <Incoming Messages Dir> [--yes]"
+	echo "Usage: $0 <Incoming Messages Dir> [--yes] [--php-cli]"
 	exit 1
 fi
 
@@ -19,11 +19,27 @@ if [[ "$selfDir" =~ '/prod/' ]]; then
 fi
 
 readonly incomingMessagesDir="$1"
-if [ $# -gt 1 ] && [ "$2" == "--yes" ]; then
-	readonly confirmLaunch='N'
-else
-	readonly confirmLaunch='Y'
-fi
+confirmLaunch='Y'
+phpCLI='N'
+
+while [ $# -gt 1 ]; do
+	case "$2" in
+		"--yes")
+			confirmLaunch='N'
+			;;
+
+		"--php-cli")
+			phpCLI='Y'
+			;;
+
+		*)
+			echo "Unknown flag [$2]. Aborting."
+			exit 1
+			;;
+	esac
+	
+	shift
+done
 
 function cleanUpDB(){
 	tables=(				\
@@ -66,8 +82,13 @@ function loadSeries(){
 
 function sendMessages(){
 	local _incomingMessagesDir="$1"
+	local _phpCLI="$2"
 
-	"$selfDir/incomingMessagesToBot.sh" "$_incomingMessagesDir"
+	if [ "$_phpCLI" == "Y" ]; then
+		"$selfDir/incomingMessagesToBot.sh" "$_incomingMessagesDir" --php-cli
+	else
+		"$selfDir/incomingMessagesToBot.sh" "$_incomingMessagesDir"
+	fi
 
 	return $?
 }
@@ -141,7 +162,7 @@ if [ "$confirmLaunch" == "Y" ]; then
 	read x
 fi
 
-sendMessages "$incomingMessagesDir"
+sendMessages "$incomingMessagesDir" "$phpCLI"
 
 echo -n "Loading latest series ... "
 loadSeries
