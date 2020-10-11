@@ -443,135 +443,113 @@ class UserController{
 			$messageText = $this->conversationStorage->getLastMessage()->getText();
 			$show = $this->showsAccess->getEligibleShowByTitle($this->user->getId(), $messageText, $showAction);
 
-			# TODO: Merge the below if-else into a singular logic.
+			$matchedShows = array();
+
 			if($show !== null){
-				# An exact match was found.
-				$this->conversationStorage->deleteConversation();
-				
-				$track = new \DAL\Track($this->user->getId(), $show->getId());
-
-				switch($showAction){
-					case \DAL\ShowAction::Add:
-					case \DAL\ShowAction::AddTentative:
-						$successText = 'добавлен';
-						$this->tracksAccess->addTrack($track);
-						
-						break;
-
-					case \DAL\ShowAction::Remove:
-						$successText = 'удален';
-						$this->tracksAccess->deleteTrack($track);
-						break;
-				}
-
-				$messageText = sprintf("%s %s", $show->getFullTitle(), $successText);
-				
-				return new DirectedOutgoingMessage(
-					$this->user,
-					new OutgoingMessage($messageText)
-				);
+				$matchedShows[] = $show;
 			}
 			else{
-				# An exact match was not found. Going to guess...
+				# Fallback in case non-exact name was submitted
 				$matchedShows = $this->showsAccess->getEligibleShowsWithScore(
 					$this->user->getId(),
 					$this->conversationStorage->getLastMessage()->getText(),
 					$showAction
 				);
+			}
 
-				switch(count($matchedShows)){
-				case 0:
-					$this->conversationStorage->deleteConversation();
+			switch(count($matchedShows)){
+			case 0:
+				$this->conversationStorage->deleteConversation();
 
-					switch($showAction){
-						case \DAL\ShowAction::Add:
-						case \DAL\ShowAction::Remove:
-							$notFoundText = 'Не найдено подходящих названий.';
-							break;
+				switch($showAction){
+					case \DAL\ShowAction::Add:
+					case \DAL\ShowAction::Remove:
+						$notFoundText = 'Не найдено подходящих названий.';
+						break;
 
-						case \DAL\ShowAction::AddTentative:
-							$notFoundText = "Не найдено подходящих названий. Жми на $addShowCoreCommand чтобы посмотреть в списке.";
-							break;
-					}
+					case \DAL\ShowAction::AddTentative:
+						$notFoundText = "Не найдено подходящих названий. Жми на $addShowCoreCommand чтобы посмотреть в списке.";
+						break;
+				}
 
-					return new DirectedOutgoingMessage($this->user, new OutgoingMessage($notFoundText));
-								
-				case 1:
-					$this->conversationStorage->deleteConversation();
-					$matchedShow = $matchedShows[0];
+				return new DirectedOutgoingMessage($this->user, new OutgoingMessage($notFoundText));
 
-					$track = new \DAL\Track($this->user->getId(), $matchedShow->getId());
+			case 1:
+				$this->conversationStorage->deleteConversation();
+				$matchedShow = $matchedShows[0];
 
-					switch($showAction){
-						case \DAL\ShowAction::Add:
-						case \DAL\ShowAction::AddTentative:
-							$successText = 'добавлен';
-							$this->tracksAccess->addTrack($track);
-							
-							break;
+				$track = new \DAL\Track($this->user->getId(), $matchedShow->getId());
+				$this->tracksAccess->manageTrack($track, $showAction);
 
-						case \DAL\ShowAction::Remove:
-							$successText = 'удален';
-							$this->tracksAccess->deleteTrack($track);
-							break;
-					}
+				switch($showAction){
+					case \DAL\ShowAction::Add:
+					case \DAL\ShowAction::AddTentative:
+						$successText = 'добавлен';
+						break;
 
-					$resultText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
-					$resultMessage = null;
-					
-					try{
-						if($showAction !== \DAL\ShowAction::Remove){
-							$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
-							if($lastSeries !== null){
-								$format = "$resultText\n\nПоследняя вышедшая серия:\n\n%s";
+					case \DAL\ShowAction::Remove:
+						$successText = 'удален';
+						break;
+				}
 
-								$resultMessage = new DirectedOutgoingMessage(
-									$this->user,
-									$this->notificationGenerator->newSeriesEvent(
-										$matchedShow,
-										$lastSeries,
-										$format
-									)
-								);
-							}
+				$resultText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
+				$resultMessage = null;
+				
+				try{
+					if($showAction !== \DAL\ShowAction::Remove){
+						$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
+						if($lastSeries !== null){
+							$format = "$resultText\n\nПоследняя вышедшая серия:\n\n%s";
+
+							$resultMessage = new DirectedOutgoingMessage(
+								$this->user,
+								$this->notificationGenerator->newSeriesEvent(
+									$matchedShow,
+									$lastSeries,
+									$format
+								)
+							);
 						}
 					}
-					catch(\Throwable $ex){
-						$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-						throw $ex;
-					}
+				}
+				catch(\Throwable $ex){
+					$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+					throw $ex;
+				}
 
-					if($resultMessage === null){
-						$resultMessage = new DirectedOutgoingMessage(
-							$this->user,
-							new OutgoingMessage($resultText)
-						);
-					}
-					
-					return $resultMessage;
-				
-				default:
-					$showTitles = array();
-					foreach($matchedShows as $matchedShow){
-						$showTitles[] = $matchedShow->getFullTitle();
-					}
-
-					array_unshift($showTitles, $cancelCoreCommand);
-					array_push($showTitles, $cancelCoreCommand);
-
-					$this->repeatQuestion();
-					
-					return new DirectedOutgoingMessage(
+				if($resultMessage === null){
+					$resultMessage = new DirectedOutgoingMessage(
 						$this->user,
-						new OutgoingMessage(
-							'Какой из этих ты имеешь в виду:',
-							null,
-							new MarkupType(MarkupTypeEnum::NoMarkup),
-							false,
-							$showTitles
-						)
+						new OutgoingMessage($resultText)
 					);
 				}
+				
+				return $resultMessage;
+
+			default:
+				$showTitles = array();
+				foreach($matchedShows as $matchedShow){
+					$showTitles[] = $matchedShow->getFullTitle();
+				}
+
+				array_unshift($showTitles, $cancelCoreCommand);
+
+				if(count($showTitles) > 10){
+					array_push($showTitles, $cancelCoreCommand);
+				}
+
+				$this->repeatQuestion();
+
+				return new DirectedOutgoingMessage(
+					$this->user,
+					new OutgoingMessage(
+						'Какой из этих ты имеешь в виду:',
+						null,
+						new MarkupType(MarkupTypeEnum::NoMarkup),
+						false,
+						$showTitles
+					)
+				);
 			}
 		}
 	}
