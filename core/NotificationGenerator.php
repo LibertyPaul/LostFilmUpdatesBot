@@ -25,6 +25,7 @@ class NotificationGenerator{
 	private $config;
 	private $commandSubstitutor;
 	private $coreCommands;
+	private $usersAccess;
 	private $APIUserDataAccessInterfaces;
 	
 	public function __construct(){
@@ -34,6 +35,8 @@ class NotificationGenerator{
 		$this->config = \Config::getConfig($this->pdo);
 		$this->commandSubstitutor = new \CommandSubstitutor\CommandSubstitutor($this->pdo);
 		$this->coreCommands = $this->commandSubstitutor->getCoreCommandsAssociative();
+
+		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
 
 		$this->APIUserDataAccessInterfaces = APIUserDataAccessFactory::getInstance();
 	}
@@ -77,7 +80,7 @@ class NotificationGenerator{
 		);
 	}
 
-	protected function getUserFirstName(User $user){
+	protected function getUserFirstName(\DAL\User $user){
 		if(array_key_exists($user->getAPI(), $this->APIUserDataAccessInterfaces) === false){
 			throw \LogicException("An UserDataAccessInterface is not defined for ".$user->getAPI());
 		}
@@ -92,12 +95,16 @@ class NotificationGenerator{
 		return $APIUserData->getFirstName();
 	}
 
-	private function messageToAdmin(string $text, MarkupType $markupType = null, bool $pushEnabled = false){
-		$admin_id = $this->config->getValue('Admin Notifications', 'Admin Id');
+	private function statusMessage(
+		string $text,
+		MarkupType $markupType = null,
+		bool $pushEnabled = false
+	): ?DirectedOutgoingMessage {
+		$admin_id = $this->config->getValue('Admin Notifications', 'Status Channel Id');
 		if($admin_id === null){
 			$this->tracer->logError(
 				'[o]', __FILE__, __LINE__,
-				'[Admin Notifications][Admin Id] value is not set.'
+				'[Admin Notifications][Status Channel Id] value is not set.'
 			);
 
 			return null;
@@ -106,8 +113,7 @@ class NotificationGenerator{
 		$admin_id = intval($admin_id);
 		
 		try{
-			$usersAccess = new \DAL\UsersAccess($this->pdo);
-			$admin = $usersAccess->getUserById($admin_id);
+			$admin = $this->usersAccess->getUserById($admin_id);
 			if($admin->isDeleted()){
 				$this->tracer->logfError(
 					'[o]', __FILE__, __LINE__,
@@ -127,7 +133,8 @@ class NotificationGenerator{
 					false,
 					null,
 					null,
-					$pushEnabled
+					$pushEnabled,
+					false
 				)
 			);
 		}
@@ -137,7 +144,7 @@ class NotificationGenerator{
 		}
 	}
 	
-	public function newUserEvent(\DAL\User $user){
+	public function newUserEvent(\DAL\User $user): ?DirectedOutgoingMessage {
 		$newUserEventEnabled = $this->config->getValue('Admin Notifications', 'Send New User Event');
 
 		if($newUserEventEnabled !== 'Y'){
@@ -153,10 +160,10 @@ class NotificationGenerator{
 			return null;
 		}
 
-		return $this->messageToAdmin("Новый юзер $userFirstName [#$userCount]");
+		return $this->statusMessage("Новый юзер $userFirstName [#$userCount]");
 	}
 
-	public function userLeftEvent(\DAL\User $user){
+	public function userLeftEvent(\DAL\User $user): ?DirectedOutgoingMessage {
 		$userLeftEventEnabled = $this->config->getValue('Admin Notifications', 'Send User Left Event');
 
 		if($userLeftEventEnabled !== 'Y'){
@@ -171,10 +178,10 @@ class NotificationGenerator{
 			return null;
 		}
 
-		return $this->messageToAdmin("Юзер $userFirstName удалился");
+		return $this->statusMessage("Юзер $userFirstName удалился");
 	}
 
-	public function errorYardDailyReport(){
+	public function errorYardDailyReport(): ?DirectedOutgoingMessage {
 		$errorYardAccess = new \DAL\ErrorYardAccess($this->pdo);
 		$errorDictionaryAccess = new \DAL\ErrorDictionaryAccess($this->pdo);
 		$activeBuckets = $errorYardAccess->getActiveErrorYardBuckets();
@@ -188,14 +195,14 @@ class NotificationGenerator{
 
 			$errorInfo = $errorDictionaryAccess->getErrorDictionaryRecordById($activeBucket->getErrorId());
 			$rows[] = sprintf(
-				'<b>%s: %d</b> [%s - %s] %s:%d <pre>%s</pre>',
+				'<b>[%s] Count: %d</b> [%s - %s] %s:%d <pre>%s</pre>',
 				$errorInfo->getLevel(),
 				$activeBucket->getCount(),
 				$activeBucket->getFirstAppearanceTime()->format('H:i:s'),
 				$activeBucket->getLastAppearanceTime()->format('H:i:s'),
-				$errorInfo->getSource(),
+				basename($errorInfo->getSource()),
 				$errorInfo->getLine(),
-				htmlspecialchars(substr($errorInfo->getText(), 0, 128))
+				htmlspecialchars(substr($errorInfo->getText(), 0, 500))
 			);
 		}
 
@@ -204,10 +211,18 @@ class NotificationGenerator{
 		$headerText .= "Total: $totalErrors / Distinct: $distinctErrors.".PHP_EOL.PHP_EOL;
 		$headerText .= "#ErrorYard";
 
-		$headerMessage = $this->messageToAdmin($headerText, MarkupType::HTML(), $hasErrors);
+		$headerMessage = $this->statusMessage($headerText, MarkupType::HTML(), $hasErrors);
+		if($headerMessage === null){
+			$this->tracer->logError(
+				'[o]', __FILE__, __LINE__,
+				'Header Message was not created.'
+			);
+
+			return null;
+		}
 
 		foreach($rows as $row){
-			$rowMessage = $this->messageToAdmin($row, MarkupType::HTML());
+			$rowMessage = $this->statusMessage($row, MarkupType::HTML());
 			$headerMessage->appendMessage($rowMessage);
 		}
 

@@ -25,7 +25,7 @@ abstract class SendResult{
 			break;
 
 		case self::Fail:
-			return "Fail";
+			return "Failure";
 			break;
 		}
 	}

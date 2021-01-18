@@ -176,15 +176,19 @@ class UpdateHandler{
 		string $first_name,
 		string $last_name = null
 	){
+		$this->tracer->logfDebug(
+			'[o]', __FILE__, __LINE__,
+			'Creating user for chat [%d], type [%s], with username [%s], first and last names [%s|%s]',
+			$chat_id,
+			$type,
+			$username ?? '-',
+			$first_name,
+			$last_name ?? '-'
+		);
+
 		try{
 			# TODO: Move transaction stuff behind DAL
-			$res = $this->pdo->beginTransaction();
-			if($res === false){
-				$this->tracer->logError(
-					'[PDO-MySQL]', __FILE__, __LINE__,
-					'PDO beginTransaction has faied'
-				);
-			}
+			$this->pdo->beginTransaction();
 
 			$user = new \DAL\User(
 				null,
@@ -198,9 +202,10 @@ class UpdateHandler{
 			$user->setId($user_id);
 			$user->setJustRegistred();
 
-			$this->tracer->logfDebug(
+			$this->tracer->logDebug(
 				'[o]', __FILE__, __LINE__,
-				"Created user:\n%s", $user
+				"Created user:".PHP_EOL.
+				$user
 			);
 			
 			$telegramUserData = new \DAL\TelegramUserData(
@@ -215,12 +220,6 @@ class UpdateHandler{
 			$this->telegramUserDataAccess->addAPIUserData($telegramUserData);
 
 			$res = $this->pdo->commit();
-			if($res === false){
-				$this->tracer->logError(
-					'[PDO-MySQL]', __FILE__, __LINE__,
-					'PDO commit has faied'
-				);
-			}
 
 			return array(
 				'user' => $user,
@@ -228,12 +227,8 @@ class UpdateHandler{
 			);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[DB]', __FILE__, __LINE__, $ex);
-
-			$res = $this->pdo->rollBack();
-			if($res === false){
-				throw new \RuntimeException("PDO Rollback failed.", 0, $ex);
-			}
+			$this->pdo->rollBack();
+			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 
 			throw $ex;
 		}
@@ -277,10 +272,16 @@ class UpdateHandler{
 			if($newChatID !== null){
 				$currentChatID = $newChatID;
 			}
-
+			
 			$userInfo = $this->createUser($currentChatID, $chat->type, $username, $first_name, $last_name);
 		}
 		else{
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
+				"Chat [$currentChatID] is found and was registred as:".PHP_EOL.
+				$userInfo['user']
+			);
+
 			if($newChatID !== null){
 				$userInfo['telegramUserData']->setAPISpecificId($newChatID);
 			}

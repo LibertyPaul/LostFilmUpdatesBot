@@ -113,28 +113,18 @@ class MessageSender implements \core\MessageSenderInterface{
 			$request_message_id = $telegramSpecificData->getMessageId();
 		}
 		else{
-			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'Request API Specific data is of unknown type: [%s]',
-				gettype($telegramSpecificData)
-			);
+			if($telegramSpecificData !== null){
+				$this->tracer->logfError(
+					'[o]', __FILE__, __LINE__,
+					'Request API Specific data is of unknown type: [%s]',
+					gettype($telegramSpecificData)
+				);
 
-
-			$this->tracer->logfDebug(
-				'[o]', __FILE__, __LINE__,
-				strval($message)
-			);
-
-			$messageText = $this->commandSubstitutor->replaceCoreCommands(
-				'TelegramAPI',
-				$message->getText(),
-				$commandSubstitutionFormat
-			);
-
-			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
-				'TelegramAPI',
-				$message->getResponseOptions()
-			);
+				$this->tracer->logfDebug(
+					'[o]', __FILE__, __LINE__,
+					PHP_EOL.strval($message)
+				);
+			}
 
 			$request_message_id = null;
 		}
@@ -172,7 +162,15 @@ class MessageSender implements \core\MessageSenderInterface{
 
 			$APIResponseJSON = $result->getBody();
 			$APIResponse = json_decode($APIResponseJSON);
-			if($APIResponse === null){
+			$messageId = null;
+			if($APIResponse !== null){
+				$messageId = intval($APIResponse->result->message_id);
+
+				if($message->forwardingAllowed()){
+					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
+				}
+			}
+			else{
 				$this->tracer->logError(
 					'[o]', __FILE__, __LINE__,
 					'Failed to parse API response:'
@@ -180,11 +178,7 @@ class MessageSender implements \core\MessageSenderInterface{
 
 				$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$APIResponseJSON);
 			}
-			else{
-				$messageId = intval($APIResponse->result->message_id);
-				$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
-			}
-			
+
 			$messageDeliveryResult = new \core\MessageDeliveryResult(
 				\core\SendResult::Success,
 				$messageId
@@ -200,42 +194,35 @@ class MessageSender implements \core\MessageSenderInterface{
 	}
 
 	private function forwardIfApplicable(int $userChatId, int $messageId){
-		if($this->forwardEverything){
-			$this->tracer->logDebug(
-				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
-				'Message is eligible for forwarding.'
-			);
+		if($this->forwardEverything === false){
+			return;
+		}
 
-			if(
-				$this->forwardingChat !== null	&&
-				$this->telegramAPI !== null
-			){
-				try{
-					$this->telegramAPI->forwardMessage(
-						$this->forwardingChat,
-						$userChatId,
-						$messageId,
-						$this->forwardingSilent
-					);
-				}
-				catch(\Throwable $ex){
-					$this->tracer->logException(
-						'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
-						$ex
-					);
-				}
-			}
-			else{
-				$this->tracer->logfWarning(
-					'[o]', __FILE__, __LINE__,
-					'Unable to forward due to:'					.PHP_EOL.
-					'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
-					'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
-					'	isset($update->message):		[%d]'	.PHP_EOL,
-					$this->forwardingChat !== null,
-					$this->telegramAPI !== null
+		if(
+			$this->forwardingChat !== null	&&
+			$this->telegramAPI !== null
+		){
+			try{
+				$this->telegramAPI->forwardMessage(
+					$this->forwardingChat,
+					$userChatId,
+					$messageId,
+					$this->forwardingSilent
 				);
 			}
+			catch(\Throwable $ex){
+				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			}
+		}
+		else{
+			$this->tracer->logfWarning(
+				'[o]', __FILE__, __LINE__,
+				'Unable to forward due to:'			.PHP_EOL.
+				'	$this->forwardingChat:	[%s]'	.PHP_EOL.
+				'	$this->telegramAPI:	    [%s]',
+				$this->forwardingChat ?? 'Null',
+				$this->telegramAPI ?? 'Null'
+			);
 		}
 	}
 }

@@ -87,7 +87,7 @@ class UpdateHandler{
 
 	private function logOutgoingMessage(
 		DirectedOutgoingMessage $outgoingMessage,
-		int $loggedRequestId,
+		?int $inResponseTo,
 		int $statusCode,
 		?int $externalId
 	){
@@ -97,9 +97,10 @@ class UpdateHandler{
 				new \DateTimeImmutable(),
 				'UpdateHandler',
 				$outgoingMessage->getUser()->getId(),
-				$externalId,
+				#$externalId, TODO: Rework external id handling
+				null,
 				$outgoingMessage->getOutgoingMessage()->getText(),
-				$loggedRequestId,
+				$inResponseTo,
 				$statusCode
 			);
 
@@ -135,48 +136,55 @@ class UpdateHandler{
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing has finished.');
 
-		while($response !== null){
+		$res = $this->sendMessages($response, $loggedRequestId);
+		if($res !== 0){
+			$this->tracer->logfError('[o]', __FILE__, __LINE__, '[%d] messages delivery failed.', $res);
+		}
+
+		return $loggedRequestId;
+	}
+
+	public function sendMessages(DirectedOutgoingMessage $message, int $inResponseTo = null): int {
+		$failures = 0;
+
+		while($message !== null){
 			try{
-				$route = $this->messageRouter->getRoute($response->getUser());
+				$failures += 1;
+
+				$route = $this->messageRouter->getRoute($message->getUser());
 
 				$this->tracer->logDebug(
 					'[o]', __FILE__, __LINE__,
 					'Message was successfully routed. Sending ...'
 				);
 			
-				$result = $route->send($response->getOutgoingMessage());
+				$result = $route->send($message->getOutgoingMessage());
 
-				switch($result->getSendResult()){
-					case SendResult::Success:
-						$statusCode = 0;
-						break;
-	
-					case SendResult::Fail:
-					default:
-						$statusCode = 1;
-						break;
-				}
-
-				$this->tracer->logDebug(
+				$this->tracer->logfDebug(
 					'[o]', __FILE__, __LINE__,
-					"Sending status: [$statusCode]"
+					"Sending result: [%s]",
+					SendResult::toString($result->getSendResult())
 				);
-				
+
 				$this->logOutgoingMessage(
-					$response,
-					$loggedRequestId,
-					$statusCode,
+					$message,
+					$inResponseTo,
+					$result->getSendResult(),
 					$result->getExternalId()
 				);
+
+				if($result->getSendResult() === SendResult::Success){
+					$failures -= 1;
+				}
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
 			}
 			
-			$response = $response->nextMessage();
+			$message = $message->nextMessage();
 		}
 
-		return $loggedRequestId;
+		return $failures;
 	}
 }
 

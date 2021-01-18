@@ -95,7 +95,7 @@ class ErrorYardAccess extends CommonAccess{
 			':errorId' => $errorId
 		);
 
-		$this->startTransaction();
+		$ownTransaction = $this->startTransaction();
 
 		try{
 			$res = $this->execute(
@@ -127,10 +127,12 @@ class ErrorYardAccess extends CommonAccess{
 			}
 		}
 		catch(\Throwable $ex){
-			$this->rollback();
+			# Rollback is not needed as there is only one INSERT/UPDATE staement
 			throw $ex;
 		}
 
-		$this->commit();
+		if($ownTransaction){
+			$this->commit();
+		}
 	}
 }

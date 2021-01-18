@@ -84,7 +84,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 			':text'		=> substr($record->getText(), 0, 500)
 		);
 
-		$this->startTransaction();
+		$ownTransaction = $this->startTransaction();
 
 		try{
 			$res = $this->execute(
@@ -95,7 +95,10 @@ class ErrorDictionaryAccess extends CommonAccess{
 			);
 
 			if($res !== null){
-				$this->commit();
+				if($ownTransaction){
+					$this->commit();
+				}
+
 				return $res->getId();
 			}
 
@@ -107,13 +110,15 @@ class ErrorDictionaryAccess extends CommonAccess{
 				\QueryTraits\Type::Write(),
 				\QueryTraits\Approach::One()
 			);
-
-			$this->commit();
+			
+			if($ownTransaction){
+				$this->commit();
+			}
 
 			return $errorId;
 		}
 		catch(\Throwable $ex){
-			$this->rollback();
+			# Rollback is not needed as there is only one INSERT staement
 			throw $ex;
 		}
 	}
