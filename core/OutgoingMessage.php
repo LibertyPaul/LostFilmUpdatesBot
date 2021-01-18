@@ -15,8 +15,6 @@ class OutgoingMessage{
 	private $inlineOptions;
 	private $pushDisabled;
 
-	private $nextMessage = null;
-
 	public function __construct(
 		string $text,
 		MessageAPISpecificData $requestAPISpecificData = null,
@@ -81,19 +79,6 @@ class OutgoingMessage{
 		}
 
 		$this->pushDisabled = $pushDisabled;
-	}
-
-	public function appendMessage(self $message){
-		if($this->nextMessage === null){
-			$this->nextMessage = $message;
-		}
-		else{
-			$this->nextMessage->appendMessage($message);
-		}
-	}
-
-	public function nextMessage(){
-		return $this->nextMessage;
 	}
 
 	public function getText(){

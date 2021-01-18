@@ -21,19 +21,19 @@ class SeriesAboutInfo{
 		$this->title_en = $title_en;
 	}
 
-	public function isReady(){
+	public function isReady(): bool{
 		return $this->ready;
 	}
 
-	public function getReason(){
+	public function getReason(): ?int{
 		return $this->reason;
 	}
 
-	public function getTitleRu(){
+	public function getTitleRu(): ?string{
 		return $this->title_ru;
 	}
 
-	public function getTitleEn(){
+	public function getTitleEn(): ?string{
 		return $this->title_en;
 	}
 }

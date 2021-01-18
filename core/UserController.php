@@ -351,13 +351,20 @@ class UserController{
 
 		$markupType = new MarkupType(MarkupTypeEnum::HTML);
 
-		$outgoingMessage = new OutgoingMessage($messageParts[0], null, $markupType);
+		$outgoingMessage = new DirectedOutgoingMessage(
+			$this->user,
+			new OutgoingMessage($messageParts[0], null, $markupType)
+		);
+
 		for($i = 1; $i < count($messageParts); ++$i){
-			$nextMessage = new OutgoingMessage($messageParts[$i], null, $markupType);
+			$nextMessage = new DirectedOutgoingMessage(
+				$this->user,
+				new OutgoingMessage($messageParts[$i], null, $markupType)
+			);
 			$outgoingMessage->appendMessage($nextMessage);
 		}
 
-		return new DirectedOutgoingMessage($this->user, $outgoingMessage);
+		return $outgoingMessage;
 	}
 
 	private function toggleMute(){
@@ -492,30 +499,24 @@ class UserController{
 						break;
 				}
 
-				$resultText = sprintf("%s %s", $matchedShow->getFullTitle(), $successText);
+				$resultText = sprintf("%s %s.", $matchedShow->getFullTitle(), $successText);
 				$resultMessage = null;
 				
-				try{
-					if($showAction !== \DAL\ShowAction::Remove){
-						$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
-						if($lastSeries !== null){
-							$date = $lastSeries->getFirstSeenAt()->format('d.M.Y');
-							$format = "$resultText\n\nПоследняя вышедшая серия ($date):\n\n%s";
+				if($showAction !== \DAL\ShowAction::Remove){
+					$lastSeries = $this->seriesAccess->getLastSeries($matchedShow->getId());
+					if($lastSeries !== null){
+						$date = $lastSeries->getFirstSeenAt()->format('d.m.Y');
+						$format = "$resultText\n\nПоследняя вышедшая серия ($date):\n\n%s";
 
-							$resultMessage = new DirectedOutgoingMessage(
-								$this->user,
-								$this->notificationGenerator->newSeriesEvent(
-									$matchedShow,
-									$lastSeries,
-									$format
-								)
-							);
-						}
+						$resultMessage = new DirectedOutgoingMessage(
+							$this->user,
+							$this->notificationGenerator->newSeriesEvent(
+								$matchedShow,
+								$lastSeries,
+								$format
+							)
+						);
 					}
-				}
-				catch(\Throwable $ex){
-					$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
-					throw $ex;
 				}
 
 				if($resultMessage === null){
@@ -797,18 +798,28 @@ class UserController{
 			$result = $this->buildBroadcastMessage();
 
 			if($result['success']){
-				$example = new OutgoingMessage('Вот что получилось:');
-				$example->appendMessage($result['message']);
-				$confirm = new OutgoingMessage(
-					'Отправляем?',
-					null,
-					new MarkupType(MarkupTypeEnum::NoMarkup),
-					false,
-					array('Да', 'Нет')
+				$response = new DirectedOutgoingMessage(
+					$this->user,
+					new OutgoingMessage('Вот что получилось:')
 				);
-				$example->appendMessage($confirm);
 
-				$response = new DirectedOutgoingMessage($this->user, $example);
+				$response->appendMessage(
+					new DirectedOutgoingMessage($this->user, $result['message'])
+				);
+
+				$confirm = new DirectedOutgoingMessage(
+					$this->user,
+					new OutgoingMessage(
+						'Отправляем?',
+						null,
+						new MarkupType(MarkupTypeEnum::NoMarkup),
+						false,
+						array('Да', 'Нет')
+					)
+				);
+				
+				$response->appendMessage($confirm);
+
 				return $response;
 			}
 			else{

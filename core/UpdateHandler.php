@@ -88,7 +88,8 @@ class UpdateHandler{
 	private function logOutgoingMessage(
 		DirectedOutgoingMessage $outgoingMessage,
 		int $loggedRequestId,
-		int $statusCode
+		int $statusCode,
+		?int $externalId
 	){
 		try{
 			$messageHistory = new \DAL\MessageHistory(
@@ -96,7 +97,7 @@ class UpdateHandler{
 				new \DateTimeImmutable(),
 				'UpdateHandler',
 				$outgoingMessage->getUser()->getId(),
-				null,
+				$externalId,
 				$outgoingMessage->getOutgoingMessage()->getText(),
 				$loggedRequestId,
 				$statusCode
@@ -145,9 +146,7 @@ class UpdateHandler{
 			
 				$result = $route->send($response->getOutgoingMessage());
 
-				assert(count($result) >= 1);
-
-				switch($result[0]){
+				switch($result->getSendResult()){
 					case SendResult::Success:
 						$statusCode = 0;
 						break;
@@ -166,7 +165,8 @@ class UpdateHandler{
 				$this->logOutgoingMessage(
 					$response,
 					$loggedRequestId,
-					$statusCode
+					$statusCode,
+					$result->getExternalId()
 				);
 			}
 			catch(\Throwable $ex){

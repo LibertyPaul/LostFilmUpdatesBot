@@ -74,7 +74,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		);
 	}
 
-	public function send(int $user_id, \core\OutgoingMessage $message): array{
+	public function send(int $user_id, \core\OutgoingMessage $message): \core\MessageDeliveryResult{
 		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
 
 		if($telegramUserData->getType() === 'private'){
@@ -84,104 +84,107 @@ class MessageSender implements \core\MessageSenderInterface{
 			$commandSubstitutionFormat = "%s@".$this->telegramBotName;
 		}
 
-		$results = array();
+		$this->outgoingMessagesTracer->logfEvent(
+			'[o]', __FILE__, __LINE__,
+			"Message to user_id=[%d], chat_id=[%d]".PHP_EOL.
+			"%s",
+			$telegramUserData->getUserId(),
+			$telegramUserData->getAPISpecificId(),
+			$message
+		);
 
-		while($message !== null){
-			$this->outgoingMessagesTracer->logfEvent(
+		$messageText = $this->commandSubstitutor->replaceCoreCommands(
+			'TelegramAPI',
+			$message->getText(),
+			$commandSubstitutionFormat
+		);
+		
+		$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
+			'TelegramAPI',
+			$message->getResponseOptions()
+		);
+
+		$telegramSpecificData = $message->getRequestAPISpecificData();
+
+		if($telegramUserData->getType() === 'private'){
+			$request_message_id = null;
+		}
+		elseif($telegramSpecificData instanceof TelegramSpecificData){
+			$request_message_id = $telegramSpecificData->getMessageId();
+		}
+		else{
+			$this->tracer->logfError(
 				'[o]', __FILE__, __LINE__,
-				"Message to user_id=[%d], chat_id=[%d]".PHP_EOL.
-				"%s",
-				$telegramUserData->getUserId(),
+				'Request API Specific data is of unknown type: [%s]',
+				gettype($telegramSpecificData)
+			);
+
+			$this->tracer->logfDebug(
+				'[o]', __FILE__, __LINE__,
+				strval($message)
+			);
+
+			$request_message_id = null;
+		}
+		
+		for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
+			$result = $this->telegramAPI->send(
 				$telegramUserData->getAPISpecificId(),
-				$message
+				$messageText,
+				$request_message_id,
+				$message->markupType(),
+				$message->URLExpandEnabled(),
+				$responseOptions,
+				$message->getInlineOptions()
 			);
 
-			$messageText = $this->commandSubstitutor->replaceCoreCommands(
-				'TelegramAPI',
-				$message->getText(),
-				$commandSubstitutionFormat
-			);
-			
-			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
-				'TelegramAPI',
-				$message->getResponseOptions()
-			);
+			if($result->isErrorTooFrequent()){
+				$this->tracer->logfWarning(
+					'[TELEGRAM API]', __FILE__, __LINE__,
+					"Got 429 HTTP Response. Nap for [%d] ms.",
+					$this->sleepOn429CodeMs
+				);
 
-			$attempt = 0;
-
-			$telegramSpecificData = $message->getRequestAPISpecificData();
-
-			if($telegramUserData->getType() === 'private'){
-				$request_message_id = null;
-			}
-			elseif($telegramSpecificData instanceof TelegramSpecificData){
-				$request_message_id = $telegramSpecificData->getMessageId();
+				usleep($this->sleepOn429CodeMs);
 			}
 			else{
-				$this->tracer->logfError(
-					'[o]', __FILE__, __LINE__,
-					'Request API Specific data is of unknown type: [%s]',
-					gettype($telegramSpecificData)
-				);
-
-				$request_message_id = null;
+				break;
 			}
-			
-			for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
-				$result = $this->telegramAPI->send(
-					$telegramUserData->getAPISpecificId(),
-					$messageText,
-					$request_message_id,
-					$message->markupType(),
-					$message->URLExpandEnabled(),
-					$responseOptions,
-					$message->getInlineOptions()
-				);
-
-				if($result->isErrorTooFrequent()){
-					$this->tracer->logfWarning(
-						'[TELEGRAM API]', __FILE__, __LINE__,
-						"Got 429 HTTP Response. Nap for [%d] ms.",
-						$this->sleepOn429CodeMs
-					);
-
-					usleep($this->sleepOn429CodeMs);
-				}
-				else{
-					break;
-				}
-			}
-
-			if($result->isSuccess()){
-				$results[] = \core\SendResult::Success;
-				$this->outgoingMessagesTracer->logEvent(
-					'[o]', __FILE__, __LINE__,
-					'Success.'
-				);
-
-				$APIResponseJSON = $result->getBody();
-				$APIResponse = json_decode($APIResponseJSON);
-				if($APIResponse === null){
-					$this->tracer->logError(
-						'[o]', __FILE__, __LINE__,
-						'Failed to parse API response:'
-					);
-
-					$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$APIResponseJSON);
-				}
-				else{
-					$messageId = intval($APIResponse->result->message_id);
-					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
-				}
-			}
-			else{
-				$results[] = \core\SendResult::Fail;
-			}
-
-			$message = $message->nextMessage();
 		}
 
-		return $results;
+		if($result->isSuccess()){
+			$this->outgoingMessagesTracer->logEvent(
+				'[o]', __FILE__, __LINE__,
+				'Success.'
+			);
+
+			$APIResponseJSON = $result->getBody();
+			$APIResponse = json_decode($APIResponseJSON);
+			if($APIResponse === null){
+				$this->tracer->logError(
+					'[o]', __FILE__, __LINE__,
+					'Failed to parse API response:'
+				);
+
+				$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$APIResponseJSON);
+			}
+			else{
+				$messageId = intval($APIResponse->result->message_id);
+				$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
+			}
+			
+			$messageDeliveryResult = new \core\MessageDeliveryResult(
+				\core\SendResult::Success,
+				$messageId
+			);
+		}
+		else{
+			$messageDeliveryResult = new \core\MessageDeliveryResult(
+				\core\SendResult::Fail
+			);
+		}
+
+		return $messageDeliveryResult;
 	}
 
 	private function forwardIfApplicable(int $userChatId, int $messageId){
