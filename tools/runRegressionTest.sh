@@ -99,34 +99,7 @@ function sendNotifications(){
 }
 
 function showErrorYard(){
-	cols="$(tput cols)"
-	if [ $? -ne 0 ]; then
-		echo "Failed to get terminal window size. Ignoring."
-	fi
-
-	textLength=999
-
-	if [ -n "$cols" ]; then
-		otherLength=20 # Approximately though
-		textLength=$(($cols - $otherLength - 5)) # -5 more just in case
-
-		if [ $textLength -lt 10 ]; then
-			textLength=10
-		fi
-	fi
-
-	"$selfDir/DBQuery.sh"								\
-		Owner 											\
-		"SELECT
-			ey.count,
-			ed.level,
-			SUBSTR(ed.text, 1, $textLength) AS text
-		FROM ErrorYard ey
-		JOIN ErrorDictionary ed ON ey.errorId = ed.id
-		ORDER BY ey.count DESC
-		LIMIT 10"										\
-		--horizontal									;
-
+	"$selfDir/errorYard.sh" 10
 	return $?
 }
 

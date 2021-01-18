@@ -13,7 +13,7 @@ class MessageRoute{
 		$this->user_id = $user_id;
 	}
 
-	public function send(OutgoingMessage $message): array {
+	public function send(OutgoingMessage $message): \core\MessageDeliveryResult{
 		return $this->messageSender->send($this->user_id, $message);
 	}
 }
