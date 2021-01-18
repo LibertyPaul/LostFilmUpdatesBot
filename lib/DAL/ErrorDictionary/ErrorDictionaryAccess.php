@@ -59,7 +59,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 		");
 	}
 
-	public function getErrorDictionaryRecordById(int $id){
+	public function getErrorDictionaryRecordById(int $id): ErrorDictionaryRecord {
 		$args = array(
 			':id' => $id
 		);
@@ -72,7 +72,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 		);
 	}
 
-	public function createOrGetErrorRecordId(ErrorDictionaryRecord $record){
+	public function createOrGetErrorRecordId(ErrorDictionaryRecord $record): int {
 		if($record->getId() !== null){
 			throw new \LogicException("Id is already set for the record ($record->id).");
 		}

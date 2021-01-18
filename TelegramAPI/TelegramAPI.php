@@ -16,8 +16,6 @@ class TelegramAPI{
 	private $botToken;
 	private $velocityController;
 
-	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
-	
 	public function __construct(
 		string $botToken,
 		\HTTPRequester\HTTPRequesterInterface $HTTPRequester,

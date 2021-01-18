@@ -24,6 +24,18 @@ class MarkupType{
 		}
 	}
 
+	public static function NO_MARKUP(): self {
+		return new MarkupType(MarkupTypeEnum::NoMarkup);
+	}
+
+	public static function HTML(): self {
+		return new MarkupType(MarkupTypeEnum::HTML);
+	}
+
+	public static function TELEGRAM(): self {
+		return new MarkupType(MarkupTypeEnum::Telegram);
+	}
+
 	public function get(){
 		return $this->type;
 	}

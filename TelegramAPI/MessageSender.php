@@ -119,9 +119,21 @@ class MessageSender implements \core\MessageSenderInterface{
 				gettype($telegramSpecificData)
 			);
 
+
 			$this->tracer->logfDebug(
 				'[o]', __FILE__, __LINE__,
 				strval($message)
+			);
+
+			$messageText = $this->commandSubstitutor->replaceCoreCommands(
+				'TelegramAPI',
+				$message->getText(),
+				$commandSubstitutionFormat
+			);
+
+			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
+				'TelegramAPI',
+				$message->getResponseOptions()
 			);
 
 			$request_message_id = null;

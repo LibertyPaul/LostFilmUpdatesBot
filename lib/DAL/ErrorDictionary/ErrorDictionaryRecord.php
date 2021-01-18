@@ -30,7 +30,7 @@ class ErrorDictionaryRecord{
 		$this->text = $text;
 	}
 
-	public function getId(): ?int{
+	public function getId(): ?int {
 		return $this->id;
 	}
 
@@ -42,23 +42,23 @@ class ErrorDictionaryRecord{
 		$this->id = $id;
 	}
 
-	public function getLevel(): string{
+	public function getLevel(): string {
 		return $this->level;
 	}
 
-	public function getSource(): string{
+	public function getSource(): string {
 		return $this->source;
 	}
 
-	public function getLine(): int{
+	public function getLine(): int {
 		return $this->line;
 	}
 
-	public function getText(): string{
+	public function getText(): string {
 		return $this->text;
 	}
 
-	public function __toString(){
+	public function __toString(): string {
 		$idStr = $this->getId() ?? 'Null';
 
 		$result =
