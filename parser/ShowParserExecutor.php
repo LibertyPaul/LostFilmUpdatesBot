@@ -45,6 +45,18 @@ class ShowParserExecutor{
 				PHP_EOL.$LFShows[$newAlias]
 			);
 
+			if($LFShows[$newAlias]->getTitleEn() === 'Dracula'){
+				# LF has a conflicting title_en with newer Dracula BBC
+				# Adding a hardcoded crotch to suppress the error
+				# In case the problem repeats with another show, a proper solution to be implemented
+				$this->tracer->logEvent(
+					'[o]', __FILE__, __LINE__,
+					'The old Dracula show was excluded to avoid collision'
+				);
+
+				continue;
+			}
+
 			try{
 				$show_id = $this->showsAccess->addShow($LFShows[$newAlias]);
 				$LFShows[$newAlias]->setId($show_id);
