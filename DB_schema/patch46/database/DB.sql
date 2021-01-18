@@ -1,1 +1,0 @@
-USE &&db_name;
