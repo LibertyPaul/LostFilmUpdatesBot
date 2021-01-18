@@ -19,7 +19,7 @@ class OutgoingMessage{
 
 	public function __construct(
 		string $text,
-		MessageAPISpecificData $requestAPISpecificData = null,
+		?MessageAPISpecificData $requestAPISpecificData = null,
 		MarkupType $markupType = null,
 		bool $enableURLExpand = false,
 		array $responseOptions = null,

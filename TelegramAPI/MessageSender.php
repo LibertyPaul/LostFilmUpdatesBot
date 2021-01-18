@@ -74,7 +74,7 @@ class MessageSender implements \core\MessageSenderInterface{
 		);
 	}
 
-	public function send(int $user_id, \core\OutgoingMessage $message): array{
+	public function send(int $user_id, \core\OutgoingMessage $message): array {
 		$telegramUserData = $this->telegramUserDataAccess->getAPIUserDataByUserId($user_id);
 
 		if($telegramUserData->getType() === 'private'){
@@ -101,7 +101,7 @@ class MessageSender implements \core\MessageSenderInterface{
 				$message->getText(),
 				$commandSubstitutionFormat
 			);
-			
+
 			$responseOptions = $this->commandSubstitutor->replaceCoreCommands(
 				'TelegramAPI',
 				$message->getResponseOptions()

@@ -18,7 +18,7 @@ class DirectedOutgoingMessage{
 		$this->outgoingMessage = $outgoingMessage;
 	}
 
-	private function findLoop(self $newNode){
+	private function findLoop(self $newNode): bool {
 		$current = $newNode;
 
 		while($current !== null){
@@ -32,7 +32,7 @@ class DirectedOutgoingMessage{
 		return false; 
 	}
 
-	public function appendMessage(self $message = null){
+	public function appendMessage(self $message = null): DirectedOutgoingMessage {
 		if($message === null){
 			return $this;
 		}
@@ -56,19 +56,19 @@ class DirectedOutgoingMessage{
 		}
 	}
 
-	public function getUser(){
+	public function getUser(): \DAL\User {
 		return $this->user;
 	}
 
-	public function getOutgoingMessage(){
+	public function getOutgoingMessage(): OutgoingMessage {
 		return $this->outgoingMessage;
 	}
 
-	public function nextMessage(){
+	public function nextMessage(): ?DirectedOutgoingMessage {
 		return $this->nextMessage;
 	}
 
-	public function __toString(){
+	public function __toString(): string {
 		$nextMessagePresent = $this->nextMessage() === null ? 'N' : 'Y';
 
 		$result  = '##### [Directed Outgoing Message] #####'			.PHP_EOL;

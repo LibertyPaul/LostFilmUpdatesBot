@@ -6,7 +6,8 @@ require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/ErrorBucketBuilder.php');
 
 class ErrorYardAccess extends CommonAccess{
-	private $getActiveErrorBucketWithLock;
+	private $getErrorYardSummary;
+	private $getActiveErrorBucketWithLockQuery;
 	private $addErrorBucketQuery;
 	private $incrementErrorBucketQuery;
 
@@ -25,11 +26,8 @@ class ErrorYardAccess extends CommonAccess{
 				`ErrorYard`.`errorId`
 		";
 
-		$this->getActiveErrorBucketWithLock = $this->pdo->prepare("
-			$selectFields
-			FROM    `ErrorYard`
-			WHERE	`ErrorYard`.`errorId` = :errorId
-			AND		`ErrorYard`.`firstAppearanceTime` BETWEEN DATE_SUB(
+		$firstAppearanceDateIsRecent = "
+			`ErrorYard`.`firstAppearanceTime` BETWEEN DATE_SUB(
 				NOW(),
 				INTERVAL IFNULL(
 					(
@@ -41,6 +39,20 @@ class ErrorYardAccess extends CommonAccess{
 					24
 				) HOUR
 			) AND NOW()
+		";
+
+		$this->getActiveErrorYardBucketsQuery = $this->pdo->prepare("
+			$selectFields
+			FROM    `ErrorYard`
+			WHERE	$firstAppearanceDateIsRecent
+			ORDER BY `ErrorYard`.`firstAppearanceTime` DESC
+		");
+
+		$this->getActiveErrorBucketWithLockQuery = $this->pdo->prepare("
+			$selectFields
+			FROM    `ErrorYard`
+			WHERE	`ErrorYard`.`errorId` = :errorId
+			AND		$firstAppearanceDateIsRecent
 			ORDER BY `ErrorYard`.`firstAppearanceTime` DESC
 			LIMIT 1
 			FOR UPDATE
@@ -69,6 +81,15 @@ class ErrorYardAccess extends CommonAccess{
 		");
 	}
 
+	public function getActiveErrorYardBuckets(): array {
+		return $this->execute(
+			$this->getActiveErrorYardBucketsQuery,
+			array(),
+			\QueryTraits\Type::Read(),
+			\QueryTraits\Approach::Many()
+		);
+	}
+
 	public function logEvent(int $errorId){
 		$args = array(
 			':errorId' => $errorId
@@ -78,7 +99,7 @@ class ErrorYardAccess extends CommonAccess{
 
 		try{
 			$res = $this->execute(
-				$this->getActiveErrorBucketWithLock,
+				$this->getActiveErrorBucketWithLockQuery,
 				$args,
 				\QueryTraits\Type::Read(),
 				\QueryTraits\Approach::OneIfExists()
