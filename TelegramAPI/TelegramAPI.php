@@ -6,7 +6,6 @@ require_once(__DIR__.'/../core/InlineOption.php');
 require_once(__DIR__.'/../core/MarkupType.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
-require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/VelocityController.php');
 require_once(__DIR__.'/VelocityControllerFactory.php');
 
