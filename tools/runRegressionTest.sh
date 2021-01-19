@@ -66,7 +66,7 @@ function cleanUpDB(){
 }
 
 function cleanUpLogs(){
-	rm "$selfDir/../logs/"*
+	find "$selfDir/../logs/" -type f -exec rm {} \;
 	return $?
 }
 
