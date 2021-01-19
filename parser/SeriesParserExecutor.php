@@ -74,13 +74,11 @@ class SeriesParserExecutor{
 		}
 
 		$seriesAboutInfo = $this->seriesAboutParser->run();
-		if (
-			$seriesAboutInfo->getTitleRu() === null ||
-			$seriesAboutInfo->getTitleEn() === null
-		){
+		if ($seriesAboutInfo->isReady() === false){
 			$this->tracer->logfError(
 				'[o]', __FILE__, __LINE__,
-				"Series page is not published: [%s]",
+				"Series page is not ready [%d]: [%s]",
+				$seriesAboutInfo->getReason(),
 				$URL
 			);
 
@@ -178,6 +176,8 @@ class SeriesParserExecutor{
 				$rssURL,
 				$ex
 			);
+
+			return;
 		}
 		catch(\Throwable $ex){
 			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);

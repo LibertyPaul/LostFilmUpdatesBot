@@ -107,7 +107,7 @@ class UsersAccess extends CommonAccess{
 			':excludeMuted' => $excludeMuted
 		);
 
-		$this->getActiveUsersCountQuery->exec($args);
+		$this->getActiveUsersCountQuery->execute($args);
 
 		$res = $this->getActiveUsersCountQuery->fetch();
 		if($res === false){

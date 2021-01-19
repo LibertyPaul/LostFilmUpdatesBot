@@ -59,7 +59,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 		");
 	}
 
-	public function getErrorDictionaryRecordById(int $id){
+	public function getErrorDictionaryRecordById(int $id): ErrorDictionaryRecord {
 		$args = array(
 			':id' => $id
 		);
@@ -72,7 +72,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 		);
 	}
 
-	public function createOrGetErrorRecordId(ErrorDictionaryRecord $record){
+	public function createOrGetErrorRecordId(ErrorDictionaryRecord $record): int {
 		if($record->getId() !== null){
 			throw new \LogicException("Id is already set for the record ($record->id).");
 		}
@@ -84,7 +84,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 			':text'		=> substr($record->getText(), 0, 500)
 		);
 
-		$this->startTransaction();
+		$ownTransaction = $this->startTransaction();
 
 		try{
 			$res = $this->execute(
@@ -95,7 +95,10 @@ class ErrorDictionaryAccess extends CommonAccess{
 			);
 
 			if($res !== null){
-				$this->commit();
+				if($ownTransaction){
+					$this->commit();
+				}
+
 				return $res->getId();
 			}
 
@@ -107,13 +110,15 @@ class ErrorDictionaryAccess extends CommonAccess{
 				\QueryTraits\Type::Write(),
 				\QueryTraits\Approach::One()
 			);
-
-			$this->commit();
+			
+			if($ownTransaction){
+				$this->commit();
+			}
 
 			return $errorId;
 		}
 		catch(\Throwable $ex){
-			$this->rollback();
+			# Rollback is not needed as there is only one INSERT staement
 			throw $ex;
 		}
 	}

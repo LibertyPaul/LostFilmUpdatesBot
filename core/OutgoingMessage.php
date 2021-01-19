@@ -14,8 +14,7 @@ class OutgoingMessage{
 	private $responseOptions;
 	private $inlineOptions;
 	private $pushDisabled;
-
-	private $nextMessage = null;
+	private $allowForwarding;
 
 	public function __construct(
 		string $text,
@@ -24,7 +23,8 @@ class OutgoingMessage{
 		bool $enableURLExpand = false,
 		array $responseOptions = null,
 		array $inlineOptions = null,
-		bool $pushDisabled = false
+		bool $pushDisabled = false,
+		bool $allowForwarding = true
 	){
 		$this->text = $text;
 
@@ -81,26 +81,14 @@ class OutgoingMessage{
 		}
 
 		$this->pushDisabled = $pushDisabled;
+		$this->allowForwarding = $allowForwarding;
 	}
 
-	public function appendMessage(self $message){
-		if($this->nextMessage === null){
-			$this->nextMessage = $message;
-		}
-		else{
-			$this->nextMessage->appendMessage($message);
-		}
-	}
-
-	public function nextMessage(){
-		return $this->nextMessage;
-	}
-
-	public function getText(){
+	public function getText(): string {
 		return $this->text;
 	}
 
-	public function getRequestAPISpecificData(){
+	public function getRequestAPISpecificData(): ?MessageAPISpecificData {
 		return $this->requestAPISpecificData;
 	}
 
@@ -112,24 +100,28 @@ class OutgoingMessage{
 		$this->requestAPISpecificData = $requestAPISpecificData;
 	}
 
-	public function markupType(){
+	public function markupType(): ?MarkupType {
 		return $this->markupType;
 	}
 
-	public function URLExpandEnabled(){
+	public function URLExpandEnabled(): bool {
 		return $this->enableURLExpand;
 	}
 
-	public function getResponseOptions(){
+	public function getResponseOptions(): ?array {
 		return $this->responseOptions;
 	}
 
-	public function getInlineOptions(){
+	public function getInlineOptions(): ?array {
 		return $this->inlineOptions;
 	}
 
-	public function pushDisabled(){
+	public function pushDisabled(): bool {
 		return $this->pushDisabled;
+	}
+
+	public function forwardingAllowed(): bool {
+		return $this->allowForwarding;
 	}
 
 	public function __toString(){
@@ -142,12 +134,17 @@ class OutgoingMessage{
 		$inlineOptions = is_array($this->inlineOptions) ? $this->inlineOptions : array();
 		$inlineOptionsStr = join(PHP_EOL.PHP_EOL, $inlineOptions);
 
+		$pushDisabledStr = $this->pushDisabled() ? 'Y' : 'N';
+		$forwardingAllowedStr = $this->forwardingAllowed() ? 'Y' : 'N';
+
 		$result  = '********[OutgoingMessage]**********'							.PHP_EOL;
 		$result .= sprintf("markupType:	        [%s]", $this->markupType())			.PHP_EOL;
 		$result .= sprintf("URLExpandEnabled:   [%s]", $enableURLExpandYN)			.PHP_EOL;
 		$result .= sprintf("PushDisabled:       [%s]", $pushDisabledYN)				.PHP_EOL;
 		$result .= sprintf("Text:               [%s]", $this->getText())			.PHP_EOL;
 		$result .= sprintf("Response Options:   [%s]", $responseOptionsStr)			.PHP_EOL;
+		$result .= sprintf("Push Disabled:      [%s]", $pushDisabledStr)			.PHP_EOL;
+		$result .= sprintf("Forwarding Allowed: [%s]", $forwardingAllowedStr)		.PHP_EOL;
 		$result .= "InlineOptions:"													.PHP_EOL;
 		$result .= str_replace(PHP_EOL, PHP_EOL."\t\t", "\t\t".$inlineOptionsStr)	.PHP_EOL;
 		$result .= strval($this->getRequestAPISpecificData())						.PHP_EOL;

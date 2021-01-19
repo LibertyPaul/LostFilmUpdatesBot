@@ -67,7 +67,7 @@ class Config{
 		$this->allCached = true;
 	}
 
-	public function getValue(string $section, string $item, string $defaultValue = null): string{
+	public function getValue(string $section, string $item, string $defaultValue = null): ?string {
 		if(array_key_exists($section, $this->cachedValues)){
 			if(array_key_exists($item, $this->cachedValues[$section])){
 				$value = $this->cachedValues[$section][$item];
