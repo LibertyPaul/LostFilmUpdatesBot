@@ -111,7 +111,8 @@ class TelegramAPI{
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
-	){
+	): \HTTPRequester\HTTPResponse{
+		# TODO: rework the return value type
 
 		$request = array(
 			'chat_id'	=> $chat_id,
@@ -203,7 +204,7 @@ class TelegramAPI{
 		return $result;
 	}
 
-	public function forwardMessage($chat_id, $from_chat_id, $message_id, $silent = false){
+	public function forwardMessage($chat_id, $from_chat_id, $message_id, $silent = false): void {
 		$payload = array(
 			'chat_id'				=> $chat_id,
 			'from_chat_id'			=> $from_chat_id,
