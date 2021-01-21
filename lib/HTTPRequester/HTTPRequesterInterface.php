@@ -8,6 +8,6 @@ class HTTPException extends \RuntimeException{}
 class HTTPTimeoutException extends HTTPException{}
 
 interface HTTPRequesterInterface{
-	public function request(HTTPRequestProperties $requestProperties);
-	public function multiRequest(array $requestsProperties);
+	public function request(HTTPRequestProperties $requestProperties): HTTPResponse;
+	public function multiRequest(array $requestsProperties): array;
 }

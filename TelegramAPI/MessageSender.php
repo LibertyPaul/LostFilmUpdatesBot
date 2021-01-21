@@ -154,43 +154,43 @@ class MessageSender implements \core\MessageSenderInterface{
 			}
 		}
 
-		if($result->isSuccess()){
-			$this->outgoingMessagesTracer->logEvent(
+		if($result->isSuccess() === false){
+			$this->tracer->logEvent(
 				'[o]', __FILE__, __LINE__,
-				'Success.'
+				'Fail.'.PHP_EOL.$result
 			);
 
-			$APIResponseJSON = $result->getBody();
-			$APIResponse = json_decode($APIResponseJSON);
-			$messageId = null;
-			if($APIResponse !== null){
-				$messageId = intval($APIResponse->result->message_id);
-
-				if($message->forwardingAllowed()){
-					$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
-				}
-			}
-			else{
-				$this->tracer->logError(
-					'[o]', __FILE__, __LINE__,
-					'Failed to parse API response:'
-				);
-
-				$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$APIResponseJSON);
-			}
-
-			$messageDeliveryResult = new \core\MessageDeliveryResult(
-				\core\SendResult::Success,
-				$messageId
-			);
+			return \core\MessageDeliveryResult::FAIL();
 		}
-		else{
-			$messageDeliveryResult = new \core\MessageDeliveryResult(
-				\core\SendResult::Fail
+		
+		$this->tracer->logEvent(
+			'[o]', __FILE__, __LINE__,
+			'Success.'
+		);
+
+		$APIResponseJSON = $result->getBody();
+		$APIResponse = json_decode($APIResponseJSON);
+		if($APIResponse === null){
+			$this->tracer->logError(
+				'[o]', __FILE__, __LINE__,
+				'Failed to parse API response.'
 			);
+
+			$this->tracer->logDebug(
+				'[o]', __FILE__, __LINE__,
+				PHP_EOL.$APIResponseJSON
+			);
+
+			throw new \RuntimeException("Failed to parse API response.");
 		}
 
-		return $messageDeliveryResult;
+		$messageId = intval($APIResponse->result->message_id);
+
+		if($message->forwardingAllowed()){
+			$this->forwardIfApplicable($telegramUserData->getAPISpecificId(), $messageId);
+		}
+
+		return \core\MessageDeliveryResult::SUCCESS($messageId);
 	}
 
 	private function forwardIfApplicable(int $userChatId, int $messageId){
