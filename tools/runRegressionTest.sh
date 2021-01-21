@@ -65,6 +65,60 @@ function cleanUpDB(){
 	return 0
 }
 
+function createDummyServiceChat(){
+	local _query="					\
+		INSERT INTO users (API)		\
+		VALUES ('TelegramAPI');		\
+									\
+		SELECT LAST_INSERT_ID();	"
+
+
+	local _userId
+	_userId="$("$selfDir/DBQuery.sh" Owner "$_query" \
+		| grep -oP "LAST_INSERT_ID\(\): \K\d+")"
+
+	if [ -z "$_userId" ]; then
+		echo_red "Failed to create dummy user for the service chat."
+		return 1
+	fi
+
+	_query="							\
+		INSERT INTO telegramUserData (	\
+			user_id,					\
+			chat_id,					\
+			type,						\
+			username,					\
+			first_name,					\
+			last_name					\
+		)								\
+		VALUES (						\
+			$_userId,					\
+			-123456,					\
+			'group',					\
+			'DummyGroup',				\
+			'Dummy',					\
+			'Group'						\
+		)"
+	
+	"$selfDir/DBQuery.sh" Owner "$_query"
+	if [ $? -ne 0 ]; then
+		echo_red "Failed to insert dummy service chat into telegramUserData."
+		return 1
+	fi
+
+	_query="									\
+		UPDATE config							\
+		SET value = '$_userId'					\
+		WHERE section = 'Admin Notifications'	\
+		AND item = 'Status Channel Id'			"
+
+	"$selfDir/DBQuery.sh" Owner "$_query"
+	if [ $? -ne 0 ]; then
+		echo_red "Failed to save dummy channel user_id into config."
+		return 1
+	fi
+}
+
 function cleanUpLogs(){
 	find "$selfDir/../logs/" -type f -exec rm {} \;
 	return $?
@@ -105,6 +159,15 @@ function showErrorYard(){
 
 echo -n "Cleaning up the DB ... "
 cleanUpDB
+if [ $? -eq 0 ]; then
+	echo_green "Done."
+else
+	echo_red "Failed. Aborting."
+	exit 1
+fi
+
+echo -n "Creating dummy Service Chat ... "
+createDummyServiceChat
 if [ $? -eq 0 ]; then
 	echo_green "Done."
 else
