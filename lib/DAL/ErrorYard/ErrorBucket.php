@@ -10,7 +10,7 @@ class ErrorBucket{
 	private $errorId;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		\DateTimeInterface $firstAppearanceTime,
 		\DateTimeInterface $lastAppearanceTime,
 		int $count,
@@ -23,7 +23,7 @@ class ErrorBucket{
 		$this->errorId = $errorId;
 	}
 
-	public function getId(){
+	public function getId(): ?int {
 		return $this->id;
 	}
 
@@ -32,23 +32,23 @@ class ErrorBucket{
 		$this->id = $id;
 	}
 
-	public function getFirstAppearanceTime(){
+	public function getFirstAppearanceTime(): \DateTimeInterface {
 		return $this->firstAppearanceTime;
 	}
 
-	public function getLastAppearanceTime(){
+	public function getLastAppearanceTime(): \DateTimeInterface {
 		return $this->lastAppearanceTime;
 	}
 
-	public function getCount(){
+	public function getCount(): int {
 		return $this->count;
 	}
 
-	public function getErrorId(){
+	public function getErrorId(): int {
 		return $this->errorId;
 	}
 
-	public function __toString(){
+	public function __toString(): string {
 		$FATime = $this->getFirstAppearanceTime()->format('d.m.Y H:i:s');
 		$LATime = $this->getLastAppearanceTime()->format('d.m.Y H:i:s');
 

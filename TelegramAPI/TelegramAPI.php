@@ -6,7 +6,6 @@ require_once(__DIR__.'/../core/InlineOption.php');
 require_once(__DIR__.'/../core/MarkupType.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterInterface.php');
 require_once(__DIR__.'/../lib/Tracer/TracerFactory.php');
-require_once(__DIR__.'/OutgoingMessage.php');
 require_once(__DIR__.'/VelocityController.php');
 require_once(__DIR__.'/VelocityControllerFactory.php');
 
@@ -16,8 +15,6 @@ class TelegramAPI{
 	private $botToken;
 	private $velocityController;
 
-	const MAX_MESSAGE_JSON_LENGTH = 4000; // 4163 in fact. Have no idea why.
-	
 	public function __construct(
 		string $botToken,
 		\HTTPRequester\HTTPRequesterInterface $HTTPRequester,
@@ -114,7 +111,8 @@ class TelegramAPI{
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
-	){
+	): \HTTPRequester\HTTPResponse{
+		# TODO: rework the return value type
 
 		$request = array(
 			'chat_id'	=> $chat_id,
@@ -206,7 +204,7 @@ class TelegramAPI{
 		return $result;
 	}
 
-	public function forwardMessage($chat_id, $from_chat_id, $message_id, $silent = false){
+	public function forwardMessage($chat_id, $from_chat_id, $message_id, $silent = false): void {
 		$payload = array(
 			'chat_id'				=> $chat_id,
 			'from_chat_id'			=> $from_chat_id,

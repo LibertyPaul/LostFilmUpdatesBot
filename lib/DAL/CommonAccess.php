@@ -135,8 +135,20 @@ abstract class CommonAccess{
 		return $id;
 	}
 
-	protected function startTransaction(){
-		$this->pdo->beginTransaction();
+	protected function startTransaction(): bool {
+		try{
+			$this->pdo->beginTransaction();
+		}
+		catch(\PDOException $ex){
+			if($ex->getMessage() === "There is already an active transaction"){
+				return false;
+			}
+			else{
+				throw $ex;
+			}
+		}
+
+		return true;
 	}
 
 	protected function commit(){

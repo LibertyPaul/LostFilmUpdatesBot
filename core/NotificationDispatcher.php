@@ -113,20 +113,10 @@ class NotificationDispatcher{
 					$sendResult = $this->messageRouter->getRoute($user)->send($outgoingMessage);
 				}
 				else{
-					$sendResult = array(SendResult::Fail);
+					$sendResult = SendResult::Fail;
 				}
 
-				if(count($sendResult) !== 1){
-					$this->tracer->logfError(
-						'[o]', __FILE__, __LINE__,
-						'MessageSender returned incorrect number of results:'.PHP_EOL.
-						implode(', ', $sendResult)
-					);
-
-					$sendResult = array(SendResult::Fail); # To prevent excessive notifications
-				}
-
-				$notification->applyDeliveryResult($sendResult[0] === SendResult::Success ? 200 : 400); #TODO change code to internal status
+				$notification->applyDeliveryResult($sendResult === SendResult::Success ? 200 : 400); #TODO change code to internal status
 				$this->notificationsQueueAccess->updateNotification($notification);
 			}
 			catch(\PDOException $ex){

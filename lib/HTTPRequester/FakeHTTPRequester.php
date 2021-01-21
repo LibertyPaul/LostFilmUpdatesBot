@@ -15,7 +15,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, null, true, false);
 	}
 	
-	private function successResponse(){
+	private function successResponse(): HTTPResponse {
 		$telegram_resp = array(
 			'ok' => true,
 			'result' => array(
@@ -27,7 +27,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $resp; 
 	}
 	
-	private function failureResponse(){
+	private function failureResponse(): HTTPResponse {
 		$telegram_resp = array(
 			'ok' => false
 		);
@@ -36,7 +36,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $resp;
 	}
 	
-	private function randomResponse(){
+	private function randomResponse(): HTTPResponse {
 		if(rand(0, 100) > 50){
 			return $this->successResponse();
 		}
@@ -45,11 +45,11 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		}
 	}
 
-	private function writeOut($text){
+	private function writeOut($text): void {
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, $text);
 	}
 
-	private static function isTelegramFilePropertiesRequest(HTTPRequestProperties $requestProperties){
+	private static function isTelegramFilePropertiesRequest(HTTPRequestProperties $requestProperties): bool {
 		$URL = $requestProperties->getURL();
 		$payload = $requestProperties->getPayload();
 
@@ -61,14 +61,14 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 			strpos($URL, '/getFile') > 0;
 	}
 
-	private static function isTelegramFileDownloadRequest(HTTPRequestProperties $requestProperties){
+	private static function isTelegramFileDownloadRequest(HTTPRequestProperties $requestProperties): bool {
 		$URL = $requestProperties->getURL();
 
 		return
 			strpos($URL, 'https://api.telegram.org/file/bot') === 0;
 	}
 
-	private static function isGoogleSpeechAPIRequest(HTTPRequestProperties $requestProperties){
+	private static function isGoogleSpeechAPIRequest(HTTPRequestProperties $requestProperties): bool {
 		$URL = $requestProperties->getURL();
 		
 		return
@@ -76,7 +76,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	}
 
 
-	private function createTelegramFilePropertiesResponse(){
+	private function createTelegramFilePropertiesResponse(): HTTPResponse {
 		$telegram_resp = array(
 			'ok' => true,
 			'result' => array(
@@ -88,12 +88,12 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $resp;		
 	}
 
-	private function createTelegramFileDownloadResponse(){
+	private function createTelegramFileDownloadResponse(): HTTPResponse {
 		$resp = new HTTPResponse(200, "Dummy response body");
 		return $resp;
 	}
 
-	private function createGoogleSpeechAPIResponse(){
+	private function createGoogleSpeechAPIResponse(): HTTPResponse {
 		$google_resp = array(
 			'results' => array(
 				array(
@@ -110,7 +110,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		return $resp;		
 	}
 	
-	public function request(HTTPRequestProperties $requestProperties){
+	public function request(HTTPRequestProperties $requestProperties): HTTPResponse {
 		$this->writeOut($requestProperties);
 
 		if(self::isTelegramFilePropertiesRequest($requestProperties)){
@@ -127,9 +127,13 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 		}
 	}
 
-	public function multiRequest(array $requestsProperties){
+	public function multiRequest(array $requestsProperties): array {
+		$res = array();
+
 		foreach($requestsProperties as $request){
-			$this->request($request);
+			$res[] = $this->request($request);
 		}
+
+		return $res;
 	}
 }		

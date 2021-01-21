@@ -54,7 +54,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		return $this->curl_multi;
 	}
 
-	private function executeCurl($curl){
+	private function executeCurl($curl): HTTPResponse {
 		$body = curl_exec($curl);
 		if($body === false){
 			$errno = curl_errno($curl);
@@ -72,7 +72,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		return new HTTPResponse($code, $body);
 	}
 
-	private function createGetRequest($URL, $payload = null){
+	private function createGetRequest(string $URL, $payload = null): string {
 		$request = $URL;
 
 		if(empty($payload) === false){
@@ -91,7 +91,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		return $request;
 	}
 
-	private function setRequestOptions($curl, HTTPRequestProperties $requestProperties){
+	private function setRequestOptions($curl, HTTPRequestProperties $requestProperties): void {
 		switch($requestProperties->getRequestType()){
 			case RequestType::Get:
 				assert(curl_setopt($curl, \CURLOPT_HTTPGET, true));
@@ -149,7 +149,7 @@ class HTTPRequester implements HTTPRequesterInterface{
 		assert(curl_setopt($curl, \CURLOPT_HTTPHEADER, $headers));
 	}
 
-	public function request(HTTPRequestProperties $requestProperties){
+	public function request(HTTPRequestProperties $requestProperties): HTTPResponse {
 		$curl = $this->getCurl();
 
 		$this->setRequestOptions($curl, $requestProperties);
@@ -169,13 +169,13 @@ class HTTPRequester implements HTTPRequesterInterface{
 		return $result;
 	}
 	
-	private function executeMultiCurl(){
+	private function executeMultiCurl(): void {
 		do{
 			curl_multi_exec($this->getMultiCurl(), $active);
 		}while($active > 0);
 	}
 
-	public function multiRequest(array $requestsProperties){
+	public function multiRequest(array $requestsProperties): array {
 		$this->curlPool->reserve(count($requestsProperties));
 
 		$handleIndex = 0;
@@ -185,7 +185,10 @@ class HTTPRequester implements HTTPRequesterInterface{
 			self::initializeCurl($curl);
 			$this->setRequestOptions($curl, $requestProperties);
 
-			$this->requestResponseTracer->logEvent('[REQUEST]', __FILE__, __LINE__, strval($requestProperties));
+			$this->requestResponseTracer->logEvent(
+				'[REQUEST]', __FILE__, __LINE__,
+				strval($requestProperties)
+			);
 
 			$requestHandles[$requestId] = $curl;
 
