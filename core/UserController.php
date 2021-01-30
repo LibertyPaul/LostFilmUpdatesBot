@@ -66,10 +66,9 @@ class UserController{
 		$this->conversationStorage->deleteConversation();
 
 		if($this->user->isJustRegistred() === false){
-			$tracks = $this->tracksAccess->getTracksByUser($this->user->getId());
-
 			$responseText = "Ты уже зарегистрирован(а).".PHP_EOL;
 
+			$tracks = $this->tracksAccess->getTracksByUser($this->user->getId());
 			if(empty($tracks)){
 				$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 				$responseText .= "Чтобы подписаться на сериал - жми на $addShowCoreCommand.".PHP_EOL;
@@ -83,8 +82,8 @@ class UserController{
 		else{
 			$responseText =
 				'Привет!'.PHP_EOL.
-				'Я - бот LostFilm updates.'.PHP_EOL.
-				'Я оповещу тебя о выходе новых серий на LostFilm.TV.'.PHP_EOL.PHP_EOL;
+				'Я - бот LostFilm Updates.'.PHP_EOL.
+				'Я оповещу тебя о выходе новых серий на LostFilm.tv.'.PHP_EOL.PHP_EOL;
 		}
 
 		$helpCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Help];
@@ -95,15 +94,17 @@ class UserController{
 			new OutgoingMessage($responseText)
 		);
 
-		try{
-			$adminNotification = $this->notificationGenerator->newUserEvent($this->user);
+		if($this->user->isJustRegistred()){
+			try{
+				$adminNotification = $this->notificationGenerator->newUserEvent($this->user);
 
-			if($adminNotification !== null){
-				$response->appendMessage($adminNotification);
+				if($adminNotification !== null){
+					$response->appendMessage($adminNotification);
+				}
 			}
-		}
-		catch(\Throwable $ex){
-			$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
+			catch(\Throwable $ex){
+				$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
+			}
 		}
 
 		return $response;
