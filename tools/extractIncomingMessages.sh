@@ -75,22 +75,26 @@ echo_green "Extracting finished."
 
 echo "Exploding into separate files..."
 
-for current in $(find "$dstDir" -type f); do
-	currentBasename="$(basename "$current")"
+for currentFile in $(find "$dstDir" -type f); do
+	currentBasename="$(basename "$currentFile")"
 	category="${currentBasename%.*}"
 	directory="$dstDir/$category"
 	mkdir "$directory"
 
-	cat "$current" | while read line; do
-		if [[ "$line" =~ EVENT* ]] && [[ -n "$current" ]]; then
-			update_id="$(echo "$current" | grep -oP '"update_id": \K(\d+)(?=,)')"
+	cat "$currentFile" | while read currentLine; do
+		if [ -n "$currentUpdate" ] && [ "${currentLine:0:5}" == "EVENT" ]; then
+			update_id="$(echo "$currentUpdate" | grep -oP '"update_id": \K(\d+)(?=,)')"
 			messagePath="$directory/$update_id.json"
-			if [ ! -f "$messagePath" ]; then
-				echo "$current" > "$messagePath"
+
+			if [ -e "$messagePath" ]; then
+				echo_red "[$messagePath] already exists." >&2
+			else
+				echo "$currentUpdate" > "$messagePath"
 			fi
-			current=''
+
+			currentUpdate=''
 		else
-			current="$current$line"
+			currentUpdate="${currentUpdate}${currentLine}"
 		fi
 	done
 done
