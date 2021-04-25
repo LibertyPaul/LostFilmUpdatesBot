@@ -6,12 +6,12 @@ require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/ErrorBucketBuilder.php');
 
 class ErrorYardAccess extends CommonAccess{
-	private $getErrorYardSummary;
-	private $getActiveErrorBucketWithLockQuery;
+    private $getActiveErrorBucketWithLockQuery;
 	private $addErrorBucketQuery;
 	private $incrementErrorBucketQuery;
+    private $getActiveErrorYardBucketsQuery;
 
-	public function __construct(\PDO $pdo){
+    public function __construct(\PDO $pdo){
 		parent::__construct(
 			$pdo,
 			new ErrorBucketBuilder()

@@ -49,7 +49,7 @@ class Approach{
 		return $this->approach;
 	}
 
-	public function verify(int $rowsAffected){
+	public function verify(int $rowsAffected): bool {
 		switch($this->approach){
 		case self::ONE:
 			if($rowsAffected !== 1){
@@ -65,8 +65,12 @@ class Approach{
 
 		case self::MANY:
 			return true;
-			break;
+
+            default:
+            throw new \LogicException("Unknown approach type: ".$this->approach);
 		}
+
+		return true;
 	}
 
 	public function repack(array $objects){
@@ -84,6 +88,9 @@ class Approach{
 
 		case self::MANY:
 			return $objects;
+
+        default:
+            throw new \LogicException("Unknown approach type: ".$this->approach);
 		}
 	}
 			

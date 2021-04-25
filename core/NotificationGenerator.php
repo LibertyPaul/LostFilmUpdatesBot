@@ -85,12 +85,12 @@ class NotificationGenerator{
 
 	protected function getUserFirstName(\DAL\User $user){
 		if(array_key_exists($user->getAPI(), $this->APIUserDataAccessInterfaces) === false){
-			throw \LogicException("An UserDataAccessInterface is not defined for ".$user->getAPI());
+			throw new \LogicException("An UserDataAccessInterface is not defined for ".$user->getAPI());
 		}
 
 		$APIUserDataAccessInterface = $this->APIUserDataAccessInterfaces[$user->getAPI()];
 		if($APIUserDataAccessInterface === null){
-			throw \LogicException("An UserDataAccessInterface is null for ".$user->getAPI());
+			throw new \LogicException("An UserDataAccessInterface is null for ".$user->getAPI());
 		}
 
 		$APIUserData = $APIUserDataAccessInterface->getAPIUserDataByUserId($user->getId());

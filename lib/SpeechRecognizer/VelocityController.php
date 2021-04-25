@@ -11,8 +11,9 @@ class VelocityController{
 	private $storage;
 	private $maxRecognitionsPerUserPerWeek;
 	private $maxRecognitionsPerBotPerMonth;
+    private $maxSearchesPerUserPerWeek;
 
-	public function __construct(
+    public function __construct(
 		\Config $config,
 		\DBStorage $storage,
 		\PDO $pdo

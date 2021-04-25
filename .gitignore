@@ -9,3 +9,5 @@ lib/Tracer/FileTracerConfig.ini
 lib/Tracer/YardTracerConfig.ini
 
 *.swp
+
+.idea

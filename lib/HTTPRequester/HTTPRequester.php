@@ -34,7 +34,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 	private static function createMultiCurl(){
 		$multiCurl = curl_multi_init();
-		assert($multiCurl !== false);
+		if($multiCurl === false) {
+		    throw new \RuntimeException("Failed to initialize multi cURL handle.");
+		}
 
 		return $multiCurl;
 	}

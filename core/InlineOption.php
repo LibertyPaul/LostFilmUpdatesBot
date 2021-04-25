@@ -56,6 +56,9 @@ class InlineOption{
 			case InlineOptionType::ShareButton:
 				$typeStr = 'Type:Share';
 				break;
+
+            default:
+                throw new \LogicException("Unknown InlineOptionType: ".$this->type);
 		}
 
 

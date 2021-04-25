@@ -9,9 +9,8 @@ require_once(__DIR__.'/../TelegramAPI/MessageSender.php');
 require_once(__DIR__.'/../lib/HTTPRequester/HTTPRequesterFactory.php');
 
 class MessageRouterFactory{
-	private static $instance;
 
-	private static function createTelegramAPISender(){
+    private static function createTelegramAPISender(){
 		$pdo = \BotPDO::getInstance();
 		$config = \Config::getConfig($pdo);
 		$botToken = $config->getValue('TelegramAPI', 'token');
@@ -35,7 +34,7 @@ class MessageRouterFactory{
 		return $telegramAPISender;
 	}
 
-	public static function getInstance(){
+	public static function getInstance(): MessageRouter {
 		if(isset($instance) === false){
 			$telegramAPISender = self::createTelegramAPISender();
 

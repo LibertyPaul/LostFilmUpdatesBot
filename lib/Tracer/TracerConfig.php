@@ -64,7 +64,8 @@ class TracerConfig{
 		}
 
 		if(isset($configIniSection['CLIStdOutTrace'])){
-			switch($configIniSection['CLIStdOutTrace']){
+            $CLIStdOutTrace = $configIniSection['CLIStdOutTrace'];
+			switch($CLIStdOutTrace){
 				case 'true':
 					$this->CLIStdOutTrace = true;
 					break;

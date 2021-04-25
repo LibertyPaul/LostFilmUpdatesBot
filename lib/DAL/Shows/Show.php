@@ -12,7 +12,7 @@ class Show{
 	private $lastAppearanceTime;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		string $alias,
 		string $title_ru,
 		string $title_en,

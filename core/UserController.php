@@ -23,8 +23,7 @@ require_once(__DIR__.'/../lib/DAL/Tracks/Track.php');
 class UserController{
 	private $user;
 	private $conversationStorage;
-	private $messageDestination;
-	private $pdo;
+    private $pdo;
 	private $config;
 	private $tracer;
 	private $coreCommands;
@@ -122,7 +121,7 @@ class UserController{
 		return new DirectedOutgoingMessage($this->user, new OutgoingMessage($text));
 	}
 
-	private function deleteUser(){
+	private function deleteUser(): DirectedOutgoingMessage {
 		$ANSWER_YES = 'Да';
 		$ANSWER_NO = 'Нет';
 
@@ -150,9 +149,7 @@ class UserController{
 				)
 			);
 
-			break;
-
-		case 2:
+            case 2:
 			$response = $this->conversationStorage->getLastMessage()->getText();
 
 			switch(strtolower($response)){
@@ -209,9 +206,8 @@ class UserController{
 					)
 				);
 			}
-			break;
 
-		default:
+            default:
 			$this->tracer->logError(
 				'[USER CONTROLLER]', __FILE__, __LINE__,
 				'3rd message in /stop conversation is impossible.'
@@ -224,10 +220,12 @@ class UserController{
 			);
 
 			$this->conversationStorage->deleteConversation();
+
+			throw new \LogicException("3rd message in /stop conversation is impossible.");
 		}
 	}
 
-	private function showHelp(){
+	private function showHelp(): DirectedOutgoingMessage {
 		$this->conversationStorage->deleteConversation();
 
 		$addShowCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
@@ -387,7 +385,7 @@ class UserController{
 		);
 	}
 	
-	private function manageSubscription($showAction){
+	private function manageSubscription($showAction): DirectedOutgoingMessage {
 		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
 		$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 
@@ -413,6 +411,9 @@ class UserController{
 					$text = "Нечего удалять. Для начала добавь пару сериалов командой [$addShowCoreCommand].";
 					
 					break;
+
+                default:
+                    throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 				
 				return new DirectedOutgoingMessage(
@@ -444,9 +445,8 @@ class UserController{
 					)
 				);
 			}
-			break;
 
-		# Search, add or propose narrow list
+            # Search, add or propose narrow list
 		case 2:
 			$messageText = $this->conversationStorage->getLastMessage()->getText();
 			$show = $this->showsAccess->getEligibleShowByTitle($this->user->getId(), $messageText, $showAction);
@@ -478,6 +478,9 @@ class UserController{
 					case \DAL\ShowAction::AddTentative:
 						$notFoundText = "Не найдено подходящих названий. Жми на $addShowCoreCommand чтобы посмотреть в списке.";
 						break;
+
+                    default:
+                        throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 
 				return new DirectedOutgoingMessage($this->user, new OutgoingMessage($notFoundText));
@@ -498,6 +501,9 @@ class UserController{
 					case \DAL\ShowAction::Remove:
 						$successText = 'удален';
 						break;
+
+                    default:
+                        throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 
 				$resultText = sprintf("%s %s.", $matchedShow->getFullTitle(), $successText);
@@ -554,6 +560,9 @@ class UserController{
 					)
 				);
 			}
+
+        default:
+            throw new \LogicException("Impossible condition.");
 		}
 	}
 
@@ -745,8 +754,6 @@ class UserController{
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
-			break;
-
 		case 2:
 			return new DirectedOutgoingMessage(
 				$this->user,
@@ -820,18 +827,16 @@ class UserController{
 				);
 				
 				$response->appendMessage($confirm);
-
-				return $response;
 			}
 			else{
 				$this->conversationStorage->deleteConversation();
-				return new DirectedOutgoingMessage(
+                $response = new DirectedOutgoingMessage(
 					$this->user,
-					new OutgoingMessage('Ты накосячил!. '.$result['why'])
+					new OutgoingMessage('Ты накосячил: '.$result['why'])
 				);
 			}
 
-			break;
+			return $response;
 
 		case 7:
 			$result = $this->buildBroadcastMessage();
@@ -876,6 +881,9 @@ class UserController{
 			$broadcastChain->appendMessage($confirmMessage);
 
 			return $broadcastChain;
+
+        default:
+            throw new \LogicException("Impossible condition.");
 		}
 	}
 

@@ -30,7 +30,7 @@ class Config{
 		}
 	}
 
-	public static function getConfig(\PDO $pdo, int $mode = ConfigFetchMode::ALL_AT_ONCE){
+	public static function getConfig(\PDO $pdo, int $mode = ConfigFetchMode::ALL_AT_ONCE): Config {
 		static $config;
 
 		if(isset($config) === false){

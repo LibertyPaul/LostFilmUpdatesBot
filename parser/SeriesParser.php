@@ -13,7 +13,7 @@ class SeriesParser extends Parser{
 		\HTTPRequester\HTTPRequesterInterface $requester,
 		\PDO $pdo
 	){
-		parent::__construct($requester, null);
+		parent::__construct($requester);
 
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 	}
@@ -73,20 +73,20 @@ class SeriesParser extends Parser{
 				'Regex: [%s]',
 				preg_last_error(),
 				$URL,
-				$regex
+				$regexp
 			);
 
 			throw new \RuntimeException('Unable to parse URL [$URL]');
 		}
 
 		if($matchesRes === 0){
-			$this->tracer->logError(
+			$this->tracer->logfError(
 				'[o]', __FILE__, __LINE__,
 				"Link doesn't match the pattern".PHP_EOL.
 				'Link: [%s]'.PHP_EOL.
 				'Regex: [%s]',
 				$URL,
-				$regex
+				$regexp
 			);
 
 			throw new \RuntimeException("Link doesn't match pattern");

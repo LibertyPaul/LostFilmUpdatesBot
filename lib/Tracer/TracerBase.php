@@ -69,7 +69,7 @@ abstract class TracerBase{
 			$format = '';
 		}
 		
-		return $this->logWrapper(
+		$this->logWrapper(
 			$level,
 			$tag,
 			$file,

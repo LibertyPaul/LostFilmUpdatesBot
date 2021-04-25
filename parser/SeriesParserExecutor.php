@@ -20,13 +20,13 @@ require_once(__DIR__.'/../lib/DAL/Shows/ShowsAccess.php');
 class SeriesParserExecutor{
 	private $config;
 	private $seriesParser;
-	private $seriesAboutsParser;
+    private $seriesAboutParser;
 	private $maxShowNotReadyPeriod;
 	private $seriesAccess;
 	private $showsAccess;
 	private $tracer;
-	
-	public function __construct(){
+
+    public function __construct(){
 		$pdo = ParserPDO::getInstance();
 		$requester = new \HTTPRequester\HTTPRequester();
 
@@ -164,7 +164,7 @@ class SeriesParserExecutor{
 		$rssURL = $this->config->getValue('Parser', 'RSS URL', 'https://www.lostfilm.tv/rss.xml');
 		$customHeaders = array();
 
-		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header', null);
+		$customHeader = $this->config->getValue('Parser', 'RSS Custom Header');
 		if ($customHeader !== null){
 			$customHeaders[] = $customHeader;
 		}	

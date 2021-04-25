@@ -30,7 +30,7 @@ class ShowListFetcher{
 	public function fetchShowList(){
 		$URL = $this->config->getValue('Parser', 'ShowListURL', 'https://www.lostfilm.tv/ajaxik.php');
 		
-		$customHeader = $this->config->getValue('Parser', 'ShowList Custom Header', null);
+		$customHeader = $this->config->getValue('Parser', 'ShowList Custom Header');
 		$customHeaders = array();
 		if ($customHeader !== null){
 			$customHeaders[] = $customHeader;

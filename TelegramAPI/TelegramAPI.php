@@ -111,7 +111,7 @@ class TelegramAPI{
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
-	): \HTTPRequester\HTTPResponse{
+	): \HTTPRequester\HTTPResponse {
 		# TODO: rework the return value type
 
 		$request = array(
@@ -183,9 +183,10 @@ class TelegramAPI{
 			$this->getBaseMethodURL('sendMessage'),
 			$requestJSON
 		);
+
+        $this->waitForVelocity($chat_id);
 		
 		try{
-			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
 		catch(\HTTPRequester\HTTPTimeoutException $ex){
@@ -194,7 +195,7 @@ class TelegramAPI{
 				'Telegram API seems to be unavailable due to [%s]',
 				$ex
 			);
-
+			throw $ex;
 		}
 		catch(\HTTPRequester\HTTPException $HTTPException){
 			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);

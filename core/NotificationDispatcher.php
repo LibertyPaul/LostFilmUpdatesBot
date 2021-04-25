@@ -18,8 +18,15 @@ class NotificationDispatcher{
 	private $notificationGenerator;
 	private $messageRouter;
 	private $tracer;
-	
-	public function __construct(NotificationGenerator $notificationGenerator){
+    private $pdo;
+    private $config;
+    private $maxRetryCount;
+    private $usersAccess;
+    private $seriesAccess;
+    private $showsAccess;
+    private $notificationsQueueAccess;
+
+    public function __construct(NotificationGenerator $notificationGenerator){
 		$this->notificationGenerator = $notificationGenerator;
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
@@ -29,11 +36,13 @@ class NotificationDispatcher{
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $this->pdo);
 
 		$this->config = \Config::getConfig($this->pdo, \ConfigFetchMode::PER_REQUEST);
-		$this->maxRetryCount = $this->config->getValue(
-			'Notification Dispatcher',
-			'Max Attempts Count',
-			5
-		);
+		$this->maxRetryCount = intval(
+		    $this->config->getValue(
+			    'Notification Dispatcher',
+                'Max Attempts Count',
+                5
+		    )
+        );
 
 		$this->usersAccess = new \DAL\UsersAccess($this->pdo);
 		$this->seriesAccess = new \DAL\SeriesAccess($this->pdo);
@@ -41,7 +50,7 @@ class NotificationDispatcher{
 		$this->notificationsQueueAccess = new \DAL\NotificationsQueueAccess($this->pdo);
 	}
 
-	private static function eligibleToBeSent(\DAL\Notification $notification){
+	private static function eligibleToBeSent(\DAL\Notification $notification): bool {
 		if($notification->getResponseCode() === null){
 			return true;
 		}
@@ -50,8 +59,9 @@ class NotificationDispatcher{
 			throw new \LogicException('lastDeliveryAttemptTime is null but responseCode is not');
 		}
 
-		$waitTime = null;
-		switch($notification->getRetryCount()){ # TODO: move intervals to `config` table
+
+        $retryCount = $notification->getRetryCount();
+        switch($retryCount){
 			case 0:
 				$interval = 'PT0S';
 				break;

@@ -15,7 +15,6 @@ require_once(__DIR__.'/../TelegramAPI/TelegramAPI.php');
 
 require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessagesHistoryAccess.php');
 require_once(__DIR__.'/../lib/DAL/MessagesHistory/MessageHistory.php');
-require_once(__DIR__.'/../lib/DAL/Users/UsersAccess.php');
 require_once(__DIR__.'/../lib/DAL/Users/User.php');
 
 class UpdateHandler{
@@ -23,17 +22,17 @@ class UpdateHandler{
 	private $messageRouter;
 
 	private $messagesHistoryAccess;
-	private $usersAccess;
 
 	public function __construct(\PDO $pdo){
 		$this->tracer = \TracerFactory::getTracer(__CLASS__, $pdo);
 
 		$this->messageRouter = MessageRouterFactory::getInstance();
 		$this->messagesHistoryAccess = new \DAL\MessagesHistoryAccess($pdo);
-		$this->usersAccess = new \DAL\UsersAccess($pdo);
 	}
 
 	private function logIncomingMessage(int $user_id, IncomingMessage $incomingMessage){
+        $externalId = null;
+
 		try{
 			$externalId = $incomingMessage->getAPISpecificData()->getUniqueMessageId();
 
@@ -54,7 +53,7 @@ class UpdateHandler{
 		catch(\DAL\MessagesHistoryDuplicateExternalIdException $ex){
 			$this->tracer->logfError(
 				'[DB ERROR]', __FILE__, __LINE__,
-				'Unable to log the mesasge due to duplicate external_id: [%d]',
+				'Unable to log the message due to duplicate external_id: [%d]',
 				$externalId
 			);
 
@@ -91,21 +90,20 @@ class UpdateHandler{
 		int $statusCode,
 		?int $externalId
 	){
+        $messageHistory = new \DAL\MessageHistory(
+            null,
+            new \DateTimeImmutable(),
+            'UpdateHandler',
+            $outgoingMessage->getUser()->getId(),
+            #$externalId, TODO: Rework external id handling
+            null,
+            $outgoingMessage->getOutgoingMessage()->getText(),
+            $inResponseTo,
+            $statusCode
+        );
+
 		try{
-			$messageHistory = new \DAL\MessageHistory(
-				null,
-				new \DateTimeImmutable(),
-				'UpdateHandler',
-				$outgoingMessage->getUser()->getId(),
-				#$externalId, TODO: Rework external id handling
-				null,
-				$outgoingMessage->getOutgoingMessage()->getText(),
-				$inResponseTo,
-				$statusCode
-			);
-
 			$this->messagesHistoryAccess->addMessageHistory($messageHistory);
-
 		}
 		catch(\PDOException $ex){
 			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);

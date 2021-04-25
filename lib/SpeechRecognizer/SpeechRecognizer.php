@@ -16,8 +16,7 @@ abstract class Result{
 class SpeechRecognizer{
 	private $APIURL;
 	private $HTTPRequester;
-	private $velocityController;
-	private $tracer;
+    private $tracer;
 
 	public function __construct(
 		\Config $config,

@@ -172,7 +172,7 @@ class UpdateHandler{
 	private function createUser(
 		int $chat_id,
 		string $type,
-		string $username = null,
+		?string $username,
 		string $first_name,
 		string $last_name = null
 	){
@@ -248,7 +248,7 @@ class UpdateHandler{
 		case 'group':
 		case 'supergroup':
 			$username	= null;
-			$first_name	= isset($chat->title) ? $chat->title : "Group $chatID";
+			$first_name	= isset($chat->title) ? $chat->title : "Group $chat->id";
 			$last_name	= null;
 			$oldChatID	= isset($message->migrate_from_chat_id)	? $message->migrate_from_chat_id : null;
 			break;
@@ -401,7 +401,7 @@ class UpdateHandler{
 			break;
 
 		default:
-			throw new \LogicException("Unknown Telegram chat type:".PHP_EOL.$telegramUserData);
+			throw new \LogicException("Unknown Telegram chat type: [$chatType]");
 		}
 
 		if($res === false){

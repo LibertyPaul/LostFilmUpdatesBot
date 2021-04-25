@@ -35,7 +35,7 @@ class AdminReports{
 			return -1;
 		}
 
-		return $this->updateHandler->sendMessages($report, null);
+		return $this->updateHandler->sendMessages($report);
 	}
 
 	public function sendReports(){

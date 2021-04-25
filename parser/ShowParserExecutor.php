@@ -91,7 +91,7 @@ class ShowParserExecutor{
 			catch(\PDOException $ex){
 				$this->tracer->logError(
 					'[DATABASE]', __FILE__, __LINE__,
-					"Unable to update show [$existingAlias]".PHP_EOL.$show
+					"Unable to update show [$existingAlias]".PHP_EOL.$LFShows[$existingAlias]
 				);
 
 				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);

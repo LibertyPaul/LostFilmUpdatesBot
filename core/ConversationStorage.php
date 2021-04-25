@@ -116,7 +116,7 @@ class ConversationStorage{
 		);
 
 		$conversation_serialized = serialize($this->conversation);
-		$res = $this->storage->setValue($this->user_id, $conversation_serialized);
+		$this->storage->setValue($this->user_id, $conversation_serialized);
 
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation was committed.');
 		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation one-line: '.$this);
@@ -170,7 +170,7 @@ class ConversationStorage{
 
 			default:
 				$this->tracer->logfError('[o]', __FILE__, __LINE__, 'Incorrect insertMessage position.');
-				throw new \RuntimeError('Incorrect insertMessage position.');
+				throw new \LogicException('Incorrect insertMessage position.');
 		}
 
 		$this->commitConversation();
@@ -179,11 +179,11 @@ class ConversationStorage{
 	}
 
 	public function appendMessage(IncomingMessage $incomingMessage){
-		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Back);
+		$this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Back);
 	}
 
 	public function prependMessage(IncomingMessage $incomingMessage){
-		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Front);
+		$this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Front);
 	}
 
 	public function deleteConversation(){

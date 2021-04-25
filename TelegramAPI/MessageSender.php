@@ -128,31 +128,31 @@ class MessageSender implements \core\MessageSenderInterface{
 
 			$request_message_id = null;
 		}
-		
-		for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
-			$result = $this->telegramAPI->send(
-				$telegramUserData->getAPISpecificId(),
-				$messageText,
-				$request_message_id,
-				$message->markupType(),
-				$message->URLExpandEnabled(),
-				$responseOptions,
-				$message->getInlineOptions()
-			);
 
-			if($result->isErrorTooFrequent()){
-				$this->tracer->logfWarning(
-					'[TELEGRAM API]', __FILE__, __LINE__,
-					"Got 429 HTTP Response. Nap for [%d] ms.",
-					$this->sleepOn429CodeMs
-				);
+		$attempt = 0;
+		do {
+            $result = $this->telegramAPI->send(
+                $telegramUserData->getAPISpecificId(),
+                $messageText,
+                $request_message_id,
+                $message->markupType(),
+                $message->URLExpandEnabled(),
+                $responseOptions,
+                $message->getInlineOptions()
+            );
 
-				usleep($this->sleepOn429CodeMs);
-			}
-			else{
-				break;
-			}
-		}
+            if ($result->isErrorTooFrequent()) {
+                $this->tracer->logfWarning(
+                    '[TELEGRAM API]', __FILE__, __LINE__,
+                    "Got 429 HTTP Response. Nap for [%d] ms.",
+                    $this->sleepOn429CodeMs
+                );
+
+                usleep($this->sleepOn429CodeMs);
+            } else {
+                break;
+            }
+        } while(++$attempt < $this->maxSendAttempts);
 
 		if($result->isSuccess() === false){
 			$this->tracer->logEvent(
