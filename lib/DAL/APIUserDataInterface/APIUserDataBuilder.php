@@ -2,4 +2,4 @@
 
 namespace DAL;
 
-class APIUserDataBuilder implements DAOBuilderInterface{}
+interface APIUserDataBuilder extends DAOBuilderInterface {}
