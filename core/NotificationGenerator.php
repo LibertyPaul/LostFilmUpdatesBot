@@ -48,12 +48,6 @@ class NotificationGenerator{
 			'%s'
 		;
 
-		$URL = \LFSpecifics::getSeriesPageURL(
-			$show->getAlias(),
-			$series->getSeasonNumber(),
-			$series->getSeriesNumber()
-		);
-
 		if($this->config->getValue('Notifications', 'Include Tor Advice') === 'Y'){
 			$torAdviceCommnad = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AboutTor];
 			$torAdvice = "Если не получается зайти на LostFilm: $torAdviceCommnad";
@@ -66,7 +60,7 @@ class NotificationGenerator{
 			$series->getSeasonNumber(),
 			$series->getSeriesNumber(),
 			htmlspecialchars($series->getTitleRu()),
-			$URL
+			$series->getSuggestedURL()
 		);
 	}
 

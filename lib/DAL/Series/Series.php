@@ -11,6 +11,7 @@ class Series{
 	private $titleRu;
 	private $titleEn;
 	private $ready;
+	private $suggestedURL;
 
 	public function __construct(
 		int	$id = null,
@@ -20,7 +21,8 @@ class Series{
 		int $seriesNumber,
 		string $titleRu,
 		string $titleEn,
-		bool $ready
+		bool $ready,
+		?string $suggestedURL
 	){
 		$this->id			= $id;
 		$this->firstSeenAt	= $firstSeenAt;
@@ -30,6 +32,7 @@ class Series{
 		$this->titleRu		= $titleRu;
 		$this->titleEn		= $titleEn;
 		$this->ready		= $ready;
+		$this->suggestedURL	= $suggestedURL;
 	}
 
 	public function getId(){
@@ -72,6 +75,10 @@ class Series{
 		$this->ready = true;
 	}
 
+	public function getSuggestedURL(){
+		return $this->suggestedURL;
+	}
+
 	public function __toString(){
 		$idStr = is_null($this->getId()) ? 'Null' : strval($this->getId());
 		$isReadyStr = $this->isReady() ? 'Y' : 'N';
@@ -87,6 +94,7 @@ class Series{
 			sprintf("Title RU:      [%s]", $this->getTitleRu())			.PHP_EOL.
 			sprintf("Title En:      [%s]", $this->getTitleEn())			.PHP_EOL.
 			sprintf("Is Ready:      [%s]", $isReadyStr)					.PHP_EOL.
+			sprintf("Suggested URL: [%s]", $this->getSuggestedURL())	.PHP_EOL.
 			'====================================';
 		
 		return $result;
