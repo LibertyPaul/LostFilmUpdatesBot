@@ -49,16 +49,31 @@ class SeriesParser extends Parser{
 	}
 	
 	private function parseURL(?string $URL){
-		$regexp = '/https:\/\/[\w\.]*?lostfilm\.[^\/]+(\/[^\/]+)?\/series\/([^\/]+)\/season_(\d+)\/episode_(\d+)\//';
+		$anything = '[^\/]+';
+
+		$urlStructure = array(
+			'1: protocol'	=> "https:\/\/",		# https://
+			'2: domain'		=> "$anything\/",		# www.lostfilmtv.site/
+			'3: subDir'		=> "($anything\/)?",	# mr/
+			'4: series'		=> "series\/",			# series/
+			'5: showAlias'	=> "($anything)\/",		# City_on_a_Hill/
+			'6: season'		=> "season_(\d+)\/",	# season_2/
+			'7: episode'	=> "episode_(\d+)\/"	# episode_4/
+		);
+
+		$regexp = '/'.join('', $urlStructure).'/';
+
 		$matches = array();
 		$matchesRes = preg_match($regexp, $URL, $matches);
 		if($matchesRes === false){
 			$this->tracer->logfError(
-				'[ERROR]', __FILE__, __LINE__,
+				'[o]', __FILE__, __LINE__,
 				'preg_match has failed with code: [%s]'.PHP_EOL.
-				'Link: [%s]',
+				'Link: [%s]'.PHP_EOL.
+				'Regex: [%s]',
 				preg_last_error(),
-				$URL
+				$URL,
+				$regex
 			);
 
 			throw new \RuntimeException('Unable to parse URL [$URL]');
@@ -66,8 +81,12 @@ class SeriesParser extends Parser{
 
 		if($matchesRes === 0){
 			$this->tracer->logError(
-				'[DATA ERROR]', __FILE__, __LINE__,
-				"Link '$URL' doesn't match pattern"
+				'[o]', __FILE__, __LINE__,
+				"Link doesn't match the pattern".PHP_EOL.
+				'Link: [%s]'.PHP_EOL.
+				'Regex: [%s]',
+				$URL,
+				$regex
 			);
 
 			throw new \RuntimeException("Link doesn't match pattern");

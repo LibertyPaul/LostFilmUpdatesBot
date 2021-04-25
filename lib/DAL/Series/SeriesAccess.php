@@ -28,7 +28,8 @@ class SeriesAccess extends CommonAccess{
 				`series`.`seriesNumber`,
 				`series`.`title_ru`,
 				`series`.`title_en`,
-				`series`.`ready`
+				`series`.`ready`,
+				`series`.`suggestedURL`
 		";
 
 		$this->getSeriesByIdQuery = $this->pdo->prepare("
@@ -63,7 +64,8 @@ class SeriesAccess extends CommonAccess{
 				`seriesNumber`,
 				`title_ru`,
 				`title_en`,
-				`ready`
+				`ready`,
+				`suggestedURL`
 			)
 			VALUES (
 				STR_TO_DATE(:firstSeenAtStr, '".parent::dateTimeDBFormat."'),
@@ -72,16 +74,18 @@ class SeriesAccess extends CommonAccess{
 				:seriesNumber,
 				:title_ru,
 				:title_en,
-				:ready
+				:ready,
+				:suggestedURL
 			)
 		");
 
 		$this->updateSeriesQuery = $this->pdo->prepare("
 			UPDATE `series`
-			SET	`title_ru`	= :title_ru,
-				`title_en`	= :title_en,
-				`ready`		= :ready
-			WHERE `id`		= :id
+			SET	`title_ru`		= :title_ru,
+				`title_en`		= :title_en,
+				`ready`			= :ready
+				`suggestedURL`	= :suggestedURL
+			WHERE `id`			= :id
 		");
 	}
 
@@ -137,7 +141,8 @@ class SeriesAccess extends CommonAccess{
 			':seriesNumber'		=> $series->getSeriesNumber(),
 			':title_ru'			=> $series->getTitleRu(),
 			':title_en'			=> $series->getTitleEn(),
-			':ready'			=> $series->isReady() ? 'Y' : 'N'
+			':ready'			=> $series->isReady() ? 'Y' : 'N',
+			':suggestedURL'		=> $series->getSuggestedURL()
 		);
 
 		return $this->execute(
@@ -155,10 +160,11 @@ class SeriesAccess extends CommonAccess{
 		}
 
 		$args = array(
-			':title_ru'	=> $series->getTitleRu(),
-			':title_en'	=> $series->getTitleEn(),
-			':ready'	=> $series->isReady() ? 'Y' : 'N',
-			':id'		=> $series->getId()
+			':title_ru'		=> $series->getTitleRu(),
+			':title_en'		=> $series->getTitleEn(),
+			':ready'		=> $series->isReady() ? 'Y' : 'N',
+			':id'			=> $series->getId(),
+			':suggestedURL'	=> $series->getSuggestedURL()
 		);
 
 		$this->execute(
