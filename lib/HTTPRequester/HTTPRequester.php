@@ -34,7 +34,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 
 	private static function createMultiCurl(){
 		$multiCurl = curl_multi_init();
-		assert($multiCurl !== false);
+		if($multiCurl === false) {
+		    throw new \RuntimeException("Failed to initialize multi cURL handle.");
+		}
 
 		return $multiCurl;
 	}
@@ -155,15 +157,15 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$this->setRequestOptions($curl, $requestProperties);
 
 		$this->requestResponseTracer->logEvent(
-			'[REQUEST]', __FILE__, __LINE__,
-			PHP_EOL.strval($requestProperties).PHP_EOL
+            __FILE__, __LINE__,
+            PHP_EOL . strval($requestProperties) . PHP_EOL
 		);
 		
 		$result = $this->executeCurl($curl);
 		
 		$this->requestResponseTracer->logEvent(
-			'[RESPONSE]', __FILE__, __LINE__, 
-			PHP_EOL.strval($result).PHP_EOL
+            __FILE__, __LINE__,
+            PHP_EOL . strval($result) . PHP_EOL
 		);
 
 		return $result;
@@ -186,8 +188,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 			$this->setRequestOptions($curl, $requestProperties);
 
 			$this->requestResponseTracer->logEvent(
-				'[REQUEST]', __FILE__, __LINE__,
-				strval($requestProperties)
+                __FILE__, __LINE__,
+                strval($requestProperties)
 			);
 
 			$requestHandles[$requestId] = $curl;

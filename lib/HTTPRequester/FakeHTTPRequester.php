@@ -46,7 +46,7 @@ class FakeHTTPRequester implements HTTPRequesterInterface{
 	}
 
 	private function writeOut($text): void {
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, $text);
+		$this->tracer->logDebug(__FILE__, __LINE__, $text);
 	}
 
 	private static function isTelegramFilePropertiesRequest(HTTPRequestProperties $requestProperties): bool {

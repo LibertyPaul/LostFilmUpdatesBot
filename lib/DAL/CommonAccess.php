@@ -13,8 +13,8 @@ class ConstraintViolationException extends \RuntimeException{
 	}
 }
 
-class DuplicateValueException extends ConstraintViolationException{};
-class ForeignKeyViolation extends ConstraintViolationException{};
+class DuplicateValueException extends ConstraintViolationException {}
+class ForeignKeyViolation extends ConstraintViolationException {}
 
 
 abstract class CommonAccess{

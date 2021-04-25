@@ -11,10 +11,10 @@ class Notification{
 	private $lastDeliveryAttemptTime;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		int $seriesId,
 		int $userId,
-		int $responseCode = null,
+		?int $responseCode,
 		int $retryCount,
 		\DateTimeInterface $lastDeliveryAttemptTime = null
 	){

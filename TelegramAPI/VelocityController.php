@@ -31,10 +31,10 @@ class VelocityController{
 
 		if($this->maxMessagesFromBotPerSecond === null){
 			$this->tracer->logWarning(
-				'[CONFIG]', __FILE__, __LINE__,
-				'[TelegramAPI][Max Messages From Bot Per Second] '.
-				'parameter is not set. '.
-				'Velocity check is disabled.'
+                __FILE__, __LINE__,
+                '[TelegramAPI][Max Messages From Bot Per Second] ' .
+                'parameter is not set. ' .
+                'Velocity check is disabled.'
 			);
 		}
 
@@ -45,10 +45,10 @@ class VelocityController{
 
 		if($this->maxMessagesToUserPerSecond === null){
 			$this->tracer->logWarning(
-				'[CONFIG]', __FILE__, __LINE__,
-				'[TelegramAPI][Max Messages To User Per Second] '.
-				'parameter is not set. '.
-				'Velocity check is disabled.'
+                __FILE__, __LINE__,
+                '[TelegramAPI][Max Messages To User Per Second] ' .
+                'parameter is not set. ' .
+                'Velocity check is disabled.'
 			);
 		}
 	}
@@ -66,9 +66,9 @@ class VelocityController{
 			$currentBotVelocity = $this->getBotVelocity();
 			if($currentBotVelocity >= $this->maxMessagesFromBotPerSecond){
 				$this->tracer->logNotice(
-					'[VELOCITY HIT]', __FILE__, __LINE__,
-					'[Max Messages From Bot Per Second] '.
-					"was reached: [$currentBotVelocity]"
+                    __FILE__, __LINE__,
+                    '[Max Messages From Bot Per Second] ' .
+                    "was reached: [$currentBotVelocity]"
 				);
 				return false;
 			}
@@ -78,9 +78,9 @@ class VelocityController{
 			$currentUserVelocity = $this->getUserVelocity($user_id);
 			if($currentUserVelocity >= $this->maxMessagesToUserPerSecond){
 				$this->tracer->logNotice(
-					'[VELOCITY HIT]', __FILE__, __LINE__,
-					'[Max Messages To User Per Second] '.
-					"was reached: [$currentUserVelocity]"
+                    __FILE__, __LINE__,
+                    '[Max Messages To User Per Second] ' .
+                    "was reached: [$currentUserVelocity]"
 				);
 				return false;
 			}

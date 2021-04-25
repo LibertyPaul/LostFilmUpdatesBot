@@ -8,9 +8,8 @@ require_once(__DIR__.'/../TelegramAPI/MessageSender.php');
 
 class MessageRouter{
 	private $messageSenders; # array('APIName' => MessageSender)
-	private $tracer;
 
-	public function __construct(array $messageSenders){
+    public function __construct(array $messageSenders){
 
 		$this->messageSenders = array();
 

@@ -6,12 +6,13 @@ require_once(__DIR__.'/../CommonAccess.php');
 require_once(__DIR__.'/MessageHistoryBuilder.php');
 require_once(__DIR__.'/MessageHistory.php');
 
-class MessagesHistoryDuplicateExternalIdException extends \RuntimeException{};
+class MessagesHistoryDuplicateExternalIdException extends \RuntimeException {}
 
 class MessagesHistoryAccess extends CommonAccess{
 	private $addMessageHistoryQuery;
+    private $getByUpdateIdQuery;
 
-	public function __construct(\PDO $pdo){
+    public function __construct(\PDO $pdo){
 		parent::__construct(
 			$pdo,
 			new MessageHistoryBuilder()
@@ -74,7 +75,7 @@ class MessagesHistoryAccess extends CommonAccess{
 
 	public function addMessageHistory(MessageHistory $messageHistory){
 		if($messageHistory->getId() !== null){
-			throw new \RuntimeError("Adding a MessageHistory record with existing id");
+			throw new \LogicException("Adding a MessageHistory record with existing id");
 		}
 
 		$args = array(

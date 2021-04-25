@@ -14,7 +14,7 @@ class Series{
 	private $suggestedURL;
 
 	public function __construct(
-		int	$id = null,
+		?int $id,
 		\DateTimeInterface $firstSeenAt,
 		int $showId,
 		int $seasonNumber,

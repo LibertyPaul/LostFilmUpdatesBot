@@ -85,12 +85,12 @@ class MessageSender implements \core\MessageSenderInterface{
 		}
 
 		$this->outgoingMessagesTracer->logfEvent(
-			'[o]', __FILE__, __LINE__,
-			"Message to user_id=[%d], chat_id=[%d]".PHP_EOL.
-			"%s",
-			$telegramUserData->getUserId(),
-			$telegramUserData->getAPISpecificId(),
-			$message
+            __FILE__, __LINE__,
+            "Message to user_id=[%d], chat_id=[%d]" . PHP_EOL .
+            "%s",
+            $telegramUserData->getUserId(),
+            $telegramUserData->getAPISpecificId(),
+            $message
 		);
 
 		$messageText = $this->commandSubstitutor->replaceCoreCommands(
@@ -115,70 +115,70 @@ class MessageSender implements \core\MessageSenderInterface{
 		else{
 			if($telegramSpecificData !== null){
 				$this->tracer->logfError(
-					'[o]', __FILE__, __LINE__,
-					'Request API Specific data is of unknown type: [%s]',
-					gettype($telegramSpecificData)
+                    __FILE__, __LINE__,
+                    'Request API Specific data is of unknown type: [%s]',
+                    gettype($telegramSpecificData)
 				);
 
 				$this->tracer->logfDebug(
-					'[o]', __FILE__, __LINE__,
-					PHP_EOL.strval($message)
+                    __FILE__, __LINE__,
+                    PHP_EOL . strval($message)
 				);
 			}
 
 			$request_message_id = null;
 		}
-		
-		for($attempt = 0; $attempt < $this->maxSendAttempts; ++$attempt){
-			$result = $this->telegramAPI->send(
-				$telegramUserData->getAPISpecificId(),
-				$messageText,
-				$request_message_id,
-				$message->markupType(),
-				$message->URLExpandEnabled(),
-				$responseOptions,
-				$message->getInlineOptions()
-			);
 
-			if($result->isErrorTooFrequent()){
-				$this->tracer->logfWarning(
-					'[TELEGRAM API]', __FILE__, __LINE__,
-					"Got 429 HTTP Response. Nap for [%d] ms.",
-					$this->sleepOn429CodeMs
-				);
+		$attempt = 0;
+		do {
+            $result = $this->telegramAPI->send(
+                $telegramUserData->getAPISpecificId(),
+                $messageText,
+                $request_message_id,
+                $message->markupType(),
+                $message->URLExpandEnabled(),
+                $responseOptions,
+                $message->getInlineOptions()
+            );
 
-				usleep($this->sleepOn429CodeMs);
-			}
-			else{
-				break;
-			}
-		}
+            if ($result->isErrorTooFrequent()) {
+                $this->tracer->logfWarning(
+                    __FILE__, __LINE__,
+                    "Got 429 HTTP Response. Nap for [%d] ms.",
+                    $this->sleepOn429CodeMs
+                );
+
+                usleep($this->sleepOn429CodeMs);
+            } else {
+                break;
+            }
+        } while(++$attempt < $this->maxSendAttempts);
 
 		if($result->isSuccess() === false){
 			$this->tracer->logEvent(
-				'[o]', __FILE__, __LINE__,
-				'Fail.'.PHP_EOL.$result
+                __FILE__, __LINE__,
+                'Fail.' . PHP_EOL . $result
 			);
 
 			return \core\MessageDeliveryResult::FAIL();
 		}
 		
 		$this->tracer->logEvent(
-			'[o]', __FILE__, __LINE__,
-			'Success.'
+            __FILE__, __LINE__,
+            'Success.'
 		);
 
 		$APIResponseJSON = $result->getBody();
 		$APIResponse = json_decode($APIResponseJSON);
 		if($APIResponse === null){
 			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'Failed to parse API response.'
+                __FILE__, __LINE__,
+                'Failed to parse API response.'
 			);
 
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				PHP_EOL.$APIResponseJSON
+                __FILE__, __LINE__,
+                PHP_EOL . $APIResponseJSON
 			);
 
 			throw new \RuntimeException("Failed to parse API response.");
@@ -211,17 +211,17 @@ class MessageSender implements \core\MessageSenderInterface{
 				);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 			}
 		}
 		else{
 			$this->tracer->logfWarning(
-				'[o]', __FILE__, __LINE__,
-				'Unable to forward due to:'			.PHP_EOL.
-				'	$this->forwardingChat:	[%s]'	.PHP_EOL.
-				'	$this->telegramAPI:	    [%s]',
-				$this->forwardingChat ?? 'Null',
-				$this->telegramAPI ?? 'Null'
+                __FILE__, __LINE__,
+                'Unable to forward due to:' . PHP_EOL .
+                '	$this->forwardingChat:	[%s]' . PHP_EOL .
+                '	$this->telegramAPI:	    [%s]',
+                $this->forwardingChat ?? 'Null',
+                $this->telegramAPI ?? 'Null'
 			);
 		}
 	}

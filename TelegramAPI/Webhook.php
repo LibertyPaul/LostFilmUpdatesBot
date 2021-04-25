@@ -40,8 +40,8 @@ class Webhook{
 		}
 		catch(\Throwable $ex){
 			\TracerCompiled::syslogCritical(
-				'[TRACER]', __FILE__, __LINE__,
-				'Unable to create Tracer instance'
+                __FILE__, __LINE__,
+                'Unable to create Tracer instance'
 			);
 		}
 
@@ -52,8 +52,8 @@ class Webhook{
 	private function verifyPassword(string $password){
 		if($this->selfWebhookPassword === null){
 			$this->tracer->logNotice(
-				'[SECURITY]', __FILE__, __LINE__,
-				'Webhook password is not set. Check was skipped.'
+                __FILE__, __LINE__,
+                'Webhook password is not set. Check was skipped.'
 			);
 			
 			return true;
@@ -96,9 +96,9 @@ class Webhook{
 
 			default:
 				$this->tracer->logfError(
-					'[UNKNOWN REASON]', __FILE__, __LINE__,
-					'Failed with unknown reason: [%d].',
-					$reason
+                    __FILE__, __LINE__,
+                    'Failed with unknown reason: [%d].',
+                    $reason
 				);
 
 				$text = 'hmm...';
@@ -109,8 +109,8 @@ class Webhook{
 		echo $text.PHP_EOL;
 
 		$this->tracer->logEvent(
-			'[RESPONSE]', __FILE__, __LINE__,
-			"HTTPCode=[$HTTPCode] Text=[$text]"
+            __FILE__, __LINE__,
+            "HTTPCode=[$HTTPCode] Text=[$text]"
 		);
 	}
 
@@ -118,20 +118,20 @@ class Webhook{
 		$prettyJSON = json_encode($update, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 		if($prettyJSON === false){
 			$this->tracer->logError(
-				'[JSON]', __FILE__, __LINE__,
-				'json_encode error: '.json_last_error_msg()
+                __FILE__, __LINE__,
+                'json_encode error: ' . json_last_error_msg()
 			);
 
 			$this->tracer->logNotice(
-				'[INFO]', __FILE__, __LINE__,
-				PHP_EOL.print_r($update, true)
+                __FILE__, __LINE__,
+                PHP_EOL . print_r($update, true)
 			);
 			return;
 		}
 
 		$this->incomingMessagesTracer->logEvent(
-			'[INCOMING MESSAGE]', __FILE__, __LINE__,
-			PHP_EOL.$prettyJSON
+            __FILE__, __LINE__,
+            PHP_EOL . $prettyJSON
 		);
 	}
 
@@ -153,9 +153,9 @@ class Webhook{
 	public function processUpdate(string $password, string $postData){
 		if($this->verifyPassword($password) === false){
 			$this->tracer->logNotice(
-				'[SECURITY]', __FILE__, __LINE__,
-				"Incorrect password: '$password'".PHP_EOL.
-				$postData
+                __FILE__, __LINE__,
+                "Incorrect password: '$password'" . PHP_EOL .
+                $postData
 			);
 			$this->respondFinal(WebhookReasons::invalidPassword);
 			return;
@@ -164,15 +164,15 @@ class Webhook{
 		$update = json_decode($postData);
 		if($update === null){
 			$this->tracer->logfError(
-				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse JSON update: [%s]",
-				json_last_error_msg()
+                __FILE__, __LINE__,
+                "Unable to parse JSON update: [%s]",
+                json_last_error_msg()
 			);
 
 			$this->tracer->logfDebug(
-				'[o]', __FILE__, __LINE__,
-				'Raw JSON: [%s]',
-				$postData
+                __FILE__, __LINE__,
+                'Raw JSON: [%s]',
+                $postData
 			);
 
 			$this->respondFinal(WebhookReasons::formatError);
@@ -183,9 +183,9 @@ class Webhook{
 
 		if(self::validateFields($update) === false){
 			$this->tracer->logNotice(
-				'[o]', __FILE__, __LINE__,
-				'Update is not supported:'.PHP_EOL.
-				print_r($update, true)
+                __FILE__, __LINE__,
+                'Update is not supported:' . PHP_EOL .
+                print_r($update, true)
 			);
 
 			$this->respondFinal(WebhookReasons::correctButIgnored);
@@ -197,7 +197,7 @@ class Webhook{
 			$this->respondFinal(WebhookReasons::OK);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[UPDATE HANDLER]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			$this->respondFinal(WebhookReasons::failed);
 		}
 	}

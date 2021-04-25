@@ -30,7 +30,7 @@ class ShowListFetcher{
 	public function fetchShowList(){
 		$URL = $this->config->getValue('Parser', 'ShowListURL', 'https://www.lostfilm.tv/ajaxik.php');
 		
-		$customHeader = $this->config->getValue('Parser', 'ShowList Custom Header', null);
+		$customHeader = $this->config->getValue('Parser', 'ShowList Custom Header');
 		$customHeaders = array();
 		if ($customHeader !== null){
 			$customHeaders[] = $customHeader;
@@ -64,22 +64,22 @@ class ShowListFetcher{
 				$showsJSON = $res->getBody();
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[HTTP LIB]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				throw $ex;
 			}
 
 			$shows = json_decode($showsJSON, true);
 			if($shows === null){
 				$this->tracer->logfError(
-					'[JSON ERROR]', __FILE__, __LINE__,
-					'json_decode error: [%s]',
-					json_last_error_msg()
+                    __FILE__, __LINE__,
+                    'json_decode error: [%s]',
+                    json_last_error_msg()
 				);
 
 				$this->tracer->logDebug(
-					'[JSON ERROR]', __FILE__, __LINE__,
-					"Erroneous JSON:".PHP_EOL.
-					$showsJSON
+                    __FILE__, __LINE__,
+                    "Erroneous JSON:" . PHP_EOL .
+                    $showsJSON
 				);
 
 				throw new \RuntimeException('json_decode error: '.json_last_error_msg());
@@ -90,9 +90,9 @@ class ShowListFetcher{
 
 				if(empty($showInfo['alias'])){
 					$this->tracer->logWarning(
-						'[DATA WARNING]', __FILE__, __LINE__,
-						'Alias is empty:'.PHP_EOL.
-						print_r($showInfo, true)
+                        __FILE__, __LINE__,
+                        'Alias is empty:' . PHP_EOL .
+                        print_r($showInfo, true)
 					);
 
 					continue;

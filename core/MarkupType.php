@@ -46,8 +46,7 @@ class MarkupType{
 			case MarkupTypeEnum::HTML:		return 'HTML';
 			case MarkupTypeEnum::Telegram:	return 'Telegram';
 			default:
-				assert(false);
-				return 'Unknown';
+				throw new \LogicException("Invalid type [$this->type]");
 		}
 	}
 }

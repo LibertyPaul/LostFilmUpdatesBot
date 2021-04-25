@@ -23,8 +23,7 @@ require_once(__DIR__.'/../lib/DAL/Tracks/Track.php');
 class UserController{
 	private $user;
 	private $conversationStorage;
-	private $messageDestination;
-	private $pdo;
+    private $pdo;
 	private $config;
 	private $tracer;
 	private $coreCommands;
@@ -103,7 +102,7 @@ class UserController{
 				}
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 			}
 		}
 
@@ -122,7 +121,7 @@ class UserController{
 		return new DirectedOutgoingMessage($this->user, new OutgoingMessage($text));
 	}
 
-	private function deleteUser(){
+	private function deleteUser(): DirectedOutgoingMessage {
 		$ANSWER_YES = 'Да';
 		$ANSWER_NO = 'Нет';
 
@@ -150,9 +149,7 @@ class UserController{
 				)
 			);
 
-			break;
-
-		case 2:
+            case 2:
 			$response = $this->conversationStorage->getLastMessage()->getText();
 
 			switch(strtolower($response)){
@@ -174,7 +171,7 @@ class UserController{
 					}
 				}
 				catch(\Throwable $ex){
-					$this->tracer->logException($ex);
+					$this->tracer->logException();
 				}
 
 				return $userResponse;
@@ -209,25 +206,26 @@ class UserController{
 					)
 				);
 			}
-			break;
 
-		default:
+            default:
 			$this->tracer->logError(
-				'[USER CONTROLLER]', __FILE__, __LINE__,
-				'3rd message in /stop conversation is impossible.'
+                __FILE__, __LINE__,
+                '3rd message in /stop conversation is impossible.'
 			);
 
 			$this->tracer->logDebug(
-				'[USER CONTROLLER]', __FILE__, __LINE__,
-				'Erroneous conversation:'.PHP_EOL.
-				print_r($this->conversationStorage->getConversation(), true)
+                __FILE__, __LINE__,
+                'Erroneous conversation:' . PHP_EOL .
+                print_r($this->conversationStorage->getConversation(), true)
 			);
 
 			$this->conversationStorage->deleteConversation();
+
+			throw new \LogicException("3rd message in /stop conversation is impossible.");
 		}
 	}
 
-	private function showHelp(){
+	private function showHelp(): DirectedOutgoingMessage {
 		$this->conversationStorage->deleteConversation();
 
 		$addShowCoreCommand			= $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
@@ -387,7 +385,7 @@ class UserController{
 		);
 	}
 	
-	private function manageSubscription($showAction){
+	private function manageSubscription($showAction): DirectedOutgoingMessage {
 		$cancelCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::Cancel];
 		$addShowCoreCommand = $this->coreCommands[\CommandSubstitutor\CoreCommandMap::AddShow];
 
@@ -413,6 +411,9 @@ class UserController{
 					$text = "Нечего удалять. Для начала добавь пару сериалов командой [$addShowCoreCommand].";
 					
 					break;
+
+                default:
+                    throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 				
 				return new DirectedOutgoingMessage(
@@ -444,9 +445,8 @@ class UserController{
 					)
 				);
 			}
-			break;
 
-		# Search, add or propose narrow list
+            # Search, add or propose narrow list
 		case 2:
 			$messageText = $this->conversationStorage->getLastMessage()->getText();
 			$show = $this->showsAccess->getEligibleShowByTitle($this->user->getId(), $messageText, $showAction);
@@ -478,6 +478,9 @@ class UserController{
 					case \DAL\ShowAction::AddTentative:
 						$notFoundText = "Не найдено подходящих названий. Жми на $addShowCoreCommand чтобы посмотреть в списке.";
 						break;
+
+                    default:
+                        throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 
 				return new DirectedOutgoingMessage($this->user, new OutgoingMessage($notFoundText));
@@ -498,6 +501,9 @@ class UserController{
 					case \DAL\ShowAction::Remove:
 						$successText = 'удален';
 						break;
+
+                    default:
+                        throw new \LogicException("Unknown ShowAction: [$showAction].");
 				}
 
 				$resultText = sprintf("%s %s.", $matchedShow->getFullTitle(), $successText);
@@ -554,6 +560,9 @@ class UserController{
 					)
 				);
 			}
+
+        default:
+            throw new \LogicException("Impossible condition.");
 		}
 	}
 
@@ -745,8 +754,6 @@ class UserController{
 				new OutgoingMessage('Окей, что раcсылать?')
 			);
 
-			break;
-
 		case 2:
 			return new DirectedOutgoingMessage(
 				$this->user,
@@ -820,18 +827,16 @@ class UserController{
 				);
 				
 				$response->appendMessage($confirm);
-
-				return $response;
 			}
 			else{
 				$this->conversationStorage->deleteConversation();
-				return new DirectedOutgoingMessage(
+                $response = new DirectedOutgoingMessage(
 					$this->user,
-					new OutgoingMessage('Ты накосячил!. '.$result['why'])
+					new OutgoingMessage('Ты накосячил: '.$result['why'])
 				);
 			}
 
-			break;
+			return $response;
 
 		case 7:
 			$result = $this->buildBroadcastMessage();
@@ -876,6 +881,9 @@ class UserController{
 			$broadcastChain->appendMessage($confirmMessage);
 
 			return $broadcastChain;
+
+        default:
+            throw new \LogicException("Impossible condition.");
 		}
 	}
 
@@ -925,10 +933,10 @@ class UserController{
 		);
 
 		$this->tracer->logfEvent(
-			'[o]', __FILE__, __LINE__,
-			'Bare text without a command [%s]. Assuming to be [%s].',
-			$this->conversationStorage->getFirstMessage()->getText(),
-			$assumedCommand->getText()
+            __FILE__, __LINE__,
+            'Bare text without a command [%s]. Assuming to be [%s].',
+            $this->conversationStorage->getFirstMessage()->getText(),
+            $assumedCommand->getText()
 		);
 
 		$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
@@ -1030,9 +1038,9 @@ class UserController{
 
 			default:
 				$this->tracer->logError(
-					'[COMMAND]', __FILE__, __LINE__,
-					'Unknown command:'.PHP_EOL.
-					print_r($this->conversationStorage->getFirstMessage(), true)
+                    __FILE__, __LINE__,
+                    'Unknown command:' . PHP_EOL .
+                    print_r($this->conversationStorage->getFirstMessage(), true)
 				);
 				throw new \LogicException('Unknown command');
 			}
@@ -1045,8 +1053,8 @@ class UserController{
 		}
 		catch(\Throwable $ex){
 			$this->pdo->rollBack();
-			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
-			$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$incomingMessage);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
+			$this->tracer->logDebug(__FILE__, __LINE__, PHP_EOL . $incomingMessage);
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(

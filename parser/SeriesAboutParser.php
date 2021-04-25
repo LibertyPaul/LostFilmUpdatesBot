@@ -29,16 +29,16 @@ class SeriesAboutParser extends Parser{
 		$matchesCount = preg_match($regex, $this->pageSrc, $matches);
 		if($matchesCount === false){
 			$this->tracer->logfError(
-				'[ERROR]', __FILE__, __LINE__,
-				'preg_match has failed with code: [%s][%s]',
-				$regex,
-				preg_last_error()
+                __FILE__, __LINE__,
+                'preg_match has failed with code: [%s][%s]',
+                $regex,
+                preg_last_error()
 			);
 
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				'Source:'.PHP_EOL.
-				$this->pageSrc
+                __FILE__, __LINE__,
+                'Source:' . PHP_EOL .
+                $this->pageSrc
 			);
 
 			throw new \Exception('preg_match has failed');
