@@ -16,7 +16,8 @@ class SeriesBuilder implements DAOBuilderInterface{
 			intval($row['seriesNumber']),
 			$row['title_ru'],
 			$row['title_en'],
-			$row['ready'] === 'Y'
+			$row['ready'] === 'Y',
+			$row['suggestedURL']
 		);
 
 		return $series;

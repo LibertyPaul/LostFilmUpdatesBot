@@ -71,6 +71,8 @@ class SeriesParserExecutor{
 				$URL,
 				$ex
 			);
+
+			return;
 		}
 
 		$seriesAboutInfo = $this->seriesAboutParser->run();
@@ -104,7 +106,8 @@ class SeriesParserExecutor{
 			intval($seriesMetaInfo['seriesNumber']),
 			$seriesAboutInfo->getTitleRu(),
 			$seriesAboutInfo->getTitleEn(),
-			$seriesAboutInfo->isReady()
+			$seriesAboutInfo->isReady(),
+			$seriesMetaInfo['URL']
 		);
 
 		$episodeDescription = sprintf(
