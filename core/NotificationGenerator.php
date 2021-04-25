@@ -54,13 +54,22 @@ class NotificationGenerator{
 			$template .= PHP_EOL.PHP_EOL.$torAdvice;
 		}
 
+		$URL = $series->getSuggestedURL();
+		if($URL === null) {
+			$URL = \LFSpecifics::getSeriesPageURL(
+				$show->getAlias(),
+				$series->getSeasonNumber(),
+				$series->getSeriesNumber()
+			);
+		}
+
 		return sprintf(
 			$template,
 			htmlspecialchars($show->getTitleRu()),
 			$series->getSeasonNumber(),
 			$series->getSeriesNumber(),
 			htmlspecialchars($series->getTitleRu()),
-			$series->getSuggestedURL()
+			$URL
 		);
 	}
 
