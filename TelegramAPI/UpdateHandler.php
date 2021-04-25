@@ -56,7 +56,7 @@ class UpdateHandler{
 			$this->coreHandler = new \core\UpdateHandler($this->pdo);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			$this->speechRecognizer = null;
 			$this->telegramAPI = null;
 		}
@@ -131,21 +131,21 @@ class UpdateHandler{
 			}
 			catch(\Throwable $ex){
 				$this->tracer->logException(
-					'[ATTACHMENT FORWARDING]', __FILE__, __LINE__, 
-					$ex
+                    __FILE__, __LINE__,
+                    $ex
 				);
 			}
 		}
 		else{
 			$this->tracer->logfWarning(
-				'[o]', __FILE__, __LINE__,
-				'Unable to forward due to:'					.PHP_EOL.
-				'	$this->forwardingChat !== null:	[%d]'	.PHP_EOL.
-				'	$this->telegramAPI !== null:	[%d]'	.PHP_EOL.
-				'	isset($update->message):		[%d]'	.PHP_EOL,
-				$this->forwardingChat !== null,
-				$this->telegramAPI !== null,
-				isset($update->message)
+                __FILE__, __LINE__,
+                'Unable to forward due to:' . PHP_EOL .
+                '	$this->forwardingChat !== null:	[%d]' . PHP_EOL .
+                '	$this->telegramAPI !== null:	[%d]' . PHP_EOL .
+                '	isset($update->message):		[%d]' . PHP_EOL,
+                $this->forwardingChat !== null,
+                $this->telegramAPI !== null,
+                isset($update->message)
 			);
 		}
 	}
@@ -172,18 +172,18 @@ class UpdateHandler{
 	private function createUser(
 		int $chat_id,
 		string $type,
-		string $username = null,
+		?string $username,
 		string $first_name,
 		string $last_name = null
 	){
 		$this->tracer->logfDebug(
-			'[o]', __FILE__, __LINE__,
-			'Creating user for chat [%d], type [%s], with username [%s], first and last names [%s|%s]',
-			$chat_id,
-			$type,
-			$username ?? '-',
-			$first_name,
-			$last_name ?? '-'
+            __FILE__, __LINE__,
+            'Creating user for chat [%d], type [%s], with username [%s], first and last names [%s|%s]',
+            $chat_id,
+            $type,
+            $username ?? '-',
+            $first_name,
+            $last_name ?? '-'
 		);
 
 		try{
@@ -203,9 +203,9 @@ class UpdateHandler{
 			$user->setJustRegistred();
 
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				"Created user:".PHP_EOL.
-				$user
+                __FILE__, __LINE__,
+                "Created user:" . PHP_EOL .
+                $user
 			);
 			
 			$telegramUserData = new \DAL\TelegramUserData(
@@ -228,7 +228,7 @@ class UpdateHandler{
 		}
 		catch(\Throwable $ex){
 			$this->pdo->rollBack();
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 
 			throw $ex;
 		}
@@ -248,7 +248,7 @@ class UpdateHandler{
 		case 'group':
 		case 'supergroup':
 			$username	= null;
-			$first_name	= isset($chat->title) ? $chat->title : "Group $chatID";
+			$first_name	= isset($chat->title) ? $chat->title : "Group $chat->id";
 			$last_name	= null;
 			$oldChatID	= isset($message->migrate_from_chat_id)	? $message->migrate_from_chat_id : null;
 			break;
@@ -277,9 +277,9 @@ class UpdateHandler{
 		}
 		else{
 			$this->tracer->logfDebug(
-				'[o]', __FILE__, __LINE__,
-				"Chat [$currentChatID] is found and was registred as:".PHP_EOL.
-				$userInfo['user']
+                __FILE__, __LINE__,
+                "Chat [$currentChatID] is found and was registred as:" . PHP_EOL .
+                $userInfo['user']
 			);
 
 			if($newChatID !== null){
@@ -297,8 +297,8 @@ class UpdateHandler{
 	private function recognizeVoiceMessage($voice){
 		if($this->speechRecognizer === null){
 			$this->tracer->logError(
-				'[SPEECH RECOGNITION]', __FILE__, __LINE__,
-				'SpeechRecognizer was not initialized.'
+                __FILE__, __LINE__,
+                'SpeechRecognizer was not initialized.'
 			);
 
 			return null;
@@ -306,8 +306,8 @@ class UpdateHandler{
 
 		if($this->telegramAPI === null){
 			$this->tracer->logError(
-				'[SPEECH RECOGNITION]', __FILE__, __LINE__,
-				'TelegramAPI was not initialized.'
+                __FILE__, __LINE__,
+                'TelegramAPI was not initialized.'
 			);
 
 			return null;
@@ -401,17 +401,17 @@ class UpdateHandler{
 			break;
 
 		default:
-			throw new \LogicException("Unknown Telegram chat type:".PHP_EOL.$telegramUserData);
+			throw new \LogicException("Unknown Telegram chat type: [$chatType]");
 		}
 
 		if($res === false){
 			$this->tracer->logfDebug(
-				'[o]', __FILE__, __LINE__,
-				"Message is not addressed to me [%s][%s][%s]\n%s",
-				$chatType,
-				$botName,
-				$this->telegramBotName,
-				print_r($message, true)
+                __FILE__, __LINE__,
+                "Message is not addressed to me [%s][%s][%s]\n%s",
+                $chatType,
+                $botName,
+                $this->telegramBotName,
+                print_r($message, true)
 			);
 		}
 
@@ -423,8 +423,8 @@ class UpdateHandler{
 		
 		if($this->forwardEverything	|| self::shouldBeForwarded($update->message)){
 			$this->tracer->logDebug(
-				'[ATTACHMENT FORWARDING]', __FILE__, __LINE__,
-				'Message is eligible for forwarding.'
+                __FILE__, __LINE__,
+                'Message is eligible for forwarding.'
 			);
 			
 			$this->forwardUpdate($update);
@@ -434,14 +434,14 @@ class UpdateHandler{
 			$userInfo = $this->createOrUpdateUser($update->message);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
 		if(isset($update->message->text)){
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				'Message->text is present'
+                __FILE__, __LINE__,
+                'Message->text is present'
 			);
 			
 			$text = $update->message->text;
@@ -449,43 +449,43 @@ class UpdateHandler{
 		elseif(isset($update->message->voice)){
 			if($userInfo['telegramUserData']->getType() !== 'private'){
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Voice messages are not supported in groups'
+                    __FILE__, __LINE__,
+                    'Voice messages are not supported in groups'
 				);
 
 				throw new \RuntimeException("Voice messages are not supported in groups");
 			}
 
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				'Message->text is absent, but voice is present. Recognizing...'
+                __FILE__, __LINE__,
+                'Message->text is absent, but voice is present. Recognizing...'
 			);
 			
 			try{
 				$text = $this->recognizeVoiceMessage($update->message->voice);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				throw $ex;
 			}
 
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				"SpeechRecognition result: '$text'"
+                __FILE__, __LINE__,
+                "SpeechRecognition result: '$text'"
 			);
 		}
 		elseif(isset($update->message->migrate_from_chat_id)){
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				'Chat was converted.'
+                __FILE__, __LINE__,
+                'Chat was converted.'
 			);
 
 			return;
 		}
 		else{
 			$this->tracer->logDebug(
-				'[o]', __FILE__, __LINE__,
-				'Both message->text and message->voice are absent. Aborting.'
+                __FILE__, __LINE__,
+                'Both message->text and message->voice are absent. Aborting.'
 			);
 
 			throw new \RuntimeException('Both message->text and message->voice are absent');
@@ -514,8 +514,8 @@ class UpdateHandler{
 			$commandText = $command->getText();
 
 			$this->tracer->logfDebug(
-				'[COMMAND]', __FILE__, __LINE__,
-				'User command [%s] was mapped to [%s]', $originalText, $commandText
+                __FILE__, __LINE__,
+                'User command [%s] was mapped to [%s]', $originalText, $commandText
 			);
 		}
 

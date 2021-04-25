@@ -35,8 +35,8 @@ class FileTracer extends TracerCompiled{
 		if(file_exists($dir)){
 			if(is_dir($dir) === false){
 				parent::syslogCritical(
-					'[SETUP]', __FILE__, __LINE__,
-					"logs dir is not a directory ($dir)"
+                    __FILE__, __LINE__,
+                    "logs dir is not a directory ($dir)"
 				);
 
 				throw new \Exception("Unable to open $dir directory");
@@ -80,7 +80,7 @@ class FileTracer extends TracerCompiled{
 				print_r(error_get_last(), true)
 			);
 
-			parent::syslogCritical('[SETUP]', __FILE__, __LINE__, $errorDescription);
+			parent::syslogCritical(__FILE__, __LINE__, $errorDescription);
 
 			throw new \Exception($errorDescription);
 		}

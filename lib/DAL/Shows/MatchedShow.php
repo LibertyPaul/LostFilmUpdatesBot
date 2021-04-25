@@ -8,7 +8,7 @@ class MatchedShow extends Show{
 	private $score;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		string $alias,
 		string $title_ru,
 		string $title_en,
@@ -31,7 +31,7 @@ class MatchedShow extends Show{
 		$this->score = $score;
 	}
 
-	public function getScore(){
+	public function getScore(): float {
 		return $this->score;
 	}
 }

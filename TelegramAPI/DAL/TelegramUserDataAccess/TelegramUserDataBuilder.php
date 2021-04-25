@@ -2,10 +2,10 @@
 
 namespace DAL;
 
-require_once(__DIR__.'/../../../lib/DAL/DAOBuilderInterface.php');
+require_once(__DIR__.'/../../../lib/DAL/APIUserDataInterface/APIUserDataBuilder.php');
 require_once(__DIR__.'/TelegramUserData.php');
 
-class TelegramUserDataBuilder implements DAOBuilderInterface{
+class TelegramUserDataBuilder implements APIUserDataBuilder {
 
 	public function buildObjectFromRow(array $row, string $dateTimeFormat){
 		$telegramUserData = new TelegramUserData(

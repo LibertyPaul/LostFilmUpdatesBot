@@ -11,7 +11,7 @@ class User{
 	private $justRegistred;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		string $API,
 		bool $isDeleted,
 		bool $muted,

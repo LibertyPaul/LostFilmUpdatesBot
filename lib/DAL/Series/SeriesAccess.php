@@ -12,8 +12,10 @@ class SeriesAccess extends CommonAccess{
 	private $getSeriesByAliasSeasonSeriesQuery;
 
 	private $addSeriesQuery;
+    private $getLastSeriesQuery;
+    private $updateSeriesQuery;
 
-	public function __construct(\PDO $pdo){
+    public function __construct(\PDO $pdo){
 		parent::__construct(
 			$pdo,
 			new SeriesBuilder()

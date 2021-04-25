@@ -13,11 +13,11 @@ class MessageHistory{
 	private $statusCode;
 
 	public function __construct(
-		int $id = null,
+		?int $id,
 		\DateTimeInterface $time,
 		string $source,
 		int $userId,
-		int $externalId = null,
+		?int $externalId,
 		string $text,
 		int $inResponseTo = null,
 		int $statusCode = null

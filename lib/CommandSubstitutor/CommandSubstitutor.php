@@ -43,7 +43,7 @@ class CommandSubstitutor{
 		$coreCommands = $loadCoreCommandsQuery->fetchAll(\PDO::FETCH_ASSOC);
 
 		foreach($coreCommands as $key => $command){
-			$codeCommandId = $coreCommands[$key][self::CORE_COMMAND_ID_KEY];
+			$codeCommandId = $command[self::CORE_COMMAND_ID_KEY];
 			$codeCommandId = intval($codeCommandId);
 			$coreCommands[$key][self::CORE_COMMAND_ID_KEY] = $codeCommandId;
 		}
@@ -222,7 +222,7 @@ class CommandSubstitutor{
 		$to		= array_column($APIMapping, self::API_COMMAND_TEXT_KEY);
 
 		foreach($to as $key => $value){
-			$to[$key] = sprintf($format, $to[$key]);
+			$to[$key] = sprintf($format, $value);
 		}
 
 		return str_replace($from, $to, $haystack);

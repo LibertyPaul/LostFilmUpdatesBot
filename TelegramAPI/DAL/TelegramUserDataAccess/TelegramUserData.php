@@ -16,7 +16,7 @@ class TelegramUserData implements APIUserData{
 		int $userId,
 		int $chatId,
 		string $type,
-		string $username = null,
+		?string $username,
 		string $firstName,
 		string $lastName = null
 	){

@@ -73,8 +73,9 @@ class ErrorDictionaryAccess extends CommonAccess{
 	}
 
 	public function createOrGetErrorRecordId(ErrorDictionaryRecord $record): int {
-		if($record->getId() !== null){
-			throw new \LogicException("Id is already set for the record ($record->id).");
+	    $recordId = $record->getId();
+		if($recordId !== null){
+			throw new \LogicException("Id is already set for the record ($recordId).");
 		}
 
 		$args = array(
@@ -118,7 +119,7 @@ class ErrorDictionaryAccess extends CommonAccess{
 			return $errorId;
 		}
 		catch(\Throwable $ex){
-			# Rollback is not needed as there is only one INSERT staement
+			# Rollback is not needed as there is only one INSERT statement
 			throw $ex;
 		}
 	}

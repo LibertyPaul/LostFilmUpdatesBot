@@ -9,7 +9,7 @@ function exception_handler(\Throwable $ex){
 		$tracer = \TracerFactory::getTracer(__NAMESPACE__, null, true, false);
 	}
 
-	$tracer->logException('[UNCAUGHT EXCEPTION]', __FILE__, __LINE__, $ex);
+	$tracer->logException(__FILE__, __LINE__, $ex);
 
 	exit;
 }
@@ -17,8 +17,8 @@ function exception_handler(\Throwable $ex){
 $res = set_exception_handler('ExceptionHandler\exception_handler');
 if($res === null){
 	\TracerCompiled::syslogCritical(
-		'[EXCEPTION CATCHER]', __FILE__, __LINE__,
-		'Unable to set exception handler'
+        __FILE__, __LINE__,
+        'Unable to set exception handler'
 	);
 }
 

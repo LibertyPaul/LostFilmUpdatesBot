@@ -43,8 +43,8 @@ class ConversationStorage{
 		$keyPrefix = $config->getValue('Conversation Storage', 'Key Prefix');
 		if($keyPrefix === null){
 			$this->tracer->logWarning(
-				'[CONFIG]', __FILE__, __LINE__,
-				'Parameter [Conversation Storage][Key Prefix] does not exist. Using "".'
+                __FILE__, __LINE__,
+                'Parameter [Conversation Storage][Key Prefix] does not exist. Using "".'
 			);
 
 			$keyPrefix = '';
@@ -57,7 +57,7 @@ class ConversationStorage{
 			);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[MEMCACHE]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 
@@ -65,7 +65,7 @@ class ConversationStorage{
 	}
 	
 	private function fetchConversation(){
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Fetching Conversation ...');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Fetching Conversation ...');
 
 		$conversation_serialized = $this->storage->getValue($this->user_id);
 
@@ -79,22 +79,22 @@ class ConversationStorage{
 		foreach($this->conversation as $incomingMessage){
 			if($incomingMessage instanceof IncomingMessage === false){
 				$this->tracer->logfError(
-					'[o]', __FILE__, __LINE__,
-					'Got invalid object from memcache [%s]',
-					gettype($incomingMessage)
+                    __FILE__, __LINE__,
+                    'Got invalid object from memcache [%s]',
+                    gettype($incomingMessage)
 				);
 
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Erroneous object:'.PHP_EOL.
-					strval($incomingMessage)
+                    __FILE__, __LINE__,
+                    'Erroneous object:' . PHP_EOL .
+                    strval($incomingMessage)
 				);
 
 				$this->deleteConversation();
 
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Whole conversation was erased.'
+                    __FILE__, __LINE__,
+                    'Whole conversation was erased.'
 				);
 
 				throw new \RuntimeException('Conversation is not valid.');
@@ -102,24 +102,24 @@ class ConversationStorage{
 		}
 
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			'Fetched Conversation:'.PHP_EOL.
-			print_r($this->conversation, true)
+            __FILE__, __LINE__,
+            'Fetched Conversation:' . PHP_EOL .
+            print_r($this->conversation, true)
 		);
 	}
 
 	private function commitConversation(){
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			'Committing Conversation:'.PHP_EOL.
-			print_r($this->conversation, true)
+            __FILE__, __LINE__,
+            'Committing Conversation:' . PHP_EOL .
+            print_r($this->conversation, true)
 		);
 
 		$conversation_serialized = serialize($this->conversation);
-		$res = $this->storage->setValue($this->user_id, $conversation_serialized);
+		$this->storage->setValue($this->user_id, $conversation_serialized);
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation was committed.');
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Conversation one-line: '.$this);
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Conversation was committed.');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Conversation one-line: ' . $this);
 	}
 
 	public function getConversation(){
@@ -153,10 +153,10 @@ class ConversationStorage{
 
 	private function insertMessage(IncomingMessage $incomingMessage, $position){
 		$this->tracer->logfDebug(
-			'[o]', __FILE__, __LINE__,
-			"Inserting message to %s:\n%s",
-			ConversationStorageInsertPosition::toString($position),
-			$incomingMessage
+            __FILE__, __LINE__,
+            "Inserting message to %s:\n%s",
+            ConversationStorageInsertPosition::toString($position),
+            $incomingMessage
 		);
 
 		switch($position){
@@ -169,39 +169,39 @@ class ConversationStorage{
 				break;
 
 			default:
-				$this->tracer->logfError('[o]', __FILE__, __LINE__, 'Incorrect insertMessage position.');
-				throw new \RuntimeError('Incorrect insertMessage position.');
+				$this->tracer->logfError(__FILE__, __LINE__, 'Incorrect insertMessage position.');
+				throw new \LogicException('Incorrect insertMessage position.');
 		}
 
 		$this->commitConversation();
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Done.');
 	}
 
 	public function appendMessage(IncomingMessage $incomingMessage){
-		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Back);
+		$this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Back);
 	}
 
 	public function prependMessage(IncomingMessage $incomingMessage){
-		return $this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Front);
+		$this->insertMessage($incomingMessage, ConversationStorageInsertPosition::Front);
 	}
 
 	public function deleteConversation(){
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Deleting conversation ...');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Deleting conversation ...');
 
 		$this->storage->deleteValue($this->user_id);
 		$this->conversation = array();
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Done.');
 	}
 
 	public function deleteLastMessage(){
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Deleting last message ...');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Deleting last message ...');
 
 		array_pop($this->conversation);
 		$this->commitConversation();
 		
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Done.');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Done.');
 	}
 
 	public function __toString(){

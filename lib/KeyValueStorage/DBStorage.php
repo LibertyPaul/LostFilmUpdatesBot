@@ -6,17 +6,15 @@ require_once(__DIR__.'/../../core/BotPDO.php');
 class DBStorage implements \KeyValueStorageInterface{
 	const DOMAIN = __CLASS__;
 
-	private $pdo;
-	private $expirationSeconds;
-	private $keyPrefix;
-
+    private $keyPrefix;
 	private $getValueQuery;
 	private $insertOrUpdateValueQuery;
 	private $incrementValueQuery;
 	private $deleteValueQuery;
+    private $valueLifeTimeSeconds;
 
 
-	public function __construct($keyPrefix, $valueLifeTimeSeconds){
+    public function __construct($keyPrefix, $valueLifeTimeSeconds){
 		assert(is_string($keyPrefix));
 		assert(is_int($valueLifeTimeSeconds));
 
@@ -71,9 +69,7 @@ class DBStorage implements \KeyValueStorageInterface{
 			return null;
 		}
 
-		$value = $result[0];
-
-		return $value;
+        return $result[0];
 	}
 
 	public function setValue($localKey, $value){

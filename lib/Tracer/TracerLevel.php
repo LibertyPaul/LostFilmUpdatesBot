@@ -35,17 +35,13 @@ abstract class TracerLevel{
 		switch(count($key)){
 			case 0:
 				throw new \OutOfBoundsException("Invalid trace level: '$level'");
-				break;
 
-			case 1:
+            case 1:
 				return $key[0];
-				break;
 
-			default:
-				assert(false);
-				return $key[0];
-				break;
-		}
+            default:
+				throw new \LogicException("Invalid logging level mapping (duplicate key)");
+        }
 	}
 }
 

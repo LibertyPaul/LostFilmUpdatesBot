@@ -20,7 +20,7 @@ abstract class TracerCompiled extends TracerBase{
 	abstract protected function write(string $text);
 	abstract protected function storeStandalone(string $text);
 
-	private static function getDateMicro(){
+	private static function getDateMicro(): string {
 		# PHP can't into microseconds. Let's help it.
 		sscanf(microtime(), '0.%d %d', $microseconds, $seconds);
 		$microseconds /= 100;
@@ -29,15 +29,13 @@ abstract class TracerCompiled extends TracerBase{
 
 	private static function compileRecord(
 		string $level,
-		string $tag, # Obsolete
-		string $file,
-		int $line,
-		string $message
-	){
+        string $file,
+        int $line,
+        string $message
+	): string {
 		return sprintf(
 			"%s %s [%' 5d] %s:%s %s",
 			$level,
-			# $tag,
 			self::getDateMicro(),
 			getmypid(),
 			basename($file),
@@ -48,23 +46,22 @@ abstract class TracerCompiled extends TracerBase{
 
 	protected function log(
 		string $level,
-		string $tag,
-		string $file,
-		int	$line,
-		string $message = null
+        string $file,
+        int	$line,
+        string $message = null
 	){
 		if(empty($message)){
 			$message = '~|___0^0___|~';
 		}
 
-		$record = self::compileRecord($level, $tag, $file, $line, $message);
+		$record = self::compileRecord($level, $file, $line, $message);
 		
 		if(strlen($record) > $this->config->getStandaloneIfLargerThan()){
 			try{
 				$this->storeStandalone($record);
 			}
 			catch(\RuntimeException $ex){
-				$this->logException('[TRACER]', $ex);
+				$this->logException(__FILE__, __LINE__, $ex);
 				$this->write($record);
 			}	
 		}
@@ -73,7 +70,7 @@ abstract class TracerCompiled extends TracerBase{
 		}
 	}
 
-	public static function syslogCritical($tag, $file, $line, $format = null, ...$args){
+	public static function syslogCritical($file, $line, $format = null, ...$args){
 		if(empty($format)){
 			$message = 'No message provided.';
 		}
@@ -82,11 +79,10 @@ abstract class TracerCompiled extends TracerBase{
 		}
 
 		$record = self::compileRecord(
-			TracerLevel::Critical,
-			$tag,
-			$file,
-			$line,
-			$message
+            TracerLevel::Critical,
+            $file,
+            $line,
+            $message
 		);
 
 		assert(syslog(LOG_CRIT, $record));

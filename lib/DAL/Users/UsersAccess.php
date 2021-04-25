@@ -9,8 +9,11 @@ require_once(__DIR__.'/User.php');
 class UsersAccess extends CommonAccess{
 	private $getUserByIdQuery;
 	private $addUserQuery;
+    private $getActiveUsersQuery;
+    private $getActiveUsersCountQuery;
+    private $updateUserQuery;
 
-	public function __construct(\PDO $pdo){
+    public function __construct(\PDO $pdo){
 		parent::__construct(
 			$pdo,
 			new UserBuilder()

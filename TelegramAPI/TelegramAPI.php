@@ -42,8 +42,8 @@ class TelegramAPI{
 			$res = time_nanosleep(0, 500000000); // 0.5s
 			if($res !== true){
 				$this->tracer->logError(
-					'[PHP]', __FILE__, __LINE__,
-					'time_nanosleep has failed'.PHP_EOL.print_r($res, true)
+                    __FILE__, __LINE__,
+                    'time_nanosleep has failed' . PHP_EOL . print_r($res, true)
 				);
 			}
 		}
@@ -111,7 +111,7 @@ class TelegramAPI{
 		bool $URLExpandEnabled,
 		array $responseOptions = null,
 		array $inlineOptions = null
-	): \HTTPRequester\HTTPResponse{
+	): \HTTPRequester\HTTPResponse {
 		# TODO: rework the return value type
 
 		$request = array(
@@ -163,15 +163,15 @@ class TelegramAPI{
 		$requestJSON = json_encode($request, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_UNICODE);
 		if($requestJSON === false){
 			$this->tracer->logfError(
-				'[JSON]', __FILE__, __LINE__,
-				'json_encode has failed: [%s].',
-				json_last_error_msg()
+                __FILE__, __LINE__,
+                'json_encode has failed: [%s].',
+                json_last_error_msg()
 			);
 
 			$this->tracer->logDebug(
-				'[JSON]', __FILE__, __LINE__,
-				'Erroneous object:'.PHP_EOL.
-				print_r($request, true)
+                __FILE__, __LINE__,
+                'Erroneous object:' . PHP_EOL .
+                print_r($request, true)
 			);
 
 			throw new \RuntimeException('json_encode has failed on:'.print_r($request, true));
@@ -183,21 +183,22 @@ class TelegramAPI{
 			$this->getBaseMethodURL('sendMessage'),
 			$requestJSON
 		);
+
+        $this->waitForVelocity($chat_id);
 		
 		try{
-			$this->waitForVelocity($chat_id);
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
 		catch(\HTTPRequester\HTTPTimeoutException $ex){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'Telegram API seems to be unavailable due to [%s]',
-				$ex
+                __FILE__, __LINE__,
+                'Telegram API seems to be unavailable due to [%s]',
+                $ex
 			);
-
+			throw $ex;
 		}
 		catch(\HTTPRequester\HTTPException $HTTPException){
-			$this->tracer->logException('[HTTP ERROR]', __FILE__, __LINE__, $HTTPException);
+			$this->tracer->logException(__FILE__, __LINE__, $HTTPException);
 			throw $HTTPException;
 		}
 				
@@ -234,15 +235,15 @@ class TelegramAPI{
 
 		if($result->isError()){
 			$this->tracer->logError(
-				'[TELEGRAM API]', __FILE__, __LINE__,
-				'getFile call has failed:'.PHP_EOL.
-				$result
+                __FILE__, __LINE__,
+                'getFile call has failed:' . PHP_EOL .
+                $result
 			);
 
 			$this->tracer->logDebug(
-				'[TELEGRAM API]', __FILE__, __LINE__,
-				'Error response body:'.PHP_EOL.
-				$result->getBody()
+                __FILE__, __LINE__,
+                'Error response body:' . PHP_EOL .
+                $result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to get file info');
@@ -251,24 +252,24 @@ class TelegramAPI{
 		$File = json_decode($result->getBody());
 		if($File === false){
 			$this->tracer->logfError(
-				'[JSON]', __FILE__, __LINE__,
-				"Unable to parse Telegram getFile response: [%s].",
-				json_last_error_msg()
+                __FILE__, __LINE__,
+                "Unable to parse Telegram getFile response: [%s].",
+                json_last_error_msg()
 			);
 
 			$this->tracer->logDebug(
-				'[JSON]', __FILE__, __LINE__,
-				'Erroneous JSON:'.PHP_EOL.
-				$result->getBody()
+                __FILE__, __LINE__,
+                'Erroneous JSON:' . PHP_EOL .
+                $result->getBody()
 			);
 
 			throw new \RuntimeException('Failed to parse getFile response');
 		}
 
 		$this->tracer->logDebug(
-			'[TELEGRAM API]', __FILE__, __LINE__,
-			'getFile has returned:'.PHP_EOL.
-			print_r($File, true)
+            __FILE__, __LINE__,
+            'getFile has returned:' . PHP_EOL .
+            print_r($File, true)
 		);
 
 		assert(isset($File->ok));
@@ -291,9 +292,9 @@ class TelegramAPI{
 
 		if($result->isError()){
 			$this->tracer->logError(
-				'[TELEGRAM API]', __FILE__, __LINE__,
-				'File download has failed:'.PHP_EOL.
-				$result
+                __FILE__, __LINE__,
+                'File download has failed:' . PHP_EOL .
+                $result
 			);
 
 			throw new \RuntimeException('Failed to download file');

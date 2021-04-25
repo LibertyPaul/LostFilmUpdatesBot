@@ -16,8 +16,7 @@ abstract class Result{
 class SpeechRecognizer{
 	private $APIURL;
 	private $HTTPRequester;
-	private $velocityController;
-	private $tracer;
+    private $tracer;
 
 	public function __construct(
 		\Config $config,
@@ -75,9 +74,9 @@ class SpeechRecognizer{
 		}
 		catch(\HTTPRequester\HTTPTimeoutException $ex){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'SpeechRecognition seems to be unavailable due to [%s]',
-				$ex
+                __FILE__, __LINE__,
+                'SpeechRecognition seems to be unavailable due to [%s]',
+                $ex
 			);
 
 			return Result::APIError;
@@ -85,9 +84,9 @@ class SpeechRecognizer{
 
 		if($result->isError()){
 			$this->tracer->logError(
-				'[SPEECH RECOGNITION API]', __FILE__, __LINE__,
-				'SpeechRecognition has failed:'.PHP_EOL.
-				$result
+                __FILE__, __LINE__,
+                'SpeechRecognition has failed:' . PHP_EOL .
+                $result
 			);
 
 			return Result::APIError;

@@ -8,7 +8,7 @@ class PDOInit{
 				return $default;
 			}
 
-			throw new \RuntimeException("$src was not found in ini file '$credentialsFile'");
+			throw new \RuntimeException("$src was not found in config");
 		}
 
 		return $src[$key];

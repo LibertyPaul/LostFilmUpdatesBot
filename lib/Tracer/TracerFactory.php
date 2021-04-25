@@ -35,8 +35,7 @@ class TracerFactory{
 			return $fileTracer;
 		}
 		else{
-			# Going to explode
-			return null;
+			throw new \LogicException("Impossible state was reached.");
 		}
 	}
 }

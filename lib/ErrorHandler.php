@@ -11,11 +11,11 @@ function error_handler($errno, $errstr, $errfile = null, $errline = null, $errco
 	}
 
 	$tracer->logError(
-		'[PHP ERROR]', $errfile, $errline,
-		sprintf('Errno=[%d], Description: %s', $errno, $errstr)
+        $errfile, $errline,
+        sprintf('Errno=[%d], Description: %s', $errno, $errstr)
 	);
 
-	$tracer->logError('[o]', $errfile, $errline, print_r(debug_backtrace(), true));
+	$tracer->logError($errfile, $errline, print_r(debug_backtrace(), true));
 
 	return true;
 }
@@ -23,8 +23,8 @@ function error_handler($errno, $errstr, $errfile = null, $errline = null, $errco
 $res = set_error_handler('ErrorHandler\error_handler');
 if($res === null){
 	\TracerCompiled::syslogCritical(
-		'[ERROR CATCHER]', __FILE__, __LINE__,
-		'Unable to set error handler'
+        __FILE__, __LINE__,
+        'Unable to set error handler'
 	);
 }
 

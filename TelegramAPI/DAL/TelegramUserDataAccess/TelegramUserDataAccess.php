@@ -10,7 +10,12 @@ require_once(__DIR__.'/TelegramUserDataBuilder.php');
 
 class TelegramUserDataAccess extends CommonAccess implements APIUserDataAccess{
 
-	public function __construct(\PDO $pdo){
+    private $getAPIUserDataByChatIDQuery;
+    private $getAPIUserDataByUserIdQuery;
+    private $addAPIUserDataQuery;
+    private $updateAPIUserDataQuery;
+
+    public function __construct(\PDO $pdo){
 		parent::__construct(
 			$pdo,
 			new TelegramUserDataBuilder()
