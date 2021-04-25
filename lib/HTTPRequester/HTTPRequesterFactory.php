@@ -28,18 +28,18 @@ class HTTPRequesterFactory{
 
 			case null:
 				$this->tracer->logWarning(
-					'[UNDEFINED]', __FILE__, __LINE__,
-					'TelegramAPI->Perform Actual Send parameter is not defined.'.
-					'Using default [N]'
+                    __FILE__, __LINE__,
+                    'TelegramAPI->Perform Actual Send parameter is not defined.' .
+                    'Using default [N]'
 				);
 				$this->performActualMessageSend = false;
 				break;
 
 			default:
 				$this->tracer->logError(
-					'[INVALID PARAMETER]', __FILE__, __LINE__,
-					'TelegramAPI->Perform Actual Send parameter = [$res].'.
-					'Using default [N]'
+                    __FILE__, __LINE__,
+                    'TelegramAPI->Perform Actual Send parameter = [$res].' .
+                    'Using default [N]'
 				);
 				$this->performActualMessageSend = false;
 				break;

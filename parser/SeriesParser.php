@@ -25,9 +25,9 @@ class SeriesParser extends Parser{
 		$pos = strpos($this->pageSrc, ' & ');
 		if ($pos !== false){
 			$this->tracer->logfWarning(
-				'[RSS]', __FILE__, __LINE__,
-				'Invalid XML token was found as pos. %d (first of, there may be more entries)',
-				$pos
+                __FILE__, __LINE__,
+                'Invalid XML token was found as pos. %d (first of, there may be more entries)',
+                $pos
 			);
 
 			$this->pageSrc = str_replace(' & ', ' &amp; ', $this->pageSrc);
@@ -67,13 +67,13 @@ class SeriesParser extends Parser{
 		$matchesRes = preg_match($regexp, $URL, $matches);
 		if($matchesRes === false){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'preg_match has failed with code: [%s]'.PHP_EOL.
-				'Link: [%s]'.PHP_EOL.
-				'Regex: [%s]',
-				preg_last_error(),
-				$URL,
-				$regexp
+                __FILE__, __LINE__,
+                'preg_match has failed with code: [%s]' . PHP_EOL .
+                'Link: [%s]' . PHP_EOL .
+                'Regex: [%s]',
+                preg_last_error(),
+                $URL,
+                $regexp
 			);
 
 			throw new \RuntimeException('Unable to parse URL [$URL]');
@@ -81,12 +81,12 @@ class SeriesParser extends Parser{
 
 		if($matchesRes === 0){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				"Link doesn't match the pattern".PHP_EOL.
-				'Link: [%s]'.PHP_EOL.
-				'Regex: [%s]',
-				$URL,
-				$regexp
+                __FILE__, __LINE__,
+                "Link doesn't match the pattern" . PHP_EOL .
+                'Link: [%s]' . PHP_EOL .
+                'Regex: [%s]',
+                $URL,
+                $regexp
 			);
 
 			throw new \RuntimeException("Link doesn't match pattern");
@@ -116,10 +116,10 @@ class SeriesParser extends Parser{
 				$result[] = $this->parseURL($item->link);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[PARSE ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				$this->tracer->logDebug(
-					'[PARSE ERROR]', __FILE__, __LINE__,
-					PHP_EOL.print_r($item, true)
+                    __FILE__, __LINE__,
+                    PHP_EOL . print_r($item, true)
 				);
 			}
 		}

@@ -106,8 +106,8 @@ class NotificationGenerator{
 		$admin_id = $this->config->getValue('Admin Notifications', 'Status Channel Id');
 		if($admin_id === null){
 			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'[Admin Notifications][Status Channel Id] value is not set.'
+                __FILE__, __LINE__,
+                '[Admin Notifications][Status Channel Id] value is not set.'
 			);
 
 			return null;
@@ -119,9 +119,9 @@ class NotificationGenerator{
 			$admin = $this->usersAccess->getUserById($admin_id);
 			if($admin->isDeleted()){
 				$this->tracer->logfError(
-					'[o]', __FILE__, __LINE__,
-					'Admin [%d] is marked as "deleted".',
-					$admin_id
+                    __FILE__, __LINE__,
+                    'Admin [%d] is marked as "deleted".',
+                    $admin_id
 				);
 				
 				return null;
@@ -142,7 +142,7 @@ class NotificationGenerator{
 			);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			return null;
 		}
 	}
@@ -159,7 +159,7 @@ class NotificationGenerator{
 			$userCount = $this->usersAccess->getActiveUsersCount(false);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			return null;
 		}
 
@@ -177,7 +177,7 @@ class NotificationGenerator{
 			$userFirstName = $this->getUserFirstName($user);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			return null;
 		}
 
@@ -217,8 +217,8 @@ class NotificationGenerator{
 		$headerMessage = $this->statusMessage($headerText, MarkupType::HTML(), $hasErrors);
 		if($headerMessage === null){
 			$this->tracer->logError(
-				'[o]', __FILE__, __LINE__,
-				'Header Message was not created.'
+                __FILE__, __LINE__,
+                'Header Message was not created.'
 			);
 
 			return null;

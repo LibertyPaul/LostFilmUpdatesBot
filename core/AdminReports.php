@@ -28,8 +28,8 @@ class AdminReports{
 		$report = $this->notificationGenerator->errorYardDailyReport();
 		if($report === null){
 			$this->tracer->logWarning(
-				'[o]', __FILE__, __LINE__,
-				'An empty report was generated.'
+                __FILE__, __LINE__,
+                'An empty report was generated.'
 			);
 
 			return -1;
@@ -40,48 +40,48 @@ class AdminReports{
 
 	public function sendReports(){
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			'Admin Reports started.'
+            __FILE__, __LINE__,
+            'Admin Reports started.'
 		);
 
 		try{
 			$errorYardReportEnabled = $this->config->getValue('Admin Notifications', 'Error Yard Reports Enabled', 'N');
 			if($errorYardReportEnabled === 'Y'){
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Going to create & send an Error Yard Report.'
+                    __FILE__, __LINE__,
+                    'Going to create & send an Error Yard Report.'
 				);
 
 				$res = $this->sendErrorYardReport();
 				
 				if($res === 0){
 					$this->tracer->logDebug(
-						'[o]', __FILE__, __LINE__,
-						'Success'
+                        __FILE__, __LINE__,
+                        'Success'
 					);
 				}
 				else{
 					$this->tracer->logError(
-						'[o]', __FILE__, __LINE__,
-						'Failure'
+                        __FILE__, __LINE__,
+                        'Failure'
 					);
 				}
 			}
 			else{
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Error Yard Reports are disabled.'
+                    __FILE__, __LINE__,
+                    'Error Yard Reports are disabled.'
 				);
 			}
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 		}
 
 
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			'Admin Reports finished.'
+            __FILE__, __LINE__,
+            'Admin Reports finished.'
 		);
 	}
 }

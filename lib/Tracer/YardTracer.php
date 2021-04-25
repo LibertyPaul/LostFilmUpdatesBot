@@ -25,10 +25,9 @@ class YardTracer extends TracerBase{
 
 	protected function log(
 		string $level,
-		string $tag,
-		string $file,
-		int $line,
-		string $message
+        string $file,
+        int $line,
+        string $message
 	){
 		$errorRecord = new \DAL\ErrorDictionaryRecord(
 			null,

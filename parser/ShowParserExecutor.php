@@ -41,8 +41,8 @@ class ShowParserExecutor{
 
 		foreach($newShowAliases as $newAlias){
 			$this->tracer->logEvent(
-				'[NEW SHOW]', __FILE__, __LINE__,
-				PHP_EOL.$LFShows[$newAlias]
+                __FILE__, __LINE__,
+                PHP_EOL . $LFShows[$newAlias]
 			);
 
 			if($LFShows[$newAlias]->getTitleEn() === 'Dracula'){
@@ -50,8 +50,8 @@ class ShowParserExecutor{
 				# Adding a hardcoded crotch to suppress the error
 				# In case the problem repeats with another show, a proper solution to be implemented
 				$this->tracer->logEvent(
-					'[o]', __FILE__, __LINE__,
-					'The old Dracula show was excluded to avoid collision'
+                    __FILE__, __LINE__,
+                    'The old Dracula show was excluded to avoid collision'
 				);
 
 				continue;
@@ -63,19 +63,19 @@ class ShowParserExecutor{
 			}
 			catch(\DAL\DuplicateValueException $ex){
 				$this->tracer->logfError(
-					'[o]', __FILE__, __LINE__,
-					'Conflicting show title (%s): "%s". Failed to add.',
-					$ex->getConstrainingIndexName(),
-					$newAlias
+                    __FILE__, __LINE__,
+                    'Conflicting show title (%s): "%s". Failed to add.',
+                    $ex->getConstrainingIndexName(),
+                    $newAlias
 				);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				$this->tracer->logDebug(
-					'[NEW SHOW]', __FILE__, __LINE__,
-					"Falied to insert a show:".PHP_EOL.
-					$LFShows[$newAlias].PHP_EOL.
-					"My records: ".self::aliasListToText($DBShowAliases)
+                    __FILE__, __LINE__,
+                    "Falied to insert a show:" . PHP_EOL .
+                    $LFShows[$newAlias] . PHP_EOL .
+                    "My records: " . self::aliasListToText($DBShowAliases)
 				);
 			}
 		}
@@ -90,11 +90,11 @@ class ShowParserExecutor{
 			}
 			catch(\PDOException $ex){
 				$this->tracer->logError(
-					'[DATABASE]', __FILE__, __LINE__,
-					"Unable to update show [$existingAlias]".PHP_EOL.$LFShows[$existingAlias]
+                    __FILE__, __LINE__,
+                    "Unable to update show [$existingAlias]" . PHP_EOL . $LFShows[$existingAlias]
 				);
 
-				$this->tracer->logException('[DATABASE]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 			}
 		}
 	}
@@ -104,8 +104,8 @@ class ShowParserExecutor{
 
 		foreach($obsoleteShowAliases as $obsoleteAlias){
 			$this->tracer->logWarning(
-				'[OUTDATED SHOW]', __FILE__, __LINE__,
-				"Show $obsoleteAlias does not exist at LostFilm anymore."
+                __FILE__, __LINE__,
+                "Show $obsoleteAlias does not exist at LostFilm anymore."
 			);
 		}
 	}
@@ -122,7 +122,7 @@ class ShowParserExecutor{
 			$this->handleObsoleteShows($DBShowAliases, $LFShows);
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 		}
 		finally{
 			$this->showsAccess->unlockTables();

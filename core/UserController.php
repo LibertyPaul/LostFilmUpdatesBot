@@ -102,7 +102,7 @@ class UserController{
 				}
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[NOTIFIER ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 			}
 		}
 
@@ -171,7 +171,7 @@ class UserController{
 					}
 				}
 				catch(\Throwable $ex){
-					$this->tracer->logException($ex);
+					$this->tracer->logException();
 				}
 
 				return $userResponse;
@@ -209,14 +209,14 @@ class UserController{
 
             default:
 			$this->tracer->logError(
-				'[USER CONTROLLER]', __FILE__, __LINE__,
-				'3rd message in /stop conversation is impossible.'
+                __FILE__, __LINE__,
+                '3rd message in /stop conversation is impossible.'
 			);
 
 			$this->tracer->logDebug(
-				'[USER CONTROLLER]', __FILE__, __LINE__,
-				'Erroneous conversation:'.PHP_EOL.
-				print_r($this->conversationStorage->getConversation(), true)
+                __FILE__, __LINE__,
+                'Erroneous conversation:' . PHP_EOL .
+                print_r($this->conversationStorage->getConversation(), true)
 			);
 
 			$this->conversationStorage->deleteConversation();
@@ -933,10 +933,10 @@ class UserController{
 		);
 
 		$this->tracer->logfEvent(
-			'[o]', __FILE__, __LINE__,
-			'Bare text without a command [%s]. Assuming to be [%s].',
-			$this->conversationStorage->getFirstMessage()->getText(),
-			$assumedCommand->getText()
+            __FILE__, __LINE__,
+            'Bare text without a command [%s]. Assuming to be [%s].',
+            $this->conversationStorage->getFirstMessage()->getText(),
+            $assumedCommand->getText()
 		);
 
 		$assumedMessage = new IncomingMessage($assumedCommand, 'Dummy');
@@ -1038,9 +1038,9 @@ class UserController{
 
 			default:
 				$this->tracer->logError(
-					'[COMMAND]', __FILE__, __LINE__,
-					'Unknown command:'.PHP_EOL.
-					print_r($this->conversationStorage->getFirstMessage(), true)
+                    __FILE__, __LINE__,
+                    'Unknown command:' . PHP_EOL .
+                    print_r($this->conversationStorage->getFirstMessage(), true)
 				);
 				throw new \LogicException('Unknown command');
 			}
@@ -1053,8 +1053,8 @@ class UserController{
 		}
 		catch(\Throwable $ex){
 			$this->pdo->rollBack();
-			$this->tracer->logException('[BOT]', __FILE__, __LINE__, $ex);
-			$this->tracer->logDebug('[o]', __FILE__, __LINE__, PHP_EOL.$incomingMessage);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
+			$this->tracer->logDebug(__FILE__, __LINE__, PHP_EOL . $incomingMessage);
 			$this->conversationStorage->deleteConversation();
 
 			return new DirectedOutgoingMessage(

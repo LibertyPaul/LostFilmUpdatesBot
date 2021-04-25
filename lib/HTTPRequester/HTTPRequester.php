@@ -157,15 +157,15 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$this->setRequestOptions($curl, $requestProperties);
 
 		$this->requestResponseTracer->logEvent(
-			'[REQUEST]', __FILE__, __LINE__,
-			PHP_EOL.strval($requestProperties).PHP_EOL
+            __FILE__, __LINE__,
+            PHP_EOL . strval($requestProperties) . PHP_EOL
 		);
 		
 		$result = $this->executeCurl($curl);
 		
 		$this->requestResponseTracer->logEvent(
-			'[RESPONSE]', __FILE__, __LINE__, 
-			PHP_EOL.strval($result).PHP_EOL
+            __FILE__, __LINE__,
+            PHP_EOL . strval($result) . PHP_EOL
 		);
 
 		return $result;
@@ -188,8 +188,8 @@ class HTTPRequester implements HTTPRequesterInterface{
 			$this->setRequestOptions($curl, $requestProperties);
 
 			$this->requestResponseTracer->logEvent(
-				'[REQUEST]', __FILE__, __LINE__,
-				strval($requestProperties)
+                __FILE__, __LINE__,
+                strval($requestProperties)
 			);
 
 			$requestHandles[$requestId] = $curl;

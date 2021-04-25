@@ -59,8 +59,8 @@ class Config{
 		while(($res = $getAllValuesQuery->fetch()) !== false){
 			$this->cacheValue($res['section'], $res['item'], $res['value']);
 			$this->tracer->logDebug(
-				'[CONFIG]', __FILE__, __LINE__,
-				sprintf('[%s][%s][%s]', $res['section'], $res['item'], $res['value'])
+                __FILE__, __LINE__,
+                sprintf('[%s][%s][%s]', $res['section'], $res['item'], $res['value'])
 			);
 		}
 		
@@ -88,8 +88,8 @@ class Config{
 		$result = $this->getValueQuery->fetch();
 		if($result === false){
 			$this->tracer->logDebug(
-				'[CONFIG GET]', __FILE__, __LINE__,
-				"Requested value [$section][$item] does not exist"
+                __FILE__, __LINE__,
+                "Requested value [$section][$item] does not exist"
 			);
 
 			return $defaultValue;

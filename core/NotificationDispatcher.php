@@ -103,8 +103,8 @@ class NotificationDispatcher{
 				$eligible = self::eligibleToBeSent($notification);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
-				$this->tracer->logfDebug('[ERROR]', __FILE__, __LINE__, "\n%s\n", $notification);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
+				$this->tracer->logfDebug(__FILE__, __LINE__, "\n%s\n", $notification);
 				continue;
 			}
 			
@@ -130,11 +130,11 @@ class NotificationDispatcher{
 				$this->notificationsQueueAccess->updateNotification($notification);
 			}
 			catch(\PDOException $ex){
-				$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				continue;
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[ERROR]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				continue;
 			}
 		}

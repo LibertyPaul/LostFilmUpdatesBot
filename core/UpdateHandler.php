@@ -52,30 +52,30 @@ class UpdateHandler{
 		}
 		catch(\DAL\MessagesHistoryDuplicateExternalIdException $ex){
 			$this->tracer->logfError(
-				'[DB ERROR]', __FILE__, __LINE__,
-				'Unable to log the message due to duplicate external_id: [%d]',
-				$externalId
+                __FILE__, __LINE__,
+                'Unable to log the message due to duplicate external_id: [%d]',
+                $externalId
 			);
 
 			$this->tracer->logDebug(
-				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
-				$incomingMessage
+                __FILE__, __LINE__, PHP_EOL .
+                $incomingMessage
 			);
 			
 			$conflictingMessage = $this->messagesHistoryAccess->getByUpdateId($externalId);
 			$this->tracer->logfDebug(
-				'[o]', __FILE__, __LINE__,
-				'MessagesHistory ID was substituted to existing one [%d]',
-				$conflictingMessage->getId()
+                __FILE__, __LINE__,
+                'MessagesHistory ID was substituted to existing one [%d]',
+                $conflictingMessage->getId()
 			);
 
 			return $conflictingMessage->getId();
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			$this->tracer->logDebug(
-				'[DB ERROR]', __FILE__, __LINE__, PHP_EOL.
-				$incomingMessage
+                __FILE__, __LINE__, PHP_EOL .
+                $incomingMessage
 			);
 
 			throw $ex;
@@ -106,37 +106,37 @@ class UpdateHandler{
 			$this->messagesHistoryAccess->addMessageHistory($messageHistory);
 		}
 		catch(\PDOException $ex){
-			$this->tracer->logException('[DB ERROR]', __FILE__, __LINE__, $ex);
-			$this->tracer->logDebug('[DB ERROR]', __FILE__, __LINE__, PHP_EOL.$messageHistory);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
+			$this->tracer->logDebug(__FILE__, __LINE__, PHP_EOL . $messageHistory);
 			throw $ex;
 		}
 	}
 
 	public function processIncomingMessage(\DAL\User $user, IncomingMessage $incomingMessage){
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			'Entered processIncomingMessage with message:'.PHP_EOL.
-			$incomingMessage
+            __FILE__, __LINE__,
+            'Entered processIncomingMessage with message:' . PHP_EOL .
+            $incomingMessage
 		);
 
 		$loggedRequestId = $this->logIncomingMessage($user->getId(), $incomingMessage);
 
 		$this->tracer->logDebug(
-			'[o]', __FILE__, __LINE__,
-			"IncomingMessage was logged with id=[$loggedRequestId]"
+            __FILE__, __LINE__,
+            "IncomingMessage was logged with id=[$loggedRequestId]"
 		);
 
 		$userController = new UserController($user);
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing message ...');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Processing message ...');
 
 		$response = $userController->processMessage($incomingMessage);
 
-		$this->tracer->logDebug('[o]', __FILE__, __LINE__, 'Processing has finished.');
+		$this->tracer->logDebug(__FILE__, __LINE__, 'Processing has finished.');
 
 		$res = $this->sendMessages($response, $loggedRequestId);
 		if($res !== 0){
-			$this->tracer->logfError('[o]', __FILE__, __LINE__, '[%d] messages delivery failed.', $res);
+			$this->tracer->logfError(__FILE__, __LINE__, '[%d] messages delivery failed.', $res);
 		}
 
 		return $loggedRequestId;
@@ -152,16 +152,16 @@ class UpdateHandler{
 				$route = $this->messageRouter->getRoute($message->getUser());
 
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Message was successfully routed. Sending ...'
+                    __FILE__, __LINE__,
+                    'Message was successfully routed. Sending ...'
 				);
 			
 				$result = $route->send($message->getOutgoingMessage());
 
 				$this->tracer->logfDebug(
-					'[o]', __FILE__, __LINE__,
-					"Sending result: [%s]",
-					SendResult::toString($result->getSendResult())
+                    __FILE__, __LINE__,
+                    "Sending result: [%s]",
+                    SendResult::toString($result->getSendResult())
 				);
 
 				$this->logOutgoingMessage(
@@ -176,7 +176,7 @@ class UpdateHandler{
 				}
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 			}
 			
 			$message = $message->nextMessage();

@@ -66,10 +66,10 @@ class SeriesParserExecutor{
 		}
 		catch(SourceNotAvailableException $ex){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				"Series page [%s] is not available at the moment due to [%s]",
-				$URL,
-				$ex
+                __FILE__, __LINE__,
+                "Series page [%s] is not available at the moment due to [%s]",
+                $URL,
+                $ex
 			);
 
 			return;
@@ -78,10 +78,10 @@ class SeriesParserExecutor{
 		$seriesAboutInfo = $this->seriesAboutParser->run();
 		if ($seriesAboutInfo->isReady() === false){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				"Series page is not ready [%d]: [%s]",
-				$seriesAboutInfo->getReason(),
-				$URL
+                __FILE__, __LINE__,
+                "Series page is not ready [%d]: [%s]",
+                $seriesAboutInfo->getReason(),
+                $URL
 			);
 
 			return;
@@ -90,9 +90,9 @@ class SeriesParserExecutor{
 		$show = $this->showsAccess->getShowByAlias($seriesMetaInfo['alias']);
 		if($show === null){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				'An episode of non-existing show was found.'.PHP_EOL.'%s',
-				print_r($seriesMetaInfo, true)
+                __FILE__, __LINE__,
+                'An episode of non-existing show was found.' . PHP_EOL . '%s',
+                print_r($seriesMetaInfo, true)
 			);
 
 			return;
@@ -124,16 +124,16 @@ class SeriesParserExecutor{
 
 		if($DBSeries === null){
 			$this->tracer->logfEvent(
-				'[o]', __FILE__, __LINE__,
-				"New episode: %s", $episodeDescription
+                __FILE__, __LINE__,
+                "New episode: %s", $episodeDescription
 			);
 			$this->seriesAccess->addSeries($LFSeries);
 		}
 		else{
 			$LFSeries->setId($DBSeries->getId());
 			$this->tracer->logfEvent(
-				'[o]', __FILE__, __LINE__,
-				"Existing episode: %s", $episodeDescription
+                __FILE__, __LINE__,
+                "Existing episode: %s", $episodeDescription
 			);
 			
 			if($LFSeries->isReady() === false){
@@ -142,8 +142,8 @@ class SeriesParserExecutor{
 
 				if($diff > $this->maxShowNotReadyPeriod){
 					$this->tracer->logfWarning(
-						'[o]', __FILE__, __LINE__,
-						'Episode was unready for too long. Overriding & marking as ready.'
+                        __FILE__, __LINE__,
+                        'Episode was unready for too long. Overriding & marking as ready.'
 					);
 
 					$LFSeries->setReady();
@@ -153,8 +153,8 @@ class SeriesParserExecutor{
 			if($LFSeries->isReady()){
 				$this->seriesAccess->updateSeries($LFSeries);
 				$this->tracer->logDebug(
-					'[o]', __FILE__, __LINE__,
-					'Marked as ready.'
+                    __FILE__, __LINE__,
+                    'Marked as ready.'
 				);
 			}
 		}
@@ -174,16 +174,16 @@ class SeriesParserExecutor{
 		}
 		catch(SourceNotAvailableException $ex){
 			$this->tracer->logfError(
-				'[o]', __FILE__, __LINE__,
-				"RSS [%s] is not available at the moment due to [%s]",
-				$rssURL,
-				$ex
+                __FILE__, __LINE__,
+                "RSS [%s] is not available at the moment due to [%s]",
+                $rssURL,
+                $ex
 			);
 
 			return;
 		}
 		catch(\Throwable $ex){
-			$this->tracer->logException('[LF ERROR]', __FILE__, __LINE__, $ex);
+			$this->tracer->logException(__FILE__, __LINE__, $ex);
 			throw $ex;
 		}
 		
@@ -197,10 +197,10 @@ class SeriesParserExecutor{
 				$this->processSeries($seriesMetaInfo);
 			}
 			catch(\Throwable $ex){
-				$this->tracer->logException('[o]', __FILE__, __LINE__, $ex);
+				$this->tracer->logException(__FILE__, __LINE__, $ex);
 				$this->tracer->logDebug(
-					'[NEW SERIES]', __FILE__, __LINE__,
-					PHP_EOL.print_r($seriesMetaInfo, true)
+                    __FILE__, __LINE__,
+                    PHP_EOL . print_r($seriesMetaInfo, true)
 				);
 			}
 		}

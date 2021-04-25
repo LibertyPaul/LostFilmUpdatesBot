@@ -28,9 +28,9 @@ class VelocityController{
 
 		if($this->maxSearchesPerUserPerWeek === null){
 			$this->tracer->logWarning(
-				'[CONFIG]', __FILE__, __LINE__,
-				'[Speech Recognizer][Max Recognitions Per User Per Week] value is not set. '.
-				'Velocity check will be skipped.'
+                __FILE__, __LINE__,
+                '[Speech Recognizer][Max Recognitions Per User Per Week] value is not set. ' .
+                'Velocity check will be skipped.'
 			);
 		}
 
@@ -41,9 +41,9 @@ class VelocityController{
 
 		if($this->maxRecognitionsPerBotPerMonth === null){
 			$this->tracer->logWarning(
-				'[CONFIG]', __FILE__, __LINE__,
-				'[Speech Recognizer][Max Recognitions Per Bot Per Month] value is not set. '.
-				'Velocity check will be skipped.'
+                __FILE__, __LINE__,
+                '[Speech Recognizer][Max Recognitions Per Bot Per Month] value is not set. ' .
+                'Velocity check will be skipped.'
 			);
 		}
 	}
