@@ -164,8 +164,9 @@ class HTTPRequester implements HTTPRequesterInterface{
 		$result = $this->executeCurl($curl);
 		
 		$this->requestResponseTracer->logEvent(
-            __FILE__, __LINE__,
-            PHP_EOL . strval($result) . PHP_EOL
+			__FILE__, __LINE__,
+			'Response received:'.PHP_EOL.
+			strval($result).PHP_EOL
 		);
 
 		return $result;

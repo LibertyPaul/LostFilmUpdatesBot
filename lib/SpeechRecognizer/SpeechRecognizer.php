@@ -16,7 +16,7 @@ abstract class Result{
 class SpeechRecognizer{
 	private $APIURL;
 	private $HTTPRequester;
-    private $tracer;
+	private $tracer;
 
 	public function __construct(
 		\Config $config,
@@ -29,7 +29,14 @@ class SpeechRecognizer{
 		$this->APIURL = "https://speech.googleapis.com/v1/speech:recognize?key=$APIKey";
 	}
 
-	public function recognize($audioBase64, $format){
+	public function recognize(string $audioBase64, string $format){
+		$this->tracer->logfDebug(
+			__FILE__, __LINE__,
+			__FUNCTION__." entered. Format: [%s], audio size: [%d] chars of base64",
+			$format,
+			strlen($audioBase64)
+		);
+
 		switch($format){
 			case 'ogg':
 				$encoding = 'OGG_OPUS';
@@ -49,12 +56,13 @@ class SpeechRecognizer{
 
 		$RecognitionConfig = array(
 			'encoding'				=> $encoding,
-			'sampleRateHertz'		=> 16000,
+			'sampleRateHertz'		=> 48000,
 			'languageCode'			=> 'ru-RU',
 			'maxAlternatives'		=> 5,
 			'profanityFilter'		=> false,
 			#'speechContexts'		=> $SpeechContext,
-			'enableWordTimeOffsets'	=> false
+			'model'					=> 'command_and_search',
+			'useEnhanced'			=> true
 		);
 
 		$Request = array(
@@ -72,45 +80,78 @@ class SpeechRecognizer{
 		try{
 			$result = $this->HTTPRequester->request($requestProperties);
 		}
-		catch(\HTTPRequester\HTTPTimeoutException $ex){
+		catch(\Throwable $ex){
 			$this->tracer->logfError(
-                __FILE__, __LINE__,
-                'SpeechRecognition seems to be unavailable due to [%s]',
-                $ex
+				__FILE__, __LINE__,
+				'SpeechRecognition seems to be unavailable due to [%s]',
+				$ex
 			);
 
 			return Result::APIError;
 		}
 
 		if($result->isError()){
-			$this->tracer->logError(
-                __FILE__, __LINE__,
-                'SpeechRecognition has failed:' . PHP_EOL .
-                $result
+			$this->tracer->logfError(
+				__FILE__, __LINE__,
+				"Speech API call has failed:\n[%s]",
+				$result
 			);
 
 			return Result::APIError;
 		}
 
-		$recognitionResult = json_decode($result->getBody());
+		$recognitionResult = json_decode($result->getBody(), true);
 		if($recognitionResult === false){
+			$this->tracer->logfError(
+				__file__, __line__,
+				"failed to parse speechrecognition response:\n[%s]",
+				$result->getBody()
+			);
+
 			return Result::APIError;
 		}
 
-		assert(isset($recognitionResult->results));
-		assert(isset($recognitionResult->results[0]));
-		assert(isset($recognitionResult->results[0]->alternatives));
+		if(	empty($recognitionResult)											||
+			isset($recognitionResult['results'])					=== false	||
+			isset($recognitionResult['results'][0])					=== false	||
+			isset($recognitionResult['results'][0]['alternatives'])	=== false
+		){
+			$this->tracer->logfError(
+				__FILE__, __LINE__,
+				"Invalid response from Speech API:\n%s",
+				print_r($recognitionResult, true)
+			);
 
-
-		$possibleVariants = array(); # array(variant => confidence)
-		
-		foreach($recognitionResult->results[0]->alternatives as $alternative){
-			if(isset($alternative->transcript) && isset($alternative->confidence)){
-				$possibleVariants[$alternative->transcript] = $alternative->confidence;
-			}
+			return Result::APIError;
 		}
 
-		return $possibleVariants;
+		$possibleOptions = array(); # array(variant => confidence)
+		
+		foreach($recognitionResult['results'][0]['alternatives'] as $pos => $alternative){
+			if(!isset($alternative['transcript']) && !isset($alternative['confidence'])){
+				$this->tracer->logfWarning(
+					__FILE__, __LINE__,
+					"An item from Speech API lacks needed data at index: [%d]:\n%s",
+					$pos,
+					print_r($recognitionResult['results'][0]['alternatives'], true)
+				);
+
+				continue;
+			}
+
+			$transcript = $alternative['transcript'];
+			$confidence = $alternative['confidence'];
+
+			$possibleOptions[$transcript] = $confidence;
+		}
+
+		$this->tracer->logfEvent(
+			__FILE__, __LINE__,
+			"Speech recognition output:\n%s",
+			print_r($possibleOptions, true)
+		);
+
+		return $possibleOptions;
 	}
 }
 
