@@ -278,15 +278,36 @@ class UserController{
 	private function showAboutTor(){
 		$this->conversationStorage->deleteConversation();
 
+		$mirrors = array(
+			'https://tor.ybti.net/ru/',
+			'https://mirror.oldsql.cc/tor/ru/',
+			'https://torproject.ip-connect.vn.ua/ru/',
+			'https://tor.stalkr.net/ru/',
+			'https://mirror.velcommuta.de/tor/ru/',
+			'https://tor.eff.org/ru/'
+		);
+
+		$wrapLink = function(string $link) {
+			return "<a>$link</a>";
+		};
+
+		$mirrorTags = array_map($wrapLink, $mirrors);
+		$mirrorTagsJoined = join(PHP_EOL, $mirrorTags);
+
 		$aboutTor =
-			'<i>Disclaimer: Это не реклама, TorProject - некоммерческая организация.</i>'		.PHP_EOL.
-			''																					.PHP_EOL.
+			'<i>Disclaimer: Это не реклама, TorProject - некоммерческая организация.</i>'				.PHP_EOL.
+			''																							.PHP_EOL.
 			'Для обхода блокировки LostFilm (да и вообще чего угодно) '									.
-			'можно воспользоваться <b>TorBrowser</b>: https://www.torproject.org/ru/download/'	.PHP_EOL.
+			'можно воспользоваться <b>TorBrowser</b>: '													.
+			'<s>https://www.torproject.org/ru/download/</s> *'											.PHP_EOL.
 			'TorBrowser - это модифицированный Firefox, все подключения которого автоматически '		.
-			'направляются через сеть Tor, обеспечивая анонимность и обход блокировок.'			.PHP_EOL.
-			''																					.PHP_EOL.
-			'Подробнее о проекте: https://ru.wikipedia.org/wiki/Tor'							.PHP_EOL
+			'направляются через сеть Tor, обеспечивая анонимность и обход блокировок.'					.PHP_EOL.
+			''																							.PHP_EOL.
+			'Подробнее о проекте: https://ru.wikipedia.org/wiki/Tor'									.PHP_EOL.
+			''																							.PHP_EOL.
+			'* UPD: TorProject заблокирован в РФ.'														.PHP_EOL.
+			'Есть несколько (пока) доступных зеркал сайта:'												.PHP_EOL.
+			$mirrorTagsJoined
 		;
 
 		return new DirectedOutgoingMessage(
