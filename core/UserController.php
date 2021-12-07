@@ -640,6 +640,72 @@ class UserController{
 		);
 	}
 
+	private function getBotStats(){
+		$this->conversationStorage->deleteConversation();
+
+		$generalStatsTemplate = ''.
+			'Бот уже работает ```%d``` лет, ```%d``` месяцев, ```%d``` дней.'.PHP_EOL.
+			'Мы познакомились с тобой ```%s```.';
+
+		$entityCountsTemplate = ''.
+			'Количество пользователей: ```%d```.'.PHP_EOL.
+			'Замьютились%s: ```%d```'.PHP_EOL.
+			'Отвечено ```%d``` сообщений, твоих: ```%d```'.PHP_EOL.
+			'Количество подписок на сериалы: ```%d```, среди них твои: ```%d```.'.PHP_EOL.
+			'Всего сериалов на LostFilm: ```%d```, из них сейчас выходят ```%d```.'.PHP_EOL.
+			'Количество серий, обработанных ботом: ```%d```'.PHP_EOL.
+			'Количество разосланных уведомлений: ```%d```, из них тебе: ```%d```.';
+
+		$averageValuesTemplate = ''.
+			'*В среднем получаем:*'.PHP_EOL.
+			'Подписок у пользователя: ```%d```, на сериал приходится по ```%d```'.PHP_EOL.
+			'Уведомлений пользователю: ```%d```, на сериал: ```%d```, на серию: ```%d```';
+
+		$earlyBirdAchievement = ''.
+			'Ты зарегистрировался(ась) раньше чем ```%.2f%%``` остальных пользователей!';
+
+		$topSubscribersAchievement = ''.
+			'У тебя подписок больше чем у ```%.2f%%``` пользователей!';
+
+		$uniqueSubscriptions = ''.
+			'Только ты подписан(а) на ```%s```';
+
+		$donateHitsTemplate ''.
+			'Команду /donate нажали ```%d``` раз, потом пришло ```%d``` доната -- спасибо, мне приятно!'.PHP_EOL.
+			'_(Статистика по пришедшим донатам обновляется вручную и с задержкой.)_';
+
+
+
+		$botLaunchedOn = new \DateTimeImmutable::createFromFormat('d.m.Y', '23.09.2017');
+		$now = \DateTimeImmutable();
+		$timeSinceLaunch = $now->diff($botLaunchedOn);
+		$yearsSinceLaunch = $timeSinceLaunch->format('y');
+		$monthsSinceLaunch = $timeSinceLaunch->format('m');
+		$daysSinceLaunch = $timeSinceLaunch->format('d');
+
+		$registrationDateStr = $this->user->getRegistrationTime()->format('d.m.Y');
+
+
+		$message = ''.
+			sprintf($generalStatsTemplate, $yearsSinceLaunch, $monthsSinceLaunch, $daysSinceLaunch, $registrationDateStr).
+			PHP_EOL.PHP_EOL.
+			sprintf($entityCountsTemplate, 
+
+
+
+		return new DirectedOutgoingMessage(
+			$this->user,
+			new OutgoingMessage(
+				'Вот тебе кнопочка. Нажми и выбери чат в который отправить мой контакт.',
+				null,
+				new MarkupType(MarkupTypeEnum::NoMarkup),
+				false,
+				null,
+				array($shareButton)
+			)
+		);
+	}
+
 	private function buildBroadcastMessage(){
 		$text = $this->conversationStorage->getMessage(1)->getText();
 		$enablePush = $this->conversationStorage->getMessage(2)->getText();
@@ -1030,6 +1096,10 @@ class UserController{
 
 			case \CommandSubstitutor\CoreCommandMap::Broadcast:
 				$response = $this->broadcast();
+				break;
+
+			case \CommandSubstitutor\CoreCommandMap::BotStats:
+				$response = $this->getBotStats();
 				break;
 
 			case null:
