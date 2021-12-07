@@ -10,6 +10,7 @@ require_once(__DIR__.'/Track.php');
 class TracksAccess extends CommonAccess{
 	private $getTracksByUserQuery;
 	private $getTracksByShowQuery;
+	private $getTrackStatsForUserQuery;
 	private $addTrackQuery;
 	private $deleteTrackQuery;
 
@@ -36,6 +37,15 @@ class TracksAccess extends CommonAccess{
 			$selectFields
 			FROM `tracks`
 			WHERE `tracks`.`show_id` = :show_id
+		");
+
+		$this->getTrackStatsForUserQuery = $this->pdo->prepare("
+			SELECT (
+				SELECT COUNT(*) FROM `tracks`
+			) AS allUserTracksCount,
+			(
+				SELECT COUNT(*) FROM `tracks` WHERE `user_id` = :user_id
+			) AS particularUserTracksCount
 		");
 
 		$this->addTrackQuery = $this->pdo->prepare("
@@ -119,5 +129,19 @@ class TracksAccess extends CommonAccess{
 		default:
 			throw new \LogicException("Unknown action received [$action]");
 		}
+	}
+
+	public function getTrackStatsForUser(int $userId){
+		$args = array(
+			':user_id' => $userId
+		);
+
+		$this->getTrackStatsForUserQuery->execute($args);
+		$res = $this->getTrackStatsForUserQuery->fetch();
+
+		return array(
+			'allUserTracksCount'		=> intval($res['allUserTracksCount']),
+			'particularUserTracksCount'	=> intval($res['particularUserTracksCount'])
+		);
 	}
 }

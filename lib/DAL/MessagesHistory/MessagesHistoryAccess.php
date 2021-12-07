@@ -10,7 +10,8 @@ class MessagesHistoryDuplicateExternalIdException extends \RuntimeException {}
 
 class MessagesHistoryAccess extends CommonAccess{
 	private $addMessageHistoryQuery;
-    private $getByUpdateIdQuery;
+	private $getByUpdateIdQuery;
+	private $getStatForUserQuery;
 
     public function __construct(\PDO $pdo){
 		parent::__construct(
@@ -34,6 +35,15 @@ class MessagesHistoryAccess extends CommonAccess{
 			$selectFields
 			FROM `messagesHistory`
 			WHERE `external_id` = :external_id 
+		");
+
+		$this->getStatForUserQuery = $this->pdo->prepare("
+			SELECT (
+				SELECT COUNT(*) FROM `messagesHistory` WHERE `source` = 'User'
+			) AS allUserMessagesCount,
+			(
+				SELECT COUNT(*) FROM `messagesHistory` WHERE `source` = 'User' AND `userId` = :user_id
+			) AS particularUserMessagesCount
 		");
 
 		$this->addMessageHistoryQuery = $this->pdo->prepare("
@@ -105,5 +115,19 @@ class MessagesHistoryAccess extends CommonAccess{
 				throw $ex;
 			}
 		}
+	}
+
+	public function getStatForUser(int $userId){
+		$args = array(
+			':user_id' => $userId
+		);
+
+		$this->getStatForUserQuery->execute($args);
+		$result = $this->getStatForUserQuery->fetch();
+
+		return array(
+			'allUserMessagesCount' => $res['allUserMessagesCount'],
+			'particularUserMessagesCount' => $res['particularUserMessagesCount']
+		);
 	}
 }

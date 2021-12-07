@@ -3,36 +3,31 @@
 namespace CommandSubstitutor;
 
 class APICommand{
-	private $id;
-	private $API;
-	private $text;
-	private $coreCommandId;
+	private int $id;
+	private string $API;
+	private string $text;
+	private int $coreCommandId;
 
-	public function __construct($id, $API, $text, $coreCommandId){
-		assert(is_numeric($id));
-		assert(is_string($API));
-		assert(is_string($text));
-		assert(is_numeric($coreCommandId));
-
+	public function __construct(int $id, string $API, string $text, int $coreCommandId){
 		$this->id = $id;
 		$this->API = $API;
 		$this->text = $text;
 		$this->coreCommandId = $coreCommandId;
 	}
 
-	public function getId(){
+	public function getId(): int {
 		return $this->id;
 	}
 
-	public function getAPI(){
+	public function getAPI(): string {
 		return $this->API;
 	}
 
-	public function getText(){
+	public function getText(): string {
 		return $this->text;
 	}
 
-	public function getCoreCommandId(){
+	public function getCoreCommandId(): int {
 		return $this->coreCommandId;
 	}
 }

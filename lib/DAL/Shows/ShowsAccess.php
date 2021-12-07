@@ -30,6 +30,7 @@ class ShowsAccess extends CommonAccess{
 	private $getEligibleShowByTitleQuery;
 	private $getEligibleShowsWithScoreQuery;
 	private $getAllQuery;
+	private $getShowStatsQuery;
 	private $addShowQuery;
 	private $updateShowQuery;
 
@@ -125,6 +126,15 @@ class ShowsAccess extends CommonAccess{
 			$selectFields
 			FROM `shows`
 			WHERE 1 = 1
+		");
+
+		$this->getShowStatsQuery = $this->pdo->prepare("
+			SELECT (
+				SELECT COUNT(*) FROM `shows`
+			) AS allShowsCount,
+			(
+				SELECT COUNT(*) FROM `shows` WHERE `onAir` = 'Y'
+			) AS onAirShowsCount
 		");
 
 		$this->addShowQuery = $this->pdo->prepare("
@@ -307,5 +317,15 @@ class ShowsAccess extends CommonAccess{
 
 	public function unlockTables(){
 		$this->pdo->query('UNLOCK TABLES');
+	}
+
+	public function getShowStats(){
+		$this->getShowStatsQuery->execute($args);
+		$res = $this->getShowStatsQuery->fetch();
+
+		return array(
+			'allShowsCount'		=> intval($res['allShowsCount']),
+			'onAirShowsCount'	=> intval($res['onAirShowsCount'])
+		);
 	}
 }

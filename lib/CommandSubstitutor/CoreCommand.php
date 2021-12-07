@@ -19,31 +19,33 @@ abstract class CoreCommandMap{
 	const Broadcast			= 12;
 	const AddShowTentative	= 13;
 	const HandleAPIError	= 14;
+	const BotStats			= 15;
 
-	const MAX				= 14;
+	const MAX				= 15;
 }
 
 class CoreCommand{
-	private $id;
-	private $text;
+	private int $id;
+	private string $text;
 
 	public function __construct(int $id, string $text){
-		assert($id >= CoreCommandMap::MIN);
-		assert($id <= CoreCommandMap::MAX);
+		if ($id < CoreCommandMap::MIN || $id > CoreCommandMap::MAX) {
+			throw new \LogicException("Invalid command id: [$id].");
+		}
 
 		$this->id = $id;
 		$this->text = $text;
 	}
 
-	public function getId(){
+	public function getId(): int {
 		return $this->id;
 	}
 
-	public function getText(){
+	public function getText(): string {
 		return $this->text;
 	}
 
-	public function __toString(){
+	public function __toString(): string {
 		return sprintf("%s(%d)", $this->getText(), $this->getId());
 	}
 }
