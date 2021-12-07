@@ -20,20 +20,25 @@ fi
 readonly as="Owner"
 readonly resultToken="Note_$(cat /dev/urandom | tr -dc 'a-z0-9' | head -c 32)"
 
-readonly query="																								\
-	SELECT CONCAT('Count [telegramUserData]: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM telegramUserData	\
-	UNION																										\
-	SELECT CONCAT('Active users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE deleted = 'N'		\
-	UNION																										\
-	SELECT CONCAT('Deleted users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE deleted = 'Y'		\
-	UNION																										\
-	SELECT CONCAT('Muted users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE mute = 'Y'			\
-	UNION																										\
-	SELECT CONCAT('Tracks: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM tracks								\
-	UNION																										\
-	SELECT CONCAT('Shows: ', CAST(COUNT(*) AS CHAR)) FROM shows													\
-	UNION																										\
-	SELECT CONCAT('Series: ', CAST(COUNT(*) AS CHAR)) FROM series												\
+readonly query="
+	SELECT CONCAT('Count [telegramUserData]: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM telegramUserData
+	UNION
+	SELECT CONCAT('Active users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE deleted = 'N'
+	UNION
+	SELECT CONCAT('Deleted users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE deleted = 'Y'
+	UNION
+	SELECT CONCAT('Muted users: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM users WHERE mute = 'Y'
+	UNION
+	SELECT CONCAT('Tracks: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM tracks
+	UNION
+	SELECT CONCAT('Shows: ', CAST(COUNT(*) AS CHAR)) FROM shows
+	UNION
+	SELECT CONCAT('Series: ', CAST(COUNT(*) AS CHAR)) FROM series
+	UNION
+	SELECT CONCAT('Count [notificationsQueue]: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM notificationsQueue
+	UNION
+	SELECT CONCAT('Delivered notifications: ', CAST(COUNT(*) AS CHAR)) AS $resultToken FROM notificationsQueue
+	WHERE responseCode = 200
 "
 
 
