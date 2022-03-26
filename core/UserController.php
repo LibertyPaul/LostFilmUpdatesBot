@@ -444,17 +444,13 @@ class UserController{
 			}
 			else{
 				$text = 'Как называется сериал?'.PHP_EOL.
-						'Выбери из списка / введи пару слов из названия или '.
+						'Введи пару слов из названия или '.
 						'продиктуй их в голосовом сообщении';
 				
-				$showTitles = array();
 				foreach($shows as $show){
 					$showTitles[] = $show->getFullTitle();
 				}
 
-				array_unshift($showTitles, $cancelCoreCommand);
-				array_push($showTitles, $cancelCoreCommand);
-				
 				return new DirectedOutgoingMessage(
 					$this->user,
 					new OutgoingMessage(
@@ -462,7 +458,7 @@ class UserController{
 						null,
 						new MarkupType(MarkupTypeEnum::NoMarkup),
 						false,
-						$showTitles
+						null
 					)
 				);
 			}
